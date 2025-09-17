@@ -4,6 +4,8 @@ function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [currentSkill, setCurrentSkill] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const skills = [
     "Mathematics",
@@ -23,11 +25,40 @@ function Login() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Username:', username);
-    console.log('Password:', password);
-    // Here you would typically send the username and password to a server for authentication
+    setErrorMessage('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        const message = data?.message || 'Login failed. Please check your credentials and try again.';
+        throw new Error(message);
+      }
+
+      // Example: if your API returns a token/user
+      if (data?.token) {
+        localStorage.setItem('auth_token', data.token);
+      }
+
+      console.log('Login successful:', data);
+      // TODO: navigate to dashboard if routing is set up
+      // e.g., useNavigate from react-router: navigate('/dashboard')
+    } catch (err) {
+      setErrorMessage(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -168,11 +199,20 @@ function Login() {
                 />
               </div>
 
+              {errorMessage && (
+                <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                  {errorMessage}
+                </div>
+              )}
+
               <button
                 type="submit"
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg text-base transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl"
+                disabled={isLoading}
+                className={`w-full bg-indigo-600 text-white font-bold py-3 rounded-lg text-base transition-all duration-200 transform active:scale-95 shadow-lg ${
+                  isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-indigo-700 hover:scale-105 hover:shadow-xl'
+                }`}
               >
-                Sign In
+                {isLoading ? 'Signing In…' : 'Sign In'}
               </button>
             </form>
 
