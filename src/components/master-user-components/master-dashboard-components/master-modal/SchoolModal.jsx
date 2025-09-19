@@ -36,7 +36,7 @@ const SchoolModal = ({
           {/* School Information */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">School Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">School Name *</label>
                 <input
@@ -48,19 +48,6 @@ const SchoolModal = ({
                   disabled={schoolModalMode === 'view'}
                 />
                 {formErrors.schoolName && <p className="text-red-500 text-xs mt-1">{formErrors.schoolName}</p>}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">School Type *</label>
-                <select
-                  className={`${inputBaseClass} ${formErrors.schoolType ? 'border-red-300 focus:ring-red-500' : ''}`}
-                  value={schoolFormData.schoolType}
-                  onChange={(e) => handleInputChange('schoolType', e.target.value)}
-                  disabled={schoolModalMode === 'view'}
-                >
-                  <option value="public">Public</option>
-                  <option value="private">Private</option>
-                </select>
               </div>
               
               <div>
@@ -170,7 +157,32 @@ const SchoolModal = ({
                 {formErrors.address && <p className="text-red-500 text-xs mt-1">{formErrors.address}</p>}
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Country *</label>
+                  <select
+                    className={`${inputBaseClass} ${formErrors.country ? 'border-red-300 focus:ring-red-500' : ''}`}
+                    value={schoolFormData.country}
+                    onChange={(e) => handleInputChange('country', e.target.value)}
+                    disabled={schoolModalMode === 'view'}
+                  >
+                    <option value="">Select Country</option>
+                    <option value="India">India</option>
+                    <option value="United States">United States</option>
+                    <option value="United Kingdom">United Kingdom</option>
+                    <option value="Canada">Canada</option>
+                    <option value="Australia">Australia</option>
+                    <option value="Germany">Germany</option>
+                    <option value="France">France</option>
+                    <option value="Japan">Japan</option>
+                    <option value="China">China</option>
+                    <option value="Singapore">Singapore</option>
+                    <option value="UAE">UAE</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  {formErrors.country && <p className="text-red-500 text-xs mt-1">{formErrors.country}</p>}
+                </div>
+                
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">State *</label>
                   <select

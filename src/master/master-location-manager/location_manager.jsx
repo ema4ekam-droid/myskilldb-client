@@ -1,52 +1,71 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import Navigation from '../../components/master-components/master-navigation/Navigation';
-import StatesList from '../../components/location-components/StatesList';
-import DistrictsList from '../../components/location-components/DistrictsList';
-import BoardsList from '../../components/location-components/BoardsList';
-import LocationTools from '../../components/location-components/LocationTools';
-import LocationsTable from '../../components/location-components/LocationsTable';
+import Navigation from '../../components/master-user-components/master-dashboard-components/master-navigation/Navigation';
+import CountryTable from '../../components/master-user-components/location-components/CountryTable';
+import StateTable from '../../components/master-user-components/location-components/StateTable';
+import DistrictTable from '../../components/master-user-components/location-components/DistrictTable';
+import SyllabusTable from '../../components/master-user-components/location-components/SyllabusTable';
+import StatsCards from '../../components/master-user-components/location-components/StatsCards';
 
 function LocationManager() {
   const API_BASE_URL = useMemo(() => 'http://localhost:5000/api', []);
 
   // --- STATE MANAGEMENT ---
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [selectedState, setSelectedState] = useState(null);
-  const [allLocationsData, setAllLocationsData] = useState([]);
-  const [filteredLocations, setFilteredLocations] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
   
-  // States and Districts
+  // Data arrays
+  const [countries, setCountries] = useState([]);
   const [states, setStates] = useState([]);
   const [districts, setDistricts] = useState([]);
-  const [boards, setBoards] = useState([]);
+  const [syllabi, setSyllabi] = useState([]);
   
-  // Form data
-  const [newStateName, setNewStateName] = useState('');
-  const [newDistrictName, setNewDistrictName] = useState('');
-  const [newBoardName, setNewBoardName] = useState('');
-  
-  // File upload
-  const [csvFile, setCsvFile] = useState(null);
+  // Filter states
+  const [selectedCountry, setSelectedCountry] = useState('');
+  const [selectedState, setSelectedState] = useState('');
   
   // Loading states
+  const [isLoadingCountries, setIsLoadingCountries] = useState(false);
   const [isLoadingStates, setIsLoadingStates] = useState(false);
   const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
-  const [isLoadingBoards, setIsLoadingBoards] = useState(false);
-  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+  const [isLoadingSyllabi, setIsLoadingSyllabi] = useState(false);
 
   // --- DERIVED STATE ---
-  const filteredStates = states.filter(state => 
-    state.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const totalCountries = countries.length;
+  const totalStates = states.length;
 
   // --- API CALLS ---
+  const fetchCountries = async () => {
+    setIsLoadingCountries(true);
+    try {
+      // Mock data - replace with actual API call
+      const mockCountries = [
+        { id: '1', name: 'India', code: 'IN' },
+        { id: '2', name: 'United States', code: 'US' },
+        { id: '3', name: 'United Kingdom', code: 'UK' },
+        { id: '4', name: 'Canada', code: 'CA' },
+        { id: '5', name: 'Australia', code: 'AU' }
+      ];
+      setCountries(mockCountries);
+    } catch (error) {
+      console.error('Failed to load countries:', error);
+    } finally {
+      setIsLoadingCountries(false);
+    }
+  };
+
   const fetchStates = async () => {
     setIsLoadingStates(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/locations/states`);
-      const data = await response.json();
-      setStates(data);
+      // Mock data - replace with actual API call
+      const mockStates = [
+        { id: '1', name: 'Karnataka', code: 'KA', countryId: '1' },
+        { id: '2', name: 'Tamil Nadu', code: 'TN', countryId: '1' },
+        { id: '3', name: 'Maharashtra', code: 'MH', countryId: '1' },
+        { id: '4', name: 'California', code: 'CA', countryId: '2' },
+        { id: '5', name: 'Texas', code: 'TX', countryId: '2' },
+        { id: '6', name: 'England', code: 'ENG', countryId: '3' },
+        { id: '7', name: 'Scotland', code: 'SCT', countryId: '3' }
+      ];
+      setStates(mockStates);
     } catch (error) {
       console.error('Failed to load states:', error);
     } finally {
@@ -54,13 +73,19 @@ function LocationManager() {
     }
   };
 
-  const fetchDistricts = async (state) => {
-    if (!state) return;
+  const fetchDistricts = async () => {
     setIsLoadingDistricts(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/locations/districts/${state}`);
-      const data = await response.json();
-      setDistricts(data);
+      // Mock data - replace with actual API call
+      const mockDistricts = [
+        { id: '1', name: 'Bangalore', code: 'BLR', stateId: '1', countryId: '1' },
+        { id: '2', name: 'Mysore', code: 'MYS', stateId: '1', countryId: '1' },
+        { id: '3', name: 'Chennai', code: 'CHN', stateId: '2', countryId: '1' },
+        { id: '4', name: 'Mumbai', code: 'MUM', stateId: '3', countryId: '1' },
+        { id: '5', name: 'Los Angeles', code: 'LA', stateId: '4', countryId: '2' },
+        { id: '6', name: 'Houston', code: 'HOU', stateId: '5', countryId: '2' }
+      ];
+      setDistricts(mockDistricts);
     } catch (error) {
       console.error('Failed to load districts:', error);
     } finally {
@@ -68,221 +93,189 @@ function LocationManager() {
     }
   };
 
-  const fetchBoards = async (state) => {
-    if (!state) return;
-    setIsLoadingBoards(true);
+  const fetchSyllabi = async () => {
+    setIsLoadingSyllabi(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/locations/boards/${state}`);
-      const data = await response.json();
-      setBoards(data);
+      // Mock data - replace with actual API call
+      const mockSyllabi = [
+        { id: '1', name: 'CBSE', code: 'CBSE', stateId: '1', countryId: '1' },
+        { id: '2', name: 'ICSE', code: 'ICSE', stateId: '2', countryId: '1' },
+        { id: '3', name: 'State Board', code: 'SB', stateId: '3', countryId: '1' },
+        { id: '4', name: 'Common Core', code: 'CC', stateId: '4', countryId: '2' },
+        { id: '5', name: 'A-Level', code: 'AL', stateId: '6', countryId: '3' }
+      ];
+      setSyllabi(mockSyllabi);
     } catch (error) {
-      console.error('Failed to load boards:', error);
+      console.error('Failed to load syllabi:', error);
     } finally {
-      setIsLoadingBoards(false);
-    }
-  };
-
-  const fetchAllLocations = async () => {
-    setIsLoadingLocations(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/locations/all`);
-      const data = await response.json();
-      setAllLocationsData(data);
-      setFilteredLocations(data);
-    } catch (error) {
-      console.error('Failed to load all locations:', error);
-    } finally {
-      setIsLoadingLocations(false);
+      setIsLoadingSyllabi(false);
     }
   };
 
   // --- EVENT HANDLERS ---
-  const handleStateSelect = (state) => {
-    setSelectedState(state);
-    fetchDistricts(state);
-    fetchBoards(state);
+  const handleCountryFilter = (countryId) => {
+    setSelectedCountry(countryId);
+    setSelectedState(''); // Reset state when country changes
   };
 
-  const handleAddState = async (e) => {
-    e.preventDefault();
-    if (!newStateName.trim()) return;
-    
+  const handleStateFilter = (stateId) => {
+    setSelectedState(stateId);
+  };
+
+  // Country handlers
+  const handleAddCountry = async (countryData) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/locations/state`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state: newStateName.trim() })
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error);
-      }
-      
-      setNewStateName('');
-      fetchStates();
-      fetchAllLocations();
+      // Mock API call - replace with actual
+      const newCountry = {
+        id: Date.now().toString(),
+        ...countryData
+      };
+      setCountries(prev => [...prev, newCountry]);
+      alert('Country added successfully!');
     } catch (error) {
       alert(`Error: ${error.message}`);
     }
   };
 
-  const handleAddDistrict = async (e) => {
-    e.preventDefault();
-    if (!newDistrictName.trim() || !selectedState) {
-      alert('Please select a state first.');
-      return;
-    }
-    
+  const handleEditCountry = async (countryId, countryData) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/locations/district`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state: selectedState, district: newDistrictName.trim() })
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error);
-      }
-      
-      setNewDistrictName('');
-      fetchDistricts(selectedState);
-      fetchAllLocations();
+      // Mock API call - replace with actual
+      setCountries(prev => prev.map(country => 
+        country.id === countryId ? { ...country, ...countryData } : country
+      ));
+      alert('Country updated successfully!');
     } catch (error) {
       alert(`Error: ${error.message}`);
     }
   };
 
-  const handleDeleteDistrict = async (district) => {
-    if (!selectedState) return;
-    
-    if (confirm(`Are you sure you want to delete the district "${district}" from ${selectedState}?`)) {
-      try {
-        const response = await fetch(`${API_BASE_URL}/locations/district`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ state: selectedState, district })
-        });
-        
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error);
-        }
-        
-        fetchDistricts(selectedState);
-        fetchAllLocations();
-      } catch (error) {
-        alert(`Error: ${error.message}`);
-      }
-    }
-  };
-
-  const handleAddBoard = async (e) => {
-    e.preventDefault();
-    if (!newBoardName.trim() || !selectedState) {
-      alert('Please select a state first.');
-      return;
-    }
-    
+  const handleDeleteCountry = async (countryId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/locations/board`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state: selectedState, board: newBoardName.trim() })
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error);
-      }
-      
-      setNewBoardName('');
-      fetchBoards(selectedState);
-      fetchAllLocations();
+      // Mock API call - replace with actual
+      setCountries(prev => prev.filter(country => country.id !== countryId));
+      alert('Country deleted successfully!');
     } catch (error) {
       alert(`Error: ${error.message}`);
     }
   };
 
-  const handleDeleteBoard = async (board) => {
-    if (!selectedState) return;
-    
-    if (confirm(`Are you sure you want to delete the board "${board}" from ${selectedState}?`)) {
-      try {
-        const response = await fetch(`${API_BASE_URL}/locations/board`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ state: selectedState, board })
-        });
-        
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error);
-        }
-        
-        fetchBoards(selectedState);
-        fetchAllLocations();
-      } catch (error) {
-        alert(`Error: ${error.message}`);
-      }
-    }
-  };
-
-  const handleBulkUpload = async () => {
-    if (!csvFile) {
-      alert('Please select a CSV file to upload.');
-      return;
-    }
-    
+  // State handlers
+  const handleAddState = async (stateData) => {
     try {
-      const fileText = await csvFile.text();
-      const response = await fetch(`${API_BASE_URL}/locations/bulk-upload`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ csvData: fileText })
-      });
-      
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error);
-      
-      alert(result.message);
-      setCsvFile(null);
-      fetchStates();
-      fetchAllLocations();
-      setSelectedState(null);
-      setDistricts([]);
+      // Mock API call - replace with actual
+      const newState = {
+        id: Date.now().toString(),
+        ...stateData
+      };
+      setStates(prev => [...prev, newState]);
+      alert('State added successfully!');
     } catch (error) {
       alert(`Error: ${error.message}`);
     }
   };
 
-  const handleSearchChange = (e) => {
-    const term = e.target.value;
-    setSearchTerm(term);
-    
-    const filtered = allLocationsData.filter(loc => 
-      loc.state.toLowerCase().includes(term.toLowerCase()) ||
-      loc.district.toLowerCase().includes(term.toLowerCase())
-    );
-    setFilteredLocations(filtered);
+  const handleEditState = async (stateId, stateData) => {
+    try {
+      // Mock API call - replace with actual
+      setStates(prev => prev.map(state => 
+        state.id === stateId ? { ...state, ...stateData } : state
+      ));
+      alert('State updated successfully!');
+    } catch (error) {
+      alert(`Error: ${error.message}`);
+    }
   };
 
-  const downloadTemplate = () => {
-    const csvContent = 'State,District\nKerala,Kozhikode\nKerala,Kochi\nPunjab,Amritsar';
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'location_template.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
+  const handleDeleteState = async (stateId) => {
+    try {
+      // Mock API call - replace with actual
+      setStates(prev => prev.filter(state => state.id !== stateId));
+      alert('State deleted successfully!');
+    } catch (error) {
+      alert(`Error: ${error.message}`);
+    }
+  };
+
+  // District handlers
+  const handleAddDistrict = async (districtData) => {
+    try {
+      // Mock API call - replace with actual
+      const newDistrict = {
+        id: Date.now().toString(),
+        ...districtData
+      };
+      setDistricts(prev => [...prev, newDistrict]);
+      alert('District added successfully!');
+    } catch (error) {
+      alert(`Error: ${error.message}`);
+    }
+  };
+
+  const handleEditDistrict = async (districtId, districtData) => {
+    try {
+      // Mock API call - replace with actual
+      setDistricts(prev => prev.map(district => 
+        district.id === districtId ? { ...district, ...districtData } : district
+      ));
+      alert('District updated successfully!');
+    } catch (error) {
+      alert(`Error: ${error.message}`);
+    }
+  };
+
+  const handleDeleteDistrict = async (districtId) => {
+    try {
+      // Mock API call - replace with actual
+      setDistricts(prev => prev.filter(district => district.id !== districtId));
+      alert('District deleted successfully!');
+    } catch (error) {
+      alert(`Error: ${error.message}`);
+    }
+  };
+
+  // Syllabus handlers
+  const handleAddSyllabus = async (syllabusData) => {
+    try {
+      // Mock API call - replace with actual
+      const newSyllabus = {
+        id: Date.now().toString(),
+        ...syllabusData
+      };
+      setSyllabi(prev => [...prev, newSyllabus]);
+      alert('Syllabus added successfully!');
+    } catch (error) {
+      alert(`Error: ${error.message}`);
+    }
+  };
+
+  const handleEditSyllabus = async (syllabusId, syllabusData) => {
+    try {
+      // Mock API call - replace with actual
+      setSyllabi(prev => prev.map(syllabus => 
+        syllabus.id === syllabusId ? { ...syllabus, ...syllabusData } : syllabus
+      ));
+      alert('Syllabus updated successfully!');
+    } catch (error) {
+      alert(`Error: ${error.message}`);
+    }
+  };
+
+  const handleDeleteSyllabus = async (syllabusId) => {
+    try {
+      // Mock API call - replace with actual
+      setSyllabi(prev => prev.filter(syllabus => syllabus.id !== syllabusId));
+      alert('Syllabus deleted successfully!');
+    } catch (error) {
+      alert(`Error: ${error.message}`);
+    }
   };
 
   // --- EFFECTS ---
   useEffect(() => {
+    fetchCountries();
     fetchStates();
-    fetchAllLocations();
+    fetchDistricts();
+    fetchSyllabi();
   }, []);
 
   useEffect(() => {
@@ -339,57 +332,62 @@ function LocationManager() {
             </div>
           </header>
 
-          {/* Top Section: Interactive Management */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Column 1: States List */}
-            <StatesList
+          {/* First Row: Statistics Cards */}
+          <StatsCards
+            totalCountries={totalCountries}
+            totalStates={totalStates}
+          />
+
+          {/* Second Row: Country and State Tables */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Country Table */}
+            <CountryTable
+              countries={countries}
+              onAddCountry={handleAddCountry}
+              onEditCountry={handleEditCountry}
+              onDeleteCountry={handleDeleteCountry}
+              isLoading={isLoadingCountries}
+            />
+
+            {/* State Table */}
+            <StateTable
               states={states}
-              selectedState={selectedState}
-              isLoadingStates={isLoadingStates}
-              onStateSelect={handleStateSelect}
-            />
-
-            {/* Column 2: Districts List */}
-            <DistrictsList
-              selectedState={selectedState}
-              districts={districts}
-              isLoadingDistricts={isLoadingDistricts}
-              newDistrictName={newDistrictName}
-              onDistrictNameChange={setNewDistrictName}
-              onAddDistrict={handleAddDistrict}
-              onDeleteDistrict={handleDeleteDistrict}
-            />
-
-            {/* Column 3: Boards List */}
-            <BoardsList
-              selectedState={selectedState}
-              boards={boards}
-              isLoadingBoards={isLoadingBoards}
-              newBoardName={newBoardName}
-              onBoardNameChange={setNewBoardName}
-              onAddBoard={handleAddBoard}
-              onDeleteBoard={handleDeleteBoard}
-            />
-
-            {/* Column 4: Tools */}
-            <LocationTools
-              newStateName={newStateName}
-              onStateNameChange={setNewStateName}
+              countries={countries}
+              selectedCountry={selectedCountry}
+              onCountryFilter={handleCountryFilter}
               onAddState={handleAddState}
-              onDownloadTemplate={downloadTemplate}
-              csvFile={csvFile}
-              onFileChange={(e) => setCsvFile(e.target.files[0])}
-              onBulkUpload={handleBulkUpload}
+              onEditState={handleEditState}
+              onDeleteState={handleDeleteState}
+              isLoading={isLoadingStates}
             />
           </div>
 
-          {/* All Locations Table */}
-          <LocationsTable
-            filteredLocations={filteredLocations}
-            isLoadingLocations={isLoadingLocations}
-            searchTerm={searchTerm}
-            onSearchChange={handleSearchChange}
-          />
+          {/* Third Row: District and Syllabus Tables */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* District Table */}
+            <DistrictTable
+              districts={districts}
+              countries={countries}
+              states={states}
+              selectedCountry={selectedCountry}
+              selectedState={selectedState}
+              onCountryFilter={handleCountryFilter}
+              onStateFilter={handleStateFilter}
+              onAddDistrict={handleAddDistrict}
+              onEditDistrict={handleEditDistrict}
+              onDeleteDistrict={handleDeleteDistrict}
+              isLoading={isLoadingDistricts}
+            />
+
+            {/* Syllabus Table */}
+            <SyllabusTable
+              syllabi={syllabi}
+              onAddSyllabus={handleAddSyllabus}
+              onEditSyllabus={handleEditSyllabus}
+              onDeleteSyllabus={handleDeleteSyllabus}
+              isLoading={isLoadingSyllabi}
+            />
+          </div>
 
         </main>
       </div>

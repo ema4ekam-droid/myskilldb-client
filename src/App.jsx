@@ -2,7 +2,7 @@ import './App.css'
 import Login from './login/login.jsx'
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import MasterDashboard from './master/master-dashboard/master_dashboard.jsx';
-import Schools from './master/schools/schools.jsx';
+import Schools from './master/master-school-manage/schools.jsx';
 import LocationManager from './master/master-location-manager/location_manager.jsx';
 
 function App() {

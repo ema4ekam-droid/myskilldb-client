@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import Navigation from '../../components/master-components/master-navigation/Navigation';
-import SchoolModal from '../../components/master-components/master-modal/SchoolModal';
-import ConfirmModal from '../../components/master-components/master-modal/ConfirmModal';
+import Navigation from '../../components/master-user-components/master-dashboard-components/master-navigation/Navigation';
+import SchoolModal from '../../components/master-user-components/master-dashboard-components/master-modal/SchoolModal';
+import ConfirmModal from '../../components/master-user-components/master-dashboard-components/master-modal/ConfirmModal';
 
 // NOTE: Ensure you have Font Awesome included in your project for these icons to work.
 // For example, in your public/index.html:
@@ -41,10 +41,10 @@ function MasterDashboard() {
     mobileNumber: '',
     alternateEmail: '',
     address: '',
+    country: '',
     state: '',
     district: '',
     pincode: '',
-    schoolType: 'public',
     boardAffiliation: '',
     establishedYear: '',
     totalStudents: '',
@@ -120,6 +120,7 @@ function MasterDashboard() {
     if (!schoolFormData.mobileNumber.trim()) errors.mobileNumber = 'Mobile number is required';
     else if (!/^[0-9]{10}$/.test(schoolFormData.mobileNumber.replace(/\D/g, ''))) errors.mobileNumber = 'Please enter a valid 10-digit mobile number';
     if (!schoolFormData.address.trim()) errors.address = 'Address is required';
+    if (!schoolFormData.country.trim()) errors.country = 'Country is required';
     if (!schoolFormData.state.trim()) errors.state = 'State is required';
     if (!schoolFormData.district.trim()) errors.district = 'District is required';
     if (!schoolFormData.pincode.trim()) errors.pincode = 'Pincode is required';
@@ -137,10 +138,10 @@ function MasterDashboard() {
       mobileNumber: '',
       alternateEmail: '',
       address: '',
+      country: '',
       state: '',
       district: '',
       pincode: '',
-      schoolType: 'public',
       boardAffiliation: '',
       establishedYear: '',
       totalStudents: '',
@@ -191,10 +192,10 @@ function MasterDashboard() {
         admin_name: schoolFormData.adminName,
         mobile_number: schoolFormData.mobileNumber,
         address: schoolFormData.address,
+        country: schoolFormData.country,
         state: schoolFormData.state,
         district: schoolFormData.district,
         pincode: schoolFormData.pincode,
-        school_type: schoolFormData.schoolType,
         board_affiliation: schoolFormData.boardAffiliation,
         established_year: schoolFormData.establishedYear,
         total_students: schoolFormData.totalStudents,
@@ -233,10 +234,10 @@ function MasterDashboard() {
         mobileNumber: school.mobile_number || '',
         alternateEmail: school.alternate_email || '',
         address: school.address || '',
+        country: school.country || '',
         state: school.state || '',
         district: school.district || '',
         pincode: school.pincode || '',
-        schoolType: school.school_type || 'public',
         boardAffiliation: school.board_affiliation || '',
         establishedYear: school.established_year || '',
         totalStudents: school.total_students || '',
