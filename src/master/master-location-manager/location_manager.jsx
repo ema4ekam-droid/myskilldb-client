@@ -1,27 +1,28 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import Navigation from '../../components/master-user-components/master-dashboard-components/master-navigation/Navigation';
-import CountryTable from '../../components/master-user-components/location-components/CountryTable';
-import StateTable from '../../components/master-user-components/location-components/StateTable';
-import DistrictTable from '../../components/master-user-components/location-components/DistrictTable';
-import SyllabusTable from '../../components/master-user-components/location-components/SyllabusTable';
-import StatsCards from '../../components/master-user-components/location-components/StatsCards';
+import React, { useEffect, useMemo, useState } from "react";
+import Navigation from "../../components/master-user-components/master-dashboard-components/master-navigation/Navigation";
+import CountryTable from "../../components/master-user-components/location-components/CountryTable";
+import StateTable from "../../components/master-user-components/location-components/StateTable";
+import DistrictTable from "../../components/master-user-components/location-components/DistrictTable";
+import SyllabusTable from "../../components/master-user-components/location-components/SyllabusTable";
+import StatsCards from "../../components/master-user-components/location-components/StatsCards";
+import axios from "axios";
 
 function LocationManager() {
-  const API_BASE_URL = useMemo(() => 'http://localhost:5000/api', []);
+  const API_BASE_URL = useMemo(() => "http://localhost:5000/api", []);
 
   // --- STATE MANAGEMENT ---
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  
+
   // Data arrays
   const [countries, setCountries] = useState([]);
   const [states, setStates] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [syllabi, setSyllabi] = useState([]);
-  
+
   // Filter states
-  const [selectedCountry, setSelectedCountry] = useState('');
-  const [selectedState, setSelectedState] = useState('');
-  
+  const [selectedCountry, setSelectedCountry] = useState("");
+  const [selectedState, setSelectedState] = useState("");
+
   // Loading states
   const [isLoadingCountries, setIsLoadingCountries] = useState(false);
   const [isLoadingStates, setIsLoadingStates] = useState(false);
@@ -32,21 +33,16 @@ function LocationManager() {
   const totalCountries = countries.length;
   const totalStates = states.length;
 
-  // --- API CALLS ---
+  // =========================
+  // API CALLS
+  // =========================
   const fetchCountries = async () => {
     setIsLoadingCountries(true);
     try {
-      // Mock data - replace with actual API call
-      const mockCountries = [
-        { id: '1', name: 'India', code: 'IN' },
-        { id: '2', name: 'United States', code: 'US' },
-        { id: '3', name: 'United Kingdom', code: 'UK' },
-        { id: '4', name: 'Canada', code: 'CA' },
-        { id: '5', name: 'Australia', code: 'AU' }
-      ];
-      setCountries(mockCountries);
+      const response = await axios.get(`${API_BASE_URL}/locations/countries`);
+      setCountries(response.data.data);
     } catch (error) {
-      console.error('Failed to load countries:', error);
+      handleApiError("fetching countries", error);
     } finally {
       setIsLoadingCountries(false);
     }
@@ -55,19 +51,10 @@ function LocationManager() {
   const fetchStates = async () => {
     setIsLoadingStates(true);
     try {
-      // Mock data - replace with actual API call
-      const mockStates = [
-        { id: '1', name: 'Karnataka', code: 'KA', countryId: '1' },
-        { id: '2', name: 'Tamil Nadu', code: 'TN', countryId: '1' },
-        { id: '3', name: 'Maharashtra', code: 'MH', countryId: '1' },
-        { id: '4', name: 'California', code: 'CA', countryId: '2' },
-        { id: '5', name: 'Texas', code: 'TX', countryId: '2' },
-        { id: '6', name: 'England', code: 'ENG', countryId: '3' },
-        { id: '7', name: 'Scotland', code: 'SCT', countryId: '3' }
-      ];
-      setStates(mockStates);
+      const response = await axios.get(`${API_BASE_URL}/locations/states/all`);
+      setStates(response.data.data);
     } catch (error) {
-      console.error('Failed to load states:', error);
+      handleApiError("fetching states", error);
     } finally {
       setIsLoadingStates(false);
     }
@@ -76,18 +63,12 @@ function LocationManager() {
   const fetchDistricts = async () => {
     setIsLoadingDistricts(true);
     try {
-      // Mock data - replace with actual API call
-      const mockDistricts = [
-        { id: '1', name: 'Bangalore', code: 'BLR', stateId: '1', countryId: '1' },
-        { id: '2', name: 'Mysore', code: 'MYS', stateId: '1', countryId: '1' },
-        { id: '3', name: 'Chennai', code: 'CHN', stateId: '2', countryId: '1' },
-        { id: '4', name: 'Mumbai', code: 'MUM', stateId: '3', countryId: '1' },
-        { id: '5', name: 'Los Angeles', code: 'LA', stateId: '4', countryId: '2' },
-        { id: '6', name: 'Houston', code: 'HOU', stateId: '5', countryId: '2' }
-      ];
-      setDistricts(mockDistricts);
+      const response = await axios.get(
+        `${API_BASE_URL}/locations/districts/country/all`
+      );
+      setDistricts(response.data.data);
     } catch (error) {
-      console.error('Failed to load districts:', error);
+      handleApiError("fetching districts", error);
     } finally {
       setIsLoadingDistricts(false);
     }
@@ -96,181 +77,152 @@ function LocationManager() {
   const fetchSyllabi = async () => {
     setIsLoadingSyllabi(true);
     try {
-      // Mock data - replace with actual API call
-      const mockSyllabi = [
-        { id: '1', name: 'CBSE', code: 'CBSE', stateId: '1', countryId: '1' },
-        { id: '2', name: 'ICSE', code: 'ICSE', stateId: '2', countryId: '1' },
-        { id: '3', name: 'State Board', code: 'SB', stateId: '3', countryId: '1' },
-        { id: '4', name: 'Common Core', code: 'CC', stateId: '4', countryId: '2' },
-        { id: '5', name: 'A-Level', code: 'AL', stateId: '6', countryId: '3' }
-      ];
-      setSyllabi(mockSyllabi);
+      const response = await axios.get(`${API_BASE_URL}/locations/syllabi`);
+      setSyllabi(response.data.data);
     } catch (error) {
-      console.error('Failed to load syllabi:', error);
+      handleApiError("fetching syllabi", error);
     } finally {
       setIsLoadingSyllabi(false);
     }
   };
 
-  // --- EVENT HANDLERS ---
-  const handleCountryFilter = (countryId) => {
-    setSelectedCountry(countryId);
-    setSelectedState(''); // Reset state when country changes
-  };
+  // =========================
+  // CRUD HANDLERS
+  // =========================
 
-  const handleStateFilter = (stateId) => {
-    setSelectedState(stateId);
-  };
-
-  // Country handlers
-  const handleAddCountry = async (countryData) => {
+  // Countries
+  const handleAddCountry = async (data) => {
     try {
-      // Mock API call - replace with actual
-      const newCountry = {
-        id: Date.now().toString(),
-        ...countryData
-      };
-      setCountries(prev => [...prev, newCountry]);
-      alert('Country added successfully!');
+      const response = await axios.post(
+        `${API_BASE_URL}/locations/countries`,
+        data
+      );
+      setCountries((prev) => [...prev, response.data.data]);
+      alert("Country added successfully!");
     } catch (error) {
-      alert(`Error: ${error.message}`);
+      handleApiError("adding country", error, true);
     }
   };
 
-  const handleEditCountry = async (countryId, countryData) => {
+  const handleEditCountry = async (id, data) => {
     try {
-      // Mock API call - replace with actual
-      setCountries(prev => prev.map(country => 
-        country.id === countryId ? { ...country, ...countryData } : country
-      ));
-      alert('Country updated successfully!');
+      const response = await axios.put(
+        `${API_BASE_URL}/locations/countries/${id}`,
+        data
+      );
+      setCountries((prev) =>
+        prev.map((c) => (c._id === id ? response.data.data : c))
+      );
+      alert("Country updated successfully!");
     } catch (error) {
-      alert(`Error: ${error.message}`);
+      handleApiError("updating country", error, true);
     }
   };
 
-  const handleDeleteCountry = async (countryId) => {
+  const handleDeleteCountry = async (id) => {
     try {
-      // Mock API call - replace with actual
-      setCountries(prev => prev.filter(country => country.id !== countryId));
-      alert('Country deleted successfully!');
+      await axios.delete(`${API_BASE_URL}/locations/countries/${id}`);
+      setCountries((prev) => prev.filter((c) => c._id !== id));
+      alert("Country deleted successfully!");
     } catch (error) {
-      alert(`Error: ${error.message}`);
+      handleApiError("deleting country", error, true);
     }
   };
 
-  // State handlers
-  const handleAddState = async (stateData) => {
+  // States
+  const handleAddState = async (data) => {
     try {
-      // Mock API call - replace with actual
-      const newState = {
-        id: Date.now().toString(),
-        ...stateData
-      };
-      setStates(prev => [...prev, newState]);
-      alert('State added successfully!');
+      const response = await axios.post(`${API_BASE_URL}/locations/states`, data);
+      setStates((prev) => [...prev, response.data.data]);
+      alert("State added successfully!");
     } catch (error) {
-      alert(`Error: ${error.message}`);
+      handleApiError("adding state", error, true);
     }
   };
 
-  const handleEditState = async (stateId, stateData) => {
+  const handleEditState = async (id, data) => {
     try {
-      // Mock API call - replace with actual
-      setStates(prev => prev.map(state => 
-        state.id === stateId ? { ...state, ...stateData } : state
-      ));
-      alert('State updated successfully!');
+      const response = await axios.put(
+        `${API_BASE_URL}/locations/states/${id}`,
+        data
+      );
+      setStates((prev) =>
+        prev.map((s) => (s._id === id ? response.data.data : s))
+      );
+      alert("State updated successfully!");
     } catch (error) {
-      alert(`Error: ${error.message}`);
+      handleApiError("updating state", error, true);
     }
   };
 
-  const handleDeleteState = async (stateId) => {
+  const handleDeleteState = async (id) => {
     try {
-      // Mock API call - replace with actual
-      setStates(prev => prev.filter(state => state.id !== stateId));
-      alert('State deleted successfully!');
+      await axios.delete(`${API_BASE_URL}/locations/states/${id}`);
+      setStates((prev) => prev.filter((s) => s._id !== id));
+      alert("State deleted successfully!");
     } catch (error) {
-      alert(`Error: ${error.message}`);
+      handleApiError("deleting state", error, true);
     }
   };
 
-  // District handlers
-  const handleAddDistrict = async (districtData) => {
+  // Districts
+  const handleAddDistrict = async (data) => {
     try {
-      // Mock API call - replace with actual
-      const newDistrict = {
-        id: Date.now().toString(),
-        ...districtData
-      };
-      setDistricts(prev => [...prev, newDistrict]);
-      alert('District added successfully!');
+      const response = await axios.post(
+        `${API_BASE_URL}/locations/districts`,
+        data
+      );
+      setDistricts((prev) => [...prev, response.data.data]);
+      alert("District added successfully!");
     } catch (error) {
-      alert(`Error: ${error.message}`);
+      handleApiError("adding district", error, true);
     }
   };
 
-  const handleEditDistrict = async (districtId, districtData) => {
+  const handleEditDistrict = async (id, data) => {
     try {
-      // Mock API call - replace with actual
-      setDistricts(prev => prev.map(district => 
-        district.id === districtId ? { ...district, ...districtData } : district
-      ));
-      alert('District updated successfully!');
+      const response = await axios.put(
+        `${API_BASE_URL}/locations/districts/${id}`,
+        data
+      );
+      setDistricts((prev) =>
+        prev.map((d) => (d._id === id ? response.data.data : d))
+      );
+      alert("District updated successfully!");
     } catch (error) {
-      alert(`Error: ${error.message}`);
+      handleApiError("updating district", error, true);
     }
   };
 
-  const handleDeleteDistrict = async (districtId) => {
+  const handleDeleteDistrict = async (id) => {
     try {
-      // Mock API call - replace with actual
-      setDistricts(prev => prev.filter(district => district.id !== districtId));
-      alert('District deleted successfully!');
+      await axios.delete(`${API_BASE_URL}/locations/districts/${id}`);
+      setDistricts((prev) => prev.filter((d) => d._id !== id));
+      alert("District deleted successfully!");
     } catch (error) {
-      alert(`Error: ${error.message}`);
+      handleApiError("deleting district", error, true);
     }
   };
 
-  // Syllabus handlers
-  const handleAddSyllabus = async (syllabusData) => {
-    try {
-      // Mock API call - replace with actual
-      const newSyllabus = {
-        id: Date.now().toString(),
-        ...syllabusData
-      };
-      setSyllabi(prev => [...prev, newSyllabus]);
-      alert('Syllabus added successfully!');
-    } catch (error) {
-      alert(`Error: ${error.message}`);
+  // =========================
+  // HELPERS
+  // =========================
+  const handleApiError = (action, error, showAlert = false) => {
+    let msg = "";
+    if (error.response) {
+      msg = error.response.data.message || error.response.statusText;
+    } else if (error.request) {
+      msg = "No response from server.";
+    } else {
+      msg = error.message;
     }
+    console.error(`Error ${action}:`, msg);
+    if (showAlert) alert(`Error ${action}: ${msg}`);
   };
 
-  const handleEditSyllabus = async (syllabusId, syllabusData) => {
-    try {
-      // Mock API call - replace with actual
-      setSyllabi(prev => prev.map(syllabus => 
-        syllabus.id === syllabusId ? { ...syllabus, ...syllabusData } : syllabus
-      ));
-      alert('Syllabus updated successfully!');
-    } catch (error) {
-      alert(`Error: ${error.message}`);
-    }
-  };
-
-  const handleDeleteSyllabus = async (syllabusId) => {
-    try {
-      // Mock API call - replace with actual
-      setSyllabi(prev => prev.filter(syllabus => syllabus.id !== syllabusId));
-      alert('Syllabus deleted successfully!');
-    } catch (error) {
-      alert(`Error: ${error.message}`);
-    }
-  };
-
-  // --- EFFECTS ---
+  // =========================
+  // EFFECTS
+  // =========================
   useEffect(() => {
     fetchCountries();
     fetchStates();
@@ -278,69 +230,41 @@ function LocationManager() {
     fetchSyllabi();
   }, []);
 
-  useEffect(() => {
-    const onWindowClick = (e) => {
-      const menuButton = document.getElementById('profile-button');
-      const menu = document.getElementById('profile-menu');
-      if (isUserMenuOpen && menuButton && menu && !menuButton.contains(e.target) && !menu.contains(e.target)) {
-        setIsUserMenuOpen(false);
-      }
-    };
-    window.addEventListener('click', onWindowClick);
-    return () => window.removeEventListener('click', onWindowClick);
-  }, [isUserMenuOpen]);
-
-  // Navigation handler
-  const handlePageChange = (pageId) => {
-    console.log(`Navigating to: ${pageId}`);
+  // --- UI Handlers ---
+  const handleCountryFilter = (countryId) => {
+    setSelectedCountry(countryId);
+    setSelectedState(""); // reset state filter when country changes
   };
 
-  // Base component styles
-  const inputBaseClass = "w-full bg-slate-100 border-slate-200 rounded-md p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-200 disabled:cursor-not-allowed";
-  const btnBaseClass = "font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors transform active:scale-95";
-  const btnTealClass = `${btnBaseClass} bg-teal-500 hover:bg-teal-600 text-white`;
-  const btnIndigoClass = `${btnBaseClass} bg-indigo-500 hover:bg-indigo-600 text-white`;
-  const btnRoseClass = `${btnBaseClass} bg-rose-500 hover:bg-rose-600 text-white`;
-  const btnSlateClass = `${btnBaseClass} bg-slate-200 hover:bg-slate-300 text-slate-800`;
+  const handleStateFilter = (stateId) => setSelectedState(stateId);
 
   return (
     <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
-      {/* Navigation Component */}
-      <Navigation currentPage="location-manager" onPageChange={handlePageChange} />
-      
-      {/* Main Content with offset for sidebar */}
+      {/* Navigation */}
+      <Navigation
+        currentPage="location-manager"
+        onPageChange={(p) => console.log(`Navigating to: ${p}`)}
+      />
+
       <div className="lg:ml-72">
         <main id="mainContent" className="flex-1 p-4 md:p-8 space-y-8">
-          
+          {/* Header */}
           <header className="flex justify-between items-center flex-wrap gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Location Data Management</h1>
-              <p className="text-slate-500 text-sm">Manage states, districts, and location data</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <button id="profile-button" onClick={() => setIsUserMenuOpen(v => !v)}>
-                  <img src="https://api.dicebear.com/8.x/initials/svg?seed=Master+Admin" className="w-14 h-14 rounded-full border-2 border-white object-cover shadow-md hover:ring-2 hover:ring-indigo-400 transition-all" alt="Admin Profile" />
-                </button>
-                {isUserMenuOpen && (
-                  <div id="profile-menu" className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-lg shadow-xl z-20">
-                    <a href="#" className="flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-100"><i className="fas fa-plus w-4 text-slate-500"></i> School Sign Up Page</a>
-                    <a href="#" className="flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-slate-100 border-t border-slate-200"><i className="fas fa-sign-out-alt w-4 text-red-500"></i> Logout</a>
-                  </div>
-                )}
-              </div>
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
+                Location Data Management
+              </h1>
+              <p className="text-slate-500 text-sm">
+                Manage countries, states, districts, and syllabi
+              </p>
             </div>
           </header>
 
-          {/* First Row: Statistics Cards */}
-          <StatsCards
-            totalCountries={totalCountries}
-            totalStates={totalStates}
-          />
+          {/* Stats */}
+          <StatsCards totalCountries={totalCountries} totalStates={totalStates} />
 
-          {/* Second Row: Country and State Tables */}
+          {/* Country + State */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Country Table */}
             <CountryTable
               countries={countries}
               onAddCountry={handleAddCountry}
@@ -348,8 +272,6 @@ function LocationManager() {
               onDeleteCountry={handleDeleteCountry}
               isLoading={isLoadingCountries}
             />
-
-            {/* State Table */}
             <StateTable
               states={states}
               countries={countries}
@@ -362,9 +284,8 @@ function LocationManager() {
             />
           </div>
 
-          {/* Third Row: District and Syllabus Tables */}
+          {/* District + Syllabus */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* District Table */}
             <DistrictTable
               districts={districts}
               countries={countries}
@@ -378,17 +299,18 @@ function LocationManager() {
               onDeleteDistrict={handleDeleteDistrict}
               isLoading={isLoadingDistricts}
             />
-
-            {/* Syllabus Table */}
             <SyllabusTable
               syllabi={syllabi}
-              onAddSyllabus={handleAddSyllabus}
-              onEditSyllabus={handleEditSyllabus}
-              onDeleteSyllabus={handleDeleteSyllabus}
+              onAddSyllabus={(d) => setSyllabi((p) => [...p, d])}
+              onEditSyllabus={(id, d) =>
+                setSyllabi((p) => p.map((s) => (s._id === id ? d : s)))
+              }
+              onDeleteSyllabus={(id) =>
+                setSyllabi((p) => p.filter((s) => s._id !== id))
+              }
               isLoading={isLoadingSyllabi}
             />
           </div>
-
         </main>
       </div>
     </div>
