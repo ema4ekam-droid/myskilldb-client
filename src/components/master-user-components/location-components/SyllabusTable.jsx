@@ -3,50 +3,64 @@ import React, { useState } from 'react';
 const SyllabusTable = ({ 
   syllabi, 
   onAddSyllabus, 
-  onEditSyllabus, 
   onDeleteSyllabus, 
   isLoading 
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingSyllabus, setEditingSyllabus] = useState(null);
-  const [formData, setFormData] = useState({ name: '', code: '' });
+  const [formData, setFormData] = useState({ name: '' });
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (editingSyllabus) {
-      onEditSyllabus(editingSyllabus.id, formData);
-    } else {
-      onAddSyllabus(formData);
+    
+    // Validate form data
+    if (!formData.name.trim()) {
+      alert('Please enter a syllabus name');
+      return;
     }
-    setIsModalOpen(false);
-    setFormData({ name: '', code: '' });
-    setEditingSyllabus(null);
-  };
 
-  const handleEdit = (syllabus) => {
-    setEditingSyllabus(syllabus);
-    setFormData({ name: syllabus.name, code: syllabus.code });
-    setIsModalOpen(true);
+    // Check for duplicate names
+    const duplicateName = syllabi.find(s => 
+      s.name.toLowerCase() === formData.name.toLowerCase()
+    );
+    
+    if (duplicateName) {
+      alert('A syllabus with this name already exists');
+      return;
+    }
+
+    onAddSyllabus(formData);
+    handleCloseModal();
   };
 
   const handleDelete = (syllabusId) => {
-    if (confirm('Are you sure you want to delete this syllabus?')) {
+    if (window.confirm('Are you sure you want to delete this syllabus? This action cannot be undone.')) {
       onDeleteSyllabus(syllabusId);
     }
   };
 
-  // No filtering for syllabus table - show all syllabi
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setFormData({ name: '' });
+  };
+
+  const handleInputChange = (value) => {
+    setFormData({ name: value });
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
       <div className="p-4 border-b border-slate-200">
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold text-slate-900">Syllabus/Universities</h3>
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900">Syllabus/Universities</h3>
+            <p className="text-sm text-slate-500">Total: {syllabi.length}</p>
+          </div>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold px-3 py-2 rounded-lg text-sm transition-colors"
+            className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2"
+            disabled={isLoading}
           >
-            <i className="fas fa-plus mr-2"></i>Add Syllabus
+            <i className="fas fa-plus"></i>Add Syllabus
           </button>
         </div>
       </div>
@@ -56,36 +70,44 @@ const SyllabusTable = ({
           <thead className="bg-slate-50 text-slate-500">
             <tr>
               <th className="p-3 text-left font-semibold">Syllabus Name</th>
-              <th className="p-3 text-left font-semibold">Code</th>
               <th className="p-3 text-center font-semibold">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {syllabi.length > 0 ? syllabi.map((syllabus) => (
-              <tr key={syllabus.id} className="hover:bg-slate-50">
-                <td className="p-3 font-medium text-slate-900">{syllabus.name}</td>
-                <td className="p-3 text-slate-600">{syllabus.code}</td>
-                <td className="p-3 text-center">
-                  <div className="flex justify-center gap-2">
-                    <button
-                      onClick={() => handleEdit(syllabus)}
-                      className="text-indigo-600 hover:text-indigo-800 text-sm"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(syllabus.id)}
-                      className="text-red-600 hover:text-red-800 text-sm"
-                    >
-                      Delete
-                    </button>
+            {isLoading ? (
+              <tr>
+                <td colSpan="2" className="text-center p-6 text-slate-500">
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-500"></div>
+                    Loading syllabi...
                   </div>
                 </td>
               </tr>
-            )) : (
+            ) : syllabi.length > 0 ? (
+              syllabi.map((syllabus) => (
+                <tr key={syllabus.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="p-3 font-medium text-slate-900">{syllabus.name}</td>
+                  <td className="p-3 text-center">
+                    <div className="flex justify-center gap-2">
+                      <button
+                        onClick={() => handleDelete(syllabus.id)}
+                        className="text-red-600 hover:text-red-800 text-sm font-medium transition-colors"
+                        disabled={isLoading}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
               <tr>
-                <td colSpan="3" className="text-center p-6 text-slate-500">
-                  {isLoading ? 'Loading...' : 'No syllabi found'}
+                <td colSpan="2" className="text-center p-8 text-slate-500">
+                  <div className="flex flex-col items-center gap-2">
+                    <i className="fas fa-book text-3xl text-slate-300"></i>
+                    <p>No syllabi found</p>
+                    <p className="text-xs">Click "Add Syllabus" to get started</p>
+                  </div>
                 </td>
               </tr>
             )}
@@ -96,53 +118,55 @@ const SyllabusTable = ({
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md border border-slate-200">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md border border-slate-200 max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-slate-200">
-              <h3 className="text-lg font-semibold text-slate-900">
-                {editingSyllabus ? 'Edit Syllabus' : 'Add New Syllabus'}
-              </h3>
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-slate-900">
+                  Add New Syllabus
+                </h3>
+                <button
+                  onClick={handleCloseModal}
+                  className="text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <i className="fas fa-times text-lg"></i>
+                </button>
+              </div>
             </div>
+            
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Syllabus Name *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Syllabus Name <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full bg-slate-100 border-slate-200 rounded-md p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                  placeholder="e.g., CBSE, ICSE, State Board"
+                  onChange={(e) => handleInputChange(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                  placeholder="e.g., Central Board of Secondary Education"
                   required
+                  maxLength="100"
                 />
+                <div className="text-xs text-slate-500 mt-1">
+                  {formData.name.length}/100 characters
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Code *</label>
-                <input
-                  type="text"
-                  value={formData.code}
-                  onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
-                  className="w-full bg-slate-100 border-slate-200 rounded-md p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                  placeholder="e.g., CBSE, ICSE, SB"
-                  maxLength="5"
-                  required
-                />
-              </div>
+              
               <div className="flex justify-end gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setFormData({ name: '', code: '' });
-                    setEditingSyllabus(null);
-                  }}
-                  className="px-4 py-2 border border-slate-300 text-slate-700 font-semibold rounded-lg text-sm hover:bg-slate-50"
+                  onClick={handleCloseModal}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 font-medium rounded-lg text-sm hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg text-sm"
+                  className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-lg text-sm transition-colors flex items-center gap-2"
+                  disabled={isLoading}
                 >
-                  {editingSyllabus ? 'Update' : 'Add'} Syllabus
+                  {isLoading && <div className="animate-spin rounded-full h-3 w-3 border-b border-white"></div>}
+                  Add Syllabus
                 </button>
               </div>
             </form>

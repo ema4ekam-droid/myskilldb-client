@@ -77,10 +77,25 @@ function LocationManager() {
   const fetchSyllabi = async () => {
     setIsLoadingSyllabi(true);
     try {
-      const response = await axios.get(`${API_BASE_URL}/locations/syllabi`);
-      setSyllabi(response.data.data);
+      const response = await axios.get(`${API_BASE_URL}/system-manager/Syllabus`);
+      if (response.data.success && response.data.data) {
+        // Convert values array to syllabus objects
+        const parsedSyllabi = response.data.data.values.map((name, index) => ({
+          id: index + 1, // Generate sequential ID
+          name: name
+        }));
+        
+        setSyllabi(parsedSyllabi);
+      } else {
+        setSyllabi([]);
+      }
     } catch (error) {
-      handleApiError("fetching syllabi", error);
+      if (error.response?.status === 404) {
+        // No syllabi found yet
+        setSyllabi([]);
+      } else {
+        handleApiError("fetching syllabi", error);
+      }
     } finally {
       setIsLoadingSyllabi(false);
     }
@@ -204,6 +219,43 @@ function LocationManager() {
     }
   };
 
+  // Syllabi (Using SystemSetting API)
+  const handleAddSyllabus = async (data) => {
+    try {
+      await axios.post(`${API_BASE_URL}/system-manager/Syllabus`, {
+        value: data.name
+      });
+      
+      // Refresh syllabi list
+      await fetchSyllabi();
+      alert("Syllabus added successfully!");
+    } catch (error) {
+      handleApiError("adding syllabus", error, true);
+    }
+  };
+
+  const handleDeleteSyllabus = async (id) => {
+    try {
+      // Find the syllabus to delete
+      const syllabusToDelete = syllabi.find(s => s.id === id);
+      if (!syllabusToDelete) {
+        alert("Syllabus not found!");
+        return;
+      }
+
+      // Call patch endpoint to remove the syllabus
+      await axios.patch(`${API_BASE_URL}/system-manager/Syllabus`, {
+        value: syllabusToDelete.name
+      });
+      
+      // Refresh syllabi list
+      await fetchSyllabi();
+      alert("Syllabus deleted successfully!");
+    } catch (error) {
+      handleApiError("deleting syllabus", error, true);
+    }
+  };
+
   // =========================
   // HELPERS
   // =========================
@@ -301,13 +353,8 @@ function LocationManager() {
             />
             <SyllabusTable
               syllabi={syllabi}
-              onAddSyllabus={(d) => setSyllabi((p) => [...p, d])}
-              onEditSyllabus={(id, d) =>
-                setSyllabi((p) => p.map((s) => (s._id === id ? d : s)))
-              }
-              onDeleteSyllabus={(id) =>
-                setSyllabi((p) => p.filter((s) => s._id !== id))
-              }
+              onAddSyllabus={handleAddSyllabus}
+              onDeleteSyllabus={handleDeleteSyllabus}
               isLoading={isLoadingSyllabi}
             />
           </div>
