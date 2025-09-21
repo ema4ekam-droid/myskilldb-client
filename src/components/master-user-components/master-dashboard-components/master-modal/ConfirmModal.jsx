@@ -7,7 +7,8 @@ const ConfirmModal = ({
   message, 
   onConfirm, 
   btnSlateClass, 
-  btnRoseClass 
+  btnRoseClass,
+  isLoading
 }) => {
   if (!isOpen) return null;
 
@@ -17,12 +18,33 @@ const ConfirmModal = ({
         <div className="p-5 border-b border-slate-200">
           <h2 className="text-xl font-bold text-slate-900">{title}</h2>
         </div>
+        
         <div className="p-6">
           <p className="text-slate-600">{message}</p>
         </div>
+        
         <div className="p-4 bg-slate-50 flex justify-end gap-4 rounded-b-lg">
-          <button onClick={onClose} className={btnSlateClass}>Cancel</button>
-          <button onClick={() => { onConfirm(); onClose(); }} className={btnRoseClass}>Confirm</button>
+          <button 
+            onClick={onClose} 
+            className={btnSlateClass}
+            disabled={isLoading}
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }} 
+            className={`${btnRoseClass} ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <><i className="fas fa-spinner fa-spin"></i> Processing...</>
+            ) : (
+              'Confirm'
+            )}
+          </button>
         </div>
       </div>
     </div>

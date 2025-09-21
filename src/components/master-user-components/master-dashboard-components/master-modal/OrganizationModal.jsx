@@ -1,17 +1,18 @@
 import React from 'react';
 
-const SchoolModal = ({ 
+const OrganizationModal = ({ 
   isOpen, 
   onClose, 
-  schoolModalMode, 
-  schoolFormData, 
+  organizationModalMode, 
+  organizationFormData, 
   formErrors, 
   inputBaseClass, 
   btnTealClass, 
   btnSlateClass, 
   locations, 
   handleInputChange, 
-  handleSchoolFormSubmit 
+  handleOrganizationFormSubmit,
+  isLoading
 }) => {
   if (!isOpen) return null;
 
@@ -21,7 +22,8 @@ const SchoolModal = ({
         <div className="p-6 border-b border-slate-200">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold text-slate-900">
-              {schoolModalMode === 'view' ? 'View School Details' : 'Create New School'}
+              {organizationModalMode === 'view' ? 'View Organization Details' : 
+               organizationModalMode === 'edit' ? 'Edit Organization' : 'Create New Organization'}
             </h2>
             <button 
               onClick={onClose} 
@@ -31,53 +33,54 @@ const SchoolModal = ({
             </button>
           </div>
         </div>
-        
-        <form onSubmit={handleSchoolFormSubmit} className="p-6 space-y-6">
-          {/* School Information */}
+
+        <form onSubmit={handleOrganizationFormSubmit} className="p-6 space-y-6">
+          {/* Organization Information */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">School Information</h3>
+            <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">Organization Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">School Name *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Organization Name *</label>
                 <input
                   type="text"
-                  className={`${inputBaseClass} ${formErrors.schoolName ? 'border-red-300 focus:ring-red-500' : ''}`}
-                  value={schoolFormData.schoolName}
-                  onChange={(e) => handleInputChange('schoolName', e.target.value)}
-                  placeholder="Enter school name"
-                  disabled={schoolModalMode === 'view'}
+                  className={`${inputBaseClass} ${formErrors.name ? 'border-red-300 focus:ring-red-500' : ''}`}
+                  value={organizationFormData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  placeholder="Enter organization name"
+                  disabled={organizationModalMode === 'view'}
                 />
-                {formErrors.schoolName && <p className="text-red-500 text-xs mt-1">{formErrors.schoolName}</p>}
+                {formErrors.name && <p className="text-red-500 text-xs mt-1">{formErrors.name}</p>}
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Board Affiliation</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Syllabus *</label>
                 <select
-                  className={inputBaseClass}
-                  value={schoolFormData.boardAffiliation}
-                  onChange={(e) => handleInputChange('boardAffiliation', e.target.value)}
-                  disabled={schoolModalMode === 'view'}
+                  className={`${inputBaseClass} ${formErrors.board ? 'border-red-300 focus:ring-red-500' : ''}`}
+                  value={organizationFormData.board}
+                  onChange={(e) => handleInputChange('board', e.target.value)}
+                  disabled={organizationModalMode === 'view'}
                 >
-                  <option value="">Select Board</option>
+                  <option value="">Select Syllabus</option>
                   <option value="CBSE">CBSE</option>
-                  <option value="ICSE">ICSE</option>
-                  <option value="State Board">State Board</option>
-                  <option value="IB">IB</option>
+                  <option value="State syllabus">State syllabus</option>
+                  <option value="Other">Other</option>
                 </select>
+                {formErrors.board && <p className="text-red-500 text-xs mt-1">{formErrors.board}</p>}
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Established Year</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Established Year *</label>
                 <input
                   type="number"
-                  className={inputBaseClass}
-                  value={schoolFormData.establishedYear}
-                  onChange={(e) => handleInputChange('establishedYear', e.target.value)}
+                  className={`${inputBaseClass} ${formErrors.establishedYear ? 'border-red-300 focus:ring-red-500' : ''}`}
+                  value={organizationFormData.establishedYear}
+                  onChange={(e) => handleInputChange('establishedYear', parseInt(e.target.value))}
                   placeholder="e.g., 1995"
-                  min="1900"
+                  min="1800"
                   max={new Date().getFullYear()}
-                  disabled={schoolModalMode === 'view'}
+                  disabled={organizationModalMode === 'view'}
                 />
+                {formErrors.establishedYear && <p className="text-red-500 text-xs mt-1">{formErrors.establishedYear}</p>}
               </div>
             </div>
           </div>
@@ -91,51 +94,52 @@ const SchoolModal = ({
                 <input
                   type="text"
                   className={`${inputBaseClass} ${formErrors.adminName ? 'border-red-300 focus:ring-red-500' : ''}`}
-                  value={schoolFormData.adminName}
+                  value={organizationFormData.adminName}
                   onChange={(e) => handleInputChange('adminName', e.target.value)}
                   placeholder="Enter admin name"
-                  disabled={schoolModalMode === 'view'}
+                  disabled={organizationModalMode === 'view'}
                 />
                 {formErrors.adminName && <p className="text-red-500 text-xs mt-1">{formErrors.adminName}</p>}
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Admin Email *</label>
                 <input
                   type="email"
                   className={`${inputBaseClass} ${formErrors.adminEmail ? 'border-red-300 focus:ring-red-500' : ''}`}
-                  value={schoolFormData.adminEmail}
+                  value={organizationFormData.adminEmail}
                   onChange={(e) => handleInputChange('adminEmail', e.target.value)}
-                  placeholder="admin@school.com"
-                  disabled={schoolModalMode === 'view'}
+                  placeholder="admin@organization.com"
+                  disabled={organizationModalMode === 'view'}
                 />
                 {formErrors.adminEmail && <p className="text-red-500 text-xs mt-1">{formErrors.adminEmail}</p>}
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Mobile Number *</label>
                 <input
                   type="tel"
                   className={`${inputBaseClass} ${formErrors.mobileNumber ? 'border-red-300 focus:ring-red-500' : ''}`}
-                  value={schoolFormData.mobileNumber}
+                  value={organizationFormData.mobileNumber}
                   onChange={(e) => handleInputChange('mobileNumber', e.target.value)}
                   placeholder="9876543210"
                   maxLength="10"
-                  disabled={schoolModalMode === 'view'}
+                  disabled={organizationModalMode === 'view'}
                 />
                 {formErrors.mobileNumber && <p className="text-red-500 text-xs mt-1">{formErrors.mobileNumber}</p>}
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Alternate Email</label>
                 <input
                   type="email"
-                  className={inputBaseClass}
-                  value={schoolFormData.alternateEmail}
+                  className={`${inputBaseClass} ${formErrors.alternateEmail ? 'border-red-300 focus:ring-red-500' : ''}`}
+                  value={organizationFormData.alternateEmail}
                   onChange={(e) => handleInputChange('alternateEmail', e.target.value)}
-                  placeholder="alternate@school.com"
-                  disabled={schoolModalMode === 'view'}
+                  placeholder="alternate@organization.com"
+                  disabled={organizationModalMode === 'view'}
                 />
+                {formErrors.alternateEmail && <p className="text-red-500 text-xs mt-1">{formErrors.alternateEmail}</p>}
               </div>
             </div>
           </div>
@@ -148,83 +152,74 @@ const SchoolModal = ({
                 <label className="block text-sm font-medium text-slate-700 mb-2">Address *</label>
                 <textarea
                   className={`${inputBaseClass} ${formErrors.address ? 'border-red-300 focus:ring-red-500' : ''}`}
-                  value={schoolFormData.address}
+                  value={organizationFormData.address}
                   onChange={(e) => handleInputChange('address', e.target.value)}
                   placeholder="Enter complete address"
                   rows="3"
-                  disabled={schoolModalMode === 'view'}
+                  disabled={organizationModalMode === 'view'}
                 />
                 {formErrors.address && <p className="text-red-500 text-xs mt-1">{formErrors.address}</p>}
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Country *</label>
                   <select
                     className={`${inputBaseClass} ${formErrors.country ? 'border-red-300 focus:ring-red-500' : ''}`}
-                    value={schoolFormData.country}
+                    value={organizationFormData.country}
                     onChange={(e) => handleInputChange('country', e.target.value)}
-                    disabled={schoolModalMode === 'view'}
+                    disabled={organizationModalMode === 'view'}
                   >
                     <option value="">Select Country</option>
-                    <option value="India">India</option>
-                    <option value="United States">United States</option>
-                    <option value="United Kingdom">United Kingdom</option>
-                    <option value="Canada">Canada</option>
-                    <option value="Australia">Australia</option>
-                    <option value="Germany">Germany</option>
-                    <option value="France">France</option>
-                    <option value="Japan">Japan</option>
-                    <option value="China">China</option>
-                    <option value="Singapore">Singapore</option>
-                    <option value="UAE">UAE</option>
-                    <option value="Other">Other</option>
+                    {locations.countries.map((country) => (
+                      <option key={country.code} value={country.name}>{country.name}</option>
+                    ))}
                   </select>
                   {formErrors.country && <p className="text-red-500 text-xs mt-1">{formErrors.country}</p>}
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">State *</label>
                   <select
                     className={`${inputBaseClass} ${formErrors.state ? 'border-red-300 focus:ring-red-500' : ''}`}
-                    value={schoolFormData.state}
+                    value={organizationFormData.state}
                     onChange={(e) => handleInputChange('state', e.target.value)}
-                    disabled={schoolModalMode === 'view'}
+                    disabled={organizationModalMode === 'view' || !organizationFormData.country}
                   >
                     <option value="">Select State</option>
                     {locations.states.map((state) => (
-                      <option key={state} value={state}>{state}</option>
+                      <option key={state.code} value={state.name}>{state.name}</option>
                     ))}
                   </select>
                   {formErrors.state && <p className="text-red-500 text-xs mt-1">{formErrors.state}</p>}
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">District *</label>
                   <select
                     className={`${inputBaseClass} ${formErrors.district ? 'border-red-300 focus:ring-red-500' : ''}`}
-                    value={schoolFormData.district}
+                    value={organizationFormData.district}
                     onChange={(e) => handleInputChange('district', e.target.value)}
-                    disabled={!schoolFormData.state || schoolModalMode === 'view'}
+                    disabled={organizationModalMode === 'view' || !organizationFormData.state}
                   >
                     <option value="">Select District</option>
                     {locations.districts.map((district) => (
-                      <option key={district} value={district}>{district}</option>
+                      <option key={district.code} value={district.name}>{district.name}</option>
                     ))}
                   </select>
                   {formErrors.district && <p className="text-red-500 text-xs mt-1">{formErrors.district}</p>}
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Pincode *</label>
                   <input
                     type="text"
                     className={`${inputBaseClass} ${formErrors.pincode ? 'border-red-300 focus:ring-red-500' : ''}`}
-                    value={schoolFormData.pincode}
+                    value={organizationFormData.pincode}
                     onChange={(e) => handleInputChange('pincode', e.target.value)}
                     placeholder="560001"
                     maxLength="6"
-                    disabled={schoolModalMode === 'view'}
+                    disabled={organizationModalMode === 'view'}
                   />
                   {formErrors.pincode && <p className="text-red-500 text-xs mt-1">{formErrors.pincode}</p>}
                 </div>
@@ -232,62 +227,68 @@ const SchoolModal = ({
             </div>
           </div>
 
-          {/* School Details */}
+          {/* Organization Details */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">School Details</h3>
+            <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">Organization Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Total Students</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Total Students *</label>
                 <input
                   type="number"
-                  className={inputBaseClass}
-                  value={schoolFormData.totalStudents}
-                  onChange={(e) => handleInputChange('totalStudents', e.target.value)}
+                  className={`${inputBaseClass} ${formErrors.totalStudents ? 'border-red-300 focus:ring-red-500' : ''}`}
+                  value={organizationFormData.totalStudents}
+                  onChange={(e) => handleInputChange('totalStudents', parseInt(e.target.value))}
                   placeholder="1200"
-                  min="0"
-                  disabled={schoolModalMode === 'view'}
+                  min="1"
+                  disabled={organizationModalMode === 'view'}
                 />
+                {formErrors.totalStudents && <p className="text-red-500 text-xs mt-1">{formErrors.totalStudents}</p>}
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Total Teachers</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Total Teachers *</label>
                 <input
                   type="number"
-                  className={inputBaseClass}
-                  value={schoolFormData.totalTeachers}
-                  onChange={(e) => handleInputChange('totalTeachers', e.target.value)}
+                  className={`${inputBaseClass} ${formErrors.totalTeachers ? 'border-red-300 focus:ring-red-500' : ''}`}
+                  value={organizationFormData.totalTeachers}
+                  onChange={(e) => handleInputChange('totalTeachers', parseInt(e.target.value))}
                   placeholder="45"
-                  min="0"
-                  disabled={schoolModalMode === 'view'}
+                  min="1"
+                  disabled={organizationModalMode === 'view'}
                 />
+                {formErrors.totalTeachers && <p className="text-red-500 text-xs mt-1">{formErrors.totalTeachers}</p>}
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Principal Name</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Principal Name *</label>
                 <input
                   type="text"
-                  className={inputBaseClass}
-                  value={schoolFormData.principalName}
+                  className={`${inputBaseClass} ${formErrors.principalName ? 'border-red-300 focus:ring-red-500' : ''}`}
+                  value={organizationFormData.principalName}
                   onChange={(e) => handleInputChange('principalName', e.target.value)}
                   placeholder="Dr. Principal Name"
-                  disabled={schoolModalMode === 'view'}
+                  disabled={organizationModalMode === 'view'}
                 />
+                {formErrors.principalName && <p className="text-red-500 text-xs mt-1">{formErrors.principalName}</p>}
               </div>
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
-              <select
-                className={inputBaseClass}
-                value={schoolFormData.status}
-                onChange={(e) => handleInputChange('status', e.target.value)}
-                disabled={schoolModalMode === 'view'}
-              >
-                <option value="active">Active</option>
-                <option value="trial">Trial</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
+
+            {organizationModalMode !== 'create' && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
+                <select
+                  className={inputBaseClass}
+                  value={organizationFormData.status}
+                  onChange={(e) => handleInputChange('status', e.target.value)}
+                  disabled={organizationModalMode === 'view'}
+                >
+                  <option value="pending">Pending</option>
+                  <option value="active">Active</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Form Actions */}
@@ -296,15 +297,24 @@ const SchoolModal = ({
               type="button"
               onClick={onClose}
               className={btnSlateClass}
+              disabled={isLoading}
             >
-              {schoolModalMode === 'view' ? 'Close' : 'Cancel'}
+              {organizationModalMode === 'view' ? 'Close' : 'Cancel'}
             </button>
-            {schoolModalMode !== 'view' && (
+            {organizationModalMode !== 'view' && (
               <button
                 type="submit"
-                className={btnTealClass}
+                className={`${btnTealClass} ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={isLoading}
               >
-                <i className="fas fa-plus"></i> Create School
+                {isLoading ? (
+                  <><i className="fas fa-spinner fa-spin"></i> Processing...</>
+                ) : (
+                  <>
+                    <i className="fas fa-plus"></i>
+                    {organizationModalMode === 'edit' ? 'Update Organization' : 'Create Organization'}
+                  </>
+                )}
               </button>
             )}
           </div>
@@ -314,4 +324,4 @@ const SchoolModal = ({
   );
 };
 
-export default SchoolModal;
+export default OrganizationModal;
