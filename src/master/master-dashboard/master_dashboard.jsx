@@ -6,7 +6,7 @@ import OrganizationModal from '../../components/master-user-components/master-da
 import ConfirmModal from '../../components/master-user-components/master-dashboard-components/master-modal/ConfirmModal';
 
 function MasterDashboard() {
-  const API_BASE_URL = useMemo(() => 'http://localhost:5000/api', []);
+  const API_BASE_URL = useMemo(() => `${import.meta.env.VITE_SERVER_API_URL}/api`, []);
 
   // --- STATE MANAGEMENT ---
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
