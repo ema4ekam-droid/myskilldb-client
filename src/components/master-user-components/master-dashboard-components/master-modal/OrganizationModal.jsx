@@ -16,7 +16,7 @@ const OrganizationModal = ({
   isLoading,
 }) => {
   if (!isOpen) return null;
-  const API_BASE_URL = useMemo(() => "http://localhost:5000/api", []);
+  const API_BASE_URL = useMemo(() => `${import.meta.env.VITE_SERVER_API_URL}/api`, []);
   const [syllabi, setSyllabi] = useState([]);
 
   const fetchSyllabi = async () => {
