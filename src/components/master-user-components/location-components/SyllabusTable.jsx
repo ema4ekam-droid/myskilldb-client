@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
+import Pagination from "../shared/Pagination";
 
 const SyllabusTable = ({ 
   syllabi, 
   onAddSyllabus, 
   onDeleteSyllabus, 
-  isLoading 
+  isLoading,
+  currentPage,
+  totalPages,
+  onPageChange,
+  itemsPerPage
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '' });
@@ -114,6 +119,15 @@ const SyllabusTable = ({
           </tbody>
         </table>
       </div>
+      
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={onPageChange}
+        totalItems={syllabi.length}
+        itemsPerPage={itemsPerPage}
+      />
 
       {/* Modal */}
       {isModalOpen && (

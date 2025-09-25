@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import Pagination from "../shared/Pagination";
 
 const CountryTable = ({
   countries,
@@ -6,6 +7,10 @@ const CountryTable = ({
   onEditCountry,
   onDeleteCountry,
   isLoading,
+  currentPage,
+  totalPages,
+  onPageChange,
+  itemsPerPage
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCountry, setEditingCountry] = useState(null);
@@ -101,6 +106,15 @@ const CountryTable = ({
           </tbody>
         </table>
       </div>
+      
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={onPageChange}
+        totalItems={countries.length}
+        itemsPerPage={itemsPerPage}
+      />
 
       {/* Modal */}
       {isModalOpen && (

@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import MasterDashboard from './master/master-dashboard/master_dashboard.jsx';
 import LocationManager from './master/master-location-manager/location_manager.jsx';
 import MasterSchoolClassSetup from './master/master-school-manage/master-school-class-setup.jsx';
+import SchoolLoginManager from './master/master-login-create/school_login_manager.jsx';
 
 function App() {
 
@@ -16,6 +17,7 @@ function App() {
         <Route path="/master" element={<MasterDashboard />} />
         <Route path="/schools" element={<h1 className="p-8">Schools - Coming Soon</h1>} />
         <Route path="/school-class-setup" element={<MasterSchoolClassSetup />} />
+        <Route path="/school-logins" element={<SchoolLoginManager />} />
         <Route path="/location-manager" element={<LocationManager />} />
         <Route path="/account-managers" element={<h1 className="p-8">Account Managers - Coming Soon</h1>} />
         <Route path="/analytics" element={<h1 className="p-8">System Analytics - Coming Soon</h1>} />

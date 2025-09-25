@@ -29,6 +29,13 @@ const Navigation = ({ currentPage = 'dashboard', onPageChange }) => {
       color: 'emerald'
     },
     {
+      id: 'school-logins',
+      label: 'School Logins',
+      icon: 'fas fa-user-lock',
+      path: '/school-logins',
+      color: 'teal'
+    },
+    {
       id: 'account-managers',
       label: 'Account Managers',
       icon: 'fas fa-user-tie',
@@ -57,6 +64,7 @@ const Navigation = ({ currentPage = 'dashboard', onPageChange }) => {
       'dashboard': '/',
       'location-manager': '/location-manager',
       'school-class-setup': '/school-class-setup',
+      'school-logins': '/school-logins',
       'account-managers': '/account-managers',
       'analytics': '/analytics',
       'settings': '/settings'

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Pagination from "../shared/Pagination";
 
 const DistrictTable = ({ 
   districts, 
@@ -11,7 +12,11 @@ const DistrictTable = ({
   onAddDistrict, 
   onEditDistrict, 
   onDeleteDistrict, 
-  isLoading 
+  isLoading,
+  currentPage,
+  totalPages,
+  onPageChange,
+  itemsPerPage
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDistrict, setEditingDistrict] = useState(null);
@@ -159,6 +164,15 @@ const DistrictTable = ({
           </tbody>
         </table>
       </div>
+      
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={onPageChange}
+        totalItems={districts.length}
+        itemsPerPage={itemsPerPage}
+      />
 
       {/* Modal */}
       {isModalOpen && (
