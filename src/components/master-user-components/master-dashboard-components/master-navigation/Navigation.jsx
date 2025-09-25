@@ -15,18 +15,18 @@ const Navigation = ({ currentPage = 'dashboard', onPageChange }) => {
       color: 'indigo'
     },
     {
-      id: 'schools',
-      label: 'Schools',
-      icon: 'fas fa-graduation-cap',
-      path: '/schools',
-      color: 'emerald'
-    },
-    {
       id: 'location-manager',
       label: 'Location Manager',
       icon: 'fas fa-globe-americas',
       path: '/location-manager',
       color: 'indigo'
+    },
+    {
+      id: 'school-class-setup',
+      label: 'School Class Setup',
+      icon: 'fas fa-graduation-cap',
+      path: '/school-class-setup',
+      color: 'emerald'
     },
     {
       id: 'account-managers',
@@ -55,8 +55,8 @@ const Navigation = ({ currentPage = 'dashboard', onPageChange }) => {
     // Navigate to the appropriate route
     const routes = {
       'dashboard': '/',
-      'schools': '/schools',
       'location-manager': '/location-manager',
+      'school-class-setup': '/school-class-setup',
       'account-managers': '/account-managers',
       'analytics': '/analytics',
       'settings': '/settings'
