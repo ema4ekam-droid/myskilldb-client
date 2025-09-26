@@ -29,9 +29,53 @@ function LocationManager() {
   const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
   const [isLoadingSyllabi, setIsLoadingSyllabi] = useState(false);
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [stateCurrentPage, setStateCurrentPage] = useState(1);
+  const [districtCurrentPage, setDistrictCurrentPage] = useState(1);
+  const [syllabusCurrentPage, setSyllabusCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(7);
+
   // --- DERIVED STATE ---
   const totalCountries = countries.length;
   const totalStates = states.length;
+
+  // Pagination calculations
+  const totalPages = Math.ceil(countries.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedCountries = countries.slice(startIndex, endIndex);
+
+  const stateTotalPages = Math.ceil(states.length / itemsPerPage);
+  const stateStartIndex = (stateCurrentPage - 1) * itemsPerPage;
+  const stateEndIndex = stateStartIndex + itemsPerPage;
+  const paginatedStates = states.slice(stateStartIndex, stateEndIndex);
+
+  const districtTotalPages = Math.ceil(districts.length / itemsPerPage);
+  const districtStartIndex = (districtCurrentPage - 1) * itemsPerPage;
+  const districtEndIndex = districtStartIndex + itemsPerPage;
+  const paginatedDistricts = districts.slice(districtStartIndex, districtEndIndex);
+
+  const syllabusTotalPages = Math.ceil(syllabi.length / itemsPerPage);
+  const syllabusStartIndex = (syllabusCurrentPage - 1) * itemsPerPage;
+  const syllabusEndIndex = syllabusStartIndex + itemsPerPage;
+  const paginatedSyllabi = syllabi.slice(syllabusStartIndex, syllabusEndIndex);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const handleStatePageChange = (page) => {
+    setStateCurrentPage(page);
+  };
+
+  const handleDistrictPageChange = (page) => {
+    setDistrictCurrentPage(page);
+  };
+
+  const handleSyllabusPageChange = (page) => {
+    setSyllabusCurrentPage(page);
+  };
 
   // =========================
   // API CALLS
@@ -318,14 +362,18 @@ function LocationManager() {
           {/* Country + State */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <CountryTable
-              countries={countries}
+              countries={paginatedCountries}
               onAddCountry={handleAddCountry}
               onEditCountry={handleEditCountry}
               onDeleteCountry={handleDeleteCountry}
               isLoading={isLoadingCountries}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              itemsPerPage={itemsPerPage}
             />
             <StateTable
-              states={states}
+              states={paginatedStates}
               countries={countries}
               selectedCountry={selectedCountry}
               onCountryFilter={handleCountryFilter}
@@ -333,13 +381,17 @@ function LocationManager() {
               onEditState={handleEditState}
               onDeleteState={handleDeleteState}
               isLoading={isLoadingStates}
+              currentPage={stateCurrentPage}
+              totalPages={stateTotalPages}
+              onPageChange={handleStatePageChange}
+              itemsPerPage={itemsPerPage}
             />
           </div>
 
           {/* District + Syllabus */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <DistrictTable
-              districts={districts}
+              districts={paginatedDistricts}
               countries={countries}
               states={states}
               selectedCountry={selectedCountry}
@@ -350,12 +402,20 @@ function LocationManager() {
               onEditDistrict={handleEditDistrict}
               onDeleteDistrict={handleDeleteDistrict}
               isLoading={isLoadingDistricts}
+              currentPage={districtCurrentPage}
+              totalPages={districtTotalPages}
+              onPageChange={handleDistrictPageChange}
+              itemsPerPage={itemsPerPage}
             />
             <SyllabusTable
-              syllabi={syllabi}
+              syllabi={paginatedSyllabi}
               onAddSyllabus={handleAddSyllabus}
               onDeleteSyllabus={handleDeleteSyllabus}
               isLoading={isLoadingSyllabi}
+              currentPage={syllabusCurrentPage}
+              totalPages={syllabusTotalPages}
+              onPageChange={handleSyllabusPageChange}
+              itemsPerPage={itemsPerPage}
             />
           </div>
         </main>

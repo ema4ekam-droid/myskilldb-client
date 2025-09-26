@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import Pagination from "../shared/Pagination";
 
 const StateTable = ({
   states,
@@ -9,6 +10,10 @@ const StateTable = ({
   onEditState,
   onDeleteState,
   isLoading,
+  currentPage,
+  totalPages,
+  onPageChange,
+  itemsPerPage
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingState, setEditingState] = useState(null);
@@ -143,6 +148,15 @@ const StateTable = ({
           </tbody>
         </table>
       </div>
+      
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={onPageChange}
+        totalItems={states.length}
+        itemsPerPage={itemsPerPage}
+      />
 
       {/* Modal */}
       {isModalOpen && (

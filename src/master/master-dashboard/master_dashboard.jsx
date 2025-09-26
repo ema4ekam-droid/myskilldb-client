@@ -4,6 +4,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import Navigation from '../../components/master-user-components/master-dashboard-components/master-navigation/Navigation';
 import OrganizationModal from '../../components/master-user-components/master-dashboard-components/master-modal/OrganizationModal';
 import ConfirmModal from '../../components/master-user-components/master-dashboard-components/master-modal/ConfirmModal';
+import Pagination from '../../components/master-user-components/shared/Pagination';
 
 function MasterDashboard() {
   const API_BASE_URL = useMemo(() => `${import.meta.env.VITE_SERVER_API_URL}/api`, []);
@@ -68,6 +69,11 @@ function MasterDashboard() {
   });
 
   const [selectedOrganizationIds, setSelectedOrganizationIds] = useState([]);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pendingCurrentPage, setPendingCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(7);
 
   // --- DERIVED STATE ---
   const allChecked = organizations.length > 0 && selectedOrganizationIds.length === organizations.length;
@@ -204,8 +210,29 @@ function MasterDashboard() {
   // --- EVENT HANDLERS ---
   const handleFilterSubmit = (e) => {
     e.preventDefault();
+    setCurrentPage(1); // Reset to first page when filtering
     fetchOrganizations(filters);
   };
+
+  // Pagination calculations
+  const totalPages = Math.ceil(organizations.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedOrganizations = organizations.slice(startIndex, endIndex);
+
+  const handlePaginationChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const handlePendingPaginationChange = (page) => {
+    setPendingCurrentPage(page);
+  };
+
+  // Pending organizations pagination
+  const pendingTotalPages = Math.ceil(pendingOrganizations.length / itemsPerPage);
+  const pendingStartIndex = (pendingCurrentPage - 1) * itemsPerPage;
+  const pendingEndIndex = pendingStartIndex + itemsPerPage;
+  const paginatedPendingOrganizations = pendingOrganizations.slice(pendingStartIndex, pendingEndIndex);
 
   const toggleSelectAll = (checked) => {
     setSelectedOrganizationIds(checked ? organizations.map(org => org._id) : []);
@@ -655,7 +682,7 @@ function MasterDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {organizations.length > 0 ? organizations.map(organization => (
+                  {paginatedOrganizations.length > 0 ? paginatedOrganizations.map(organization => (
                     <tr key={organization._id} className="hover:bg-slate-50">
                       <td className="p-4">
                         <input
@@ -702,12 +729,21 @@ function MasterDashboard() {
                       </td>
                     </tr>
                   )}
-                </tbody>
-              </table>
-            </div>
-          </section>
+          </tbody>
+        </table>
+      </div>
+      
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={handlePaginationChange}
+        totalItems={organizations.length}
+        itemsPerPage={itemsPerPage}
+      />
+    </section>
 
-          {pendingOrganizations.length > 0 && (
+    {pendingOrganizations.length > 0 && (
             <section className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
               <div className="p-4 border-b border-slate-200">
                 <h2 className="text-xl font-bold text-slate-900">Pending Approvals</h2>
@@ -723,7 +759,7 @@ function MasterDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
-                    {pendingOrganizations.map(org => (
+                    {paginatedPendingOrganizations.map(org => (
                       <tr key={org._id} className="hover:bg-slate-50">
                         <td className="p-4 font-semibold text-slate-900">{org.name}</td>
                         <td className="p-4 text-slate-600">{org.adminEmail}</td>
@@ -763,6 +799,15 @@ function MasterDashboard() {
                   </tbody>
                 </table>
               </div>
+              
+              {/* Pagination for Pending Organizations */}
+              <Pagination
+                currentPage={pendingCurrentPage}
+                totalPages={pendingTotalPages}
+                onPageChange={handlePendingPaginationChange}
+                totalItems={pendingOrganizations.length}
+                itemsPerPage={itemsPerPage}
+              />
             </section>
           )}
         </main>
