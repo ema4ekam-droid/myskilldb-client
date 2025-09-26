@@ -159,7 +159,16 @@ const Navigation = ({ currentPage = 'dashboard', onPageChange }) => {
                   <span className="font-semibold text-base">{item.label}</span>
                 </div>
                 {isActive && (
-                  <div className={`w-3 h-3 bg-${item.color}-500 rounded-full animate-pulse`}></div>
+                  <div className={`w-3 h-3 rounded-full animate-pulse ${
+                    item.color === 'blue' ? 'bg-blue-500' :
+                    item.color === 'green' ? 'bg-green-500' :
+                    item.color === 'purple' ? 'bg-purple-500' :
+                    item.color === 'teal' ? 'bg-teal-500' :
+                    item.color === 'orange' ? 'bg-orange-500' :
+                    item.color === 'gray' ? 'bg-gray-500' :
+                    item.color === 'emerald' ? 'bg-emerald-500' :
+                    'bg-indigo-500'
+                  }`}></div>
                 )}
               </button>
             );
