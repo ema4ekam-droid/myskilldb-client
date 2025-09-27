@@ -19,6 +19,14 @@ const MasterSchoolClassSetup = () => {
   const [sections, setSections] = useState([]);
   const [subjects, setSubjects] = useState([]);
   
+  // School selection states
+  const [countries, setCountries] = useState([]);
+  const [states, setStates] = useState([]);
+  const [schools, setSchools] = useState([]);
+  const [selectedCountry, setSelectedCountry] = useState('');
+  const [selectedState, setSelectedState] = useState('');
+  const [selectedSchool, setSelectedSchool] = useState('');
+  
   // Junction table for section-class assignments
   const [sectionClassAssignments, setSectionClassAssignments] = useState([]);
 
@@ -88,6 +96,33 @@ const MasterSchoolClassSetup = () => {
 
   // Mock data initialization
   useEffect(() => {
+    // Initialize countries, states, and schools
+    setCountries([
+      { id: 1, name: 'India' },
+      { id: 2, name: 'United States' },
+      { id: 3, name: 'United Kingdom' }
+    ]);
+
+    setStates([
+      { id: 1, name: 'Karnataka', countryId: 1 },
+      { id: 2, name: 'Tamil Nadu', countryId: 1 },
+      { id: 3, name: 'Maharashtra', countryId: 1 },
+      { id: 4, name: 'California', countryId: 2 },
+      { id: 5, name: 'Texas', countryId: 2 },
+      { id: 6, name: 'England', countryId: 3 },
+      { id: 7, name: 'Scotland', countryId: 3 }
+    ]);
+
+    setSchools([
+      { id: 1, name: 'Bangalore International School', stateId: 1, countryId: 1, countryName: 'India', stateName: 'Karnataka' },
+      { id: 2, name: 'Delhi Public School', stateId: 1, countryId: 1, countryName: 'India', stateName: 'Karnataka' },
+      { id: 3, name: 'Chennai Central School', stateId: 2, countryId: 1, countryName: 'India', stateName: 'Tamil Nadu' },
+      { id: 4, name: 'Mumbai High School', stateId: 3, countryId: 1, countryName: 'India', stateName: 'Maharashtra' },
+      { id: 5, name: 'Stanford Elementary', stateId: 4, countryId: 2, countryName: 'United States', stateName: 'California' },
+      { id: 6, name: 'Harvard Prep School', stateId: 4, countryId: 2, countryName: 'United States', stateName: 'California' },
+      { id: 7, name: 'Oxford Academy', stateId: 6, countryId: 3, countryName: 'United Kingdom', stateName: 'England' }
+    ]);
+
     // Initialize global departments
     setDepartments([
       { id: 1, name: 'Science', description: 'Science department' },
@@ -455,6 +490,38 @@ const MasterSchoolClassSetup = () => {
     }
   };
 
+  // School selection handlers
+  const handleCountryChange = (countryId) => {
+    setSelectedCountry(countryId);
+    setSelectedState('');
+    setSelectedSchool('');
+  };
+
+  const handleStateChange = (stateId) => {
+    setSelectedState(stateId);
+    setSelectedSchool('');
+  };
+
+  const handleSchoolChange = (schoolId) => {
+    setSelectedSchool(schoolId);
+  };
+
+  // Helper functions to get filtered states and schools
+  const getFilteredStates = () => {
+    if (!selectedCountry) return [];
+    return states.filter(state => state.countryId === parseInt(selectedCountry));
+  };
+
+  const getFilteredSchools = () => {
+    if (!selectedState) return [];
+    return schools.filter(school => school.stateId === parseInt(selectedState));
+  };
+
+  const getSelectedSchoolInfo = () => {
+    if (!selectedSchool) return null;
+    return schools.find(school => school.id === parseInt(selectedSchool));
+  };
+
   // Filter handlers for global entities
   const handleDepartmentFilter = (departmentId) => {
     setSelectedDepartment(departmentId);
@@ -611,13 +678,115 @@ const MasterSchoolClassSetup = () => {
           {/* Header */}
           <header className="flex justify-between items-center flex-wrap gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Global Class Setup</h1>
-              <p className="text-slate-500 text-sm">Manage global departments, classes, sections, subjects, and assignments</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">School Class Setup</h1>
+              <p className="text-slate-500 text-sm">Select a school first, then manage departments, classes, sections, subjects, and assignments</p>
             </div>
           </header>
 
-          {/* Global Entity Management Tabs */}
+          {/* School Selection Filter */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Select School</h2>
+                <p className="text-slate-500 text-sm">Choose country, state, and school to manage class setup</p>
+              </div>
+              {selectedSchool && (
+                <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-2">
+                  <div className="flex items-center gap-2">
+                    <i className="fas fa-check-circle text-green-600"></i>
+                    <span className="text-green-800 font-medium">
+                      {getSelectedSchoolInfo()?.name}
+                    </span>
+                  </div>
+                  <p className="text-green-600 text-sm">
+                    {getSelectedSchoolInfo()?.stateName}, {getSelectedSchoolInfo()?.countryName}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Country *
+                </label>
+                <select
+                  value={selectedCountry}
+                  onChange={(e) => handleCountryChange(e.target.value)}
+                  className={inputBaseClass}
+                  required
+                >
+                  <option value="">Select Country</option>
+                  {countries.map(country => (
+                    <option key={country.id} value={country.id}>{country.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  State *
+                </label>
+                <select
+                  value={selectedState}
+                  onChange={(e) => handleStateChange(e.target.value)}
+                  className={inputBaseClass}
+                  disabled={!selectedCountry}
+                  required
+                >
+                  <option value="">Select State</option>
+                  {getFilteredStates().map(state => (
+                    <option key={state.id} value={state.id}>{state.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  School *
+                </label>
+                <select
+                  value={selectedSchool}
+                  onChange={(e) => handleSchoolChange(e.target.value)}
+                  className={inputBaseClass}
+                  disabled={!selectedState}
+                  required
+                >
+                  <option value="">Select School</option>
+                  {getFilteredSchools().map(school => (
+                    <option key={school.id} value={school.id}>{school.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {!selectedSchool && (
+              <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <i className="fas fa-info-circle text-amber-600"></i>
+                  <div>
+                    <h3 className="font-semibold text-amber-900">School Selection Required</h3>
+                    <p className="text-sm text-amber-700">Please select a country, state, and school to manage class setup and assignments.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Global Entity Management Tabs - Only show when school is selected */}
+          {selectedSchool && (
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Entity Management</h2>
+                <p className="text-slate-500 text-sm">Manage departments, classes, sections, and subjects for {getSelectedSchoolInfo()?.name}</p>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                <span className="text-blue-800 text-sm font-medium">
+                  School: {getSelectedSchoolInfo()?.name}
+                </span>
+              </div>
+            </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
               {/* Departments Card */}
               <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
@@ -808,13 +977,15 @@ const MasterSchoolClassSetup = () => {
               </div>
             </div>
           </div>
+          )}
 
-          {/* Assignment Management */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+          {/* Assignment Management - Only show when school is selected */}
+          {selectedSchool && (
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-xl font-bold text-slate-900">Section-Class Assignments</h2>
-                <p className="text-slate-500 text-sm">Assign sections to classes under specific departments</p>
+                <p className="text-slate-500 text-sm">Assign sections to classes under specific departments for {getSelectedSchoolInfo()?.name}</p>
               </div>
               <button
                 onClick={handleAddAssignment}
@@ -916,6 +1087,7 @@ const MasterSchoolClassSetup = () => {
               </table>
             </div>
           </div>
+          )}
         </main>
       </div>
 
