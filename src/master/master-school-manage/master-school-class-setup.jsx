@@ -1,31 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Navigation from '../../components/master-user-components/master-dashboard-components/master-navigation/Navigation';
 import {
-  SetupStatusFilter,
-  LocationFilter,
-  SchoolsTable,
-  ClassSetupSection,
   DepartmentModal,
   ClassModal,
   SectionModal,
   SubjectModal,
   DeleteConfirmationModal
 } from '../../components/master-user-components/master-class-setup-components';
+import axios from 'axios';
+import toast, { Toaster } from 'react-hot-toast';
 
 const MasterSchoolClassSetup = () => {
+  const API_BASE_URL = useMemo(() => `${import.meta.env.VITE_SERVER_API_URL}/api`, []);
+  
   // State for global entities
   const [departments, setDepartments] = useState([]);
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
   const [subjects, setSubjects] = useState([]);
   
-  // School selection states
-  const [countries, setCountries] = useState([]);
-  const [states, setStates] = useState([]);
-  const [schools, setSchools] = useState([]);
+  // Location and organization selection states
+  const [locations, setLocations] = useState({
+    countries: [],
+    states: [],
+    districts: [],
+    filterStates: [],
+    filterDistricts: []
+  });
+  const [organizations, setOrganizations] = useState([]);
   const [selectedCountry, setSelectedCountry] = useState('');
   const [selectedState, setSelectedState] = useState('');
-  const [selectedSchool, setSelectedSchool] = useState('');
+  const [selectedDistrict, setSelectedDistrict] = useState('');
+  const [selectedOrganization, setSelectedOrganization] = useState('');
   
   // Junction table for section-class assignments
   const [sectionClassAssignments, setSectionClassAssignments] = useState([]);
@@ -41,11 +47,6 @@ const MasterSchoolClassSetup = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewModalType, setViewModalType] = useState(''); // 'department', 'class', 'section', 'subject'
   const [viewingItem, setViewingItem] = useState(null);
-  
-  // Bulk operations states
-  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
-  const [bulkOperationType, setBulkOperationType] = useState(''); // 'department', 'class', 'section', 'subject'
-  const [selectedItems, setSelectedItems] = useState([]);
   
   // Edit list modal states
   const [isEditListModalOpen, setIsEditListModalOpen] = useState(false);
@@ -71,7 +72,6 @@ const MasterSchoolClassSetup = () => {
   });
 
   // File upload states for subjects
-  const [csvFile, setCsvFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
 
   // Editing states
@@ -81,10 +81,15 @@ const MasterSchoolClassSetup = () => {
   const [editingSubject, setEditingSubject] = useState(null);
   const [editingAssignment, setEditingAssignment] = useState(null);
 
-  // Filter states for global entities
-  const [selectedDepartment, setSelectedDepartment] = useState('');
-  const [selectedClass, setSelectedClass] = useState('');
-  const [selectedSection, setSelectedSection] = useState('');
+  // Filter states for assignments - Updated to not filter by section
+  const [assignmentFilters, setAssignmentFilters] = useState({
+    departmentId: '',
+    classId: ''
+  });
+  const [appliedFilters, setAppliedFilters] = useState({
+    departmentId: '',
+    classId: ''
+  });
   
   // Confirmation modal states
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -93,77 +98,517 @@ const MasterSchoolClassSetup = () => {
 
   // Loading states
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingEntities, setLoadingEntities] = useState({
+    departments: false,
+    classes: false,
+    sections: false,
+    subjects: false,
+    assignments: false
+  });
 
-  // Mock data initialization
+  // --- API CALLS FOR LOCATIONS ---
+  const fetchCountries = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/locations/countries`);
+      if (response.data.success) {
+        const countries = response.data.data.map(country => ({
+          name: country.country,
+          code: country.countryCode
+        }));
+        setLocations(prev => ({ ...prev, countries }));
+      }
+    } catch (error) {
+      console.error('Error fetching countries:', error);
+      toast.error('Failed to fetch countries');
+    }
+  };
+
+  const fetchStates = async (countryCode, forFilter = false) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/locations/states/${countryCode}`);
+      if (response.data.success) {
+        const states = response.data.data.map(state => ({
+          name: state.state,
+          code: state.stateCode
+        }));
+        if (forFilter) {
+          setLocations(prev => ({ ...prev, filterStates: states }));
+        } else {
+          setLocations(prev => ({ ...prev, states }));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching states:', error);
+      toast.error('Failed to fetch states');
+    }
+  };
+
+  const fetchDistricts = async (stateCode, forFilter = false) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/locations/districts/state/${stateCode}`);
+      if (response.data.success) {
+        const districts = response.data.data.map(district => ({
+          name: district.district,
+          code: district.districtCode
+        }));
+        if (forFilter) {
+          setLocations(prev => ({ ...prev, filterDistricts: districts }));
+        } else {
+          setLocations(prev => ({ ...prev, districts }));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching districts:', error);
+      toast.error('Failed to fetch districts');
+    }
+  };
+
+  const fetchOrganizations = async (filterParams = {}) => {
+    try {
+      setIsLoading(true);
+      const params = new URLSearchParams();
+      
+      Object.entries(filterParams).forEach(([key, value]) => {
+        if (value && value.trim()) {
+          params.append(key, value);
+        }
+      });
+
+      const response = await axios.get(`${API_BASE_URL}/organization?${params}`);
+      
+      if (response.data.success) {
+        const allOrgs = response.data.data;
+        const activeOrgs = allOrgs.filter(org => org.status === 'active');
+        setOrganizations(activeOrgs);
+      }
+    } catch (error) {
+      console.error('Error fetching organizations:', error);
+      toast.error('Failed to fetch organizations');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // --- API CALLS FOR ENTITIES ---
+  
+  // Department API calls
+  const fetchDepartments = async (organizationId) => {
+    if (!organizationId) return;
+    
+    try {
+      setLoadingEntities(prev => ({ ...prev, departments: true }));
+      const response = await axios.get(`${API_BASE_URL}/organization-setup/departments/${organizationId}`);
+      if (response.data.success) {
+        setDepartments(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+      toast.error('Failed to fetch departments');
+    } finally {
+      setLoadingEntities(prev => ({ ...prev, departments: false }));
+    }
+  };
+
+  const createDepartment = async (departmentData) => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/organization-setup/departments`, {
+        ...departmentData,
+        organizationId: selectedOrganization
+      });
+      if (response.data.success) {
+        setDepartments(prev => [...prev, response.data.data]);
+        toast.success('Department created successfully');
+        return response.data.data;
+      }
+    } catch (error) {
+      handleApiError(error);
+      throw error;
+    }
+  };
+
+  const updateDepartment = async (departmentId, departmentData) => {
+    try {
+      const response = await axios.put(`${API_BASE_URL}/organization-setup/departments/${departmentId}`, departmentData);
+      if (response.data.success) {
+        setDepartments(prev => prev.map(dept => 
+          dept._id === departmentId ? response.data.data : dept
+        ));
+        toast.success('Department updated successfully');
+        return response.data.data;
+      }
+    } catch (error) {
+      handleApiError(error);
+      throw error;
+    }
+  };
+
+  const deleteDepartment = async (departmentId) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/organization-setup/departments/${departmentId}`);
+      setDepartments(prev => prev.filter(dept => dept._id !== departmentId));
+      toast.success('Department deleted successfully');
+    } catch (error) {
+      handleApiError(error);
+      throw error;
+    }
+  };
+
+  // Class API calls
+  const fetchClasses = async (organizationId) => {
+    if (!organizationId) return;
+    
+    try {
+      setLoadingEntities(prev => ({ ...prev, classes: true }));
+      const response = await axios.get(`${API_BASE_URL}/organization-setup/classes/${organizationId}`);
+      if (response.data.success) {
+        setClasses(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching classes:', error);
+      toast.error('Failed to fetch classes');
+    } finally {
+      setLoadingEntities(prev => ({ ...prev, classes: false }));
+    }
+  };
+
+  const createClass = async (classData) => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/organization-setup/classes`, {
+        ...classData,
+        organizationId: selectedOrganization
+      });
+      if (response.data.success) {
+        setClasses(prev => [...prev, response.data.data]);
+        toast.success('Class created successfully');
+        return response.data.data;
+      }
+    } catch (error) {
+      handleApiError(error);
+      throw error;
+    }
+  };
+
+  const updateClass = async (classId, classData) => {
+    try {
+      const response = await axios.put(`${API_BASE_URL}/organization-setup/classes/${classId}`, classData);
+      if (response.data.success) {
+        setClasses(prev => prev.map(cls => 
+          cls._id === classId ? response.data.data : cls
+        ));
+        toast.success('Class updated successfully');
+        return response.data.data;
+      }
+    } catch (error) {
+      handleApiError(error);
+      throw error;
+    }
+  };
+
+  const deleteClass = async (classId) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/organization-setup/classes/${classId}`);
+      setClasses(prev => prev.filter(cls => cls._id !== classId));
+      toast.success('Class deleted successfully');
+    } catch (error) {
+      handleApiError(error);
+      throw error;
+    }
+  };
+
+  // Section API calls
+  const fetchSections = async (organizationId) => {
+    if (!organizationId) return;
+    
+    try {
+      setLoadingEntities(prev => ({ ...prev, sections: true }));
+      const response = await axios.get(`${API_BASE_URL}/organization-setup/sections/${organizationId}`);
+      if (response.data.success) {
+        setSections(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching sections:', error);
+      toast.error('Failed to fetch sections');
+    } finally {
+      setLoadingEntities(prev => ({ ...prev, sections: false }));
+    }
+  };
+
+  const createSection = async (sectionData) => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/organization-setup/sections`, {
+        ...sectionData,
+        organizationId: selectedOrganization
+      });
+      if (response.data.success) {
+        setSections(prev => [...prev, response.data.data]);
+        toast.success('Section created successfully');
+        return response.data.data;
+      }
+    } catch (error) {
+      handleApiError(error);
+      throw error;
+    }
+  };
+
+  const updateSection = async (sectionId, sectionData) => {
+    try {
+      const response = await axios.put(`${API_BASE_URL}/organization-setup/sections/${sectionId}`, sectionData);
+      if (response.data.success) {
+        setSections(prev => prev.map(sec => 
+          sec._id === sectionId ? response.data.data : sec
+        ));
+        toast.success('Section updated successfully');
+        return response.data.data;
+      }
+    } catch (error) {
+      handleApiError(error);
+      throw error;
+    }
+  };
+
+  const deleteSection = async (sectionId) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/organization-setup/sections/${sectionId}`);
+      setSections(prev => prev.filter(sec => sec._id !== sectionId));
+      toast.success('Section deleted successfully');
+    } catch (error) {
+      handleApiError(error);
+      throw error;
+    }
+  };
+
+  // Subject API calls
+  const fetchSubjects = async (organizationId) => {
+    if (!organizationId) return;
+    
+    try {
+      setLoadingEntities(prev => ({ ...prev, subjects: true }));
+      const response = await axios.get(`${API_BASE_URL}/organization-setup/subjects/${organizationId}`);
+      if (response.data.success) {
+        setSubjects(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching subjects:', error);
+      toast.error('Failed to fetch subjects');
+    } finally {
+      setLoadingEntities(prev => ({ ...prev, subjects: false }));
+    }
+  };
+
+  const createSubject = async (subjectData) => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/organization-setup/subjects`, {
+        ...subjectData,
+        organizationId: selectedOrganization
+      });
+      if (response.data.success) {
+        setSubjects(prev => [...prev, response.data.data]);
+        toast.success('Subject created successfully');
+        return response.data.data;
+      }
+    } catch (error) {
+      handleApiError(error);
+      throw error;
+    }
+  };
+
+  const updateSubject = async (subjectId, subjectData) => {
+    try {
+      const response = await axios.put(`${API_BASE_URL}/organization-setup/subjects/${subjectId}`, subjectData);
+      if (response.data.success) {
+        setSubjects(prev => prev.map(sub => 
+          sub._id === subjectId ? response.data.data : sub
+        ));
+        toast.success('Subject updated successfully');
+        return response.data.data;
+      }
+    } catch (error) {
+      handleApiError(error);
+      throw error;
+    }
+  };
+
+  const deleteSubject = async (subjectId) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/organization-setup/subjects/${subjectId}`);
+      setSubjects(prev => prev.filter(sub => sub._id !== subjectId));
+      toast.success('Subject deleted successfully');
+    } catch (error) {
+      handleApiError(error);
+      throw error;
+    }
+  };
+
+  // Assignment API calls - Updated to accept filter parameters
+  const fetchAssignments = async (organizationId, filterParams = {}) => {
+    if (!organizationId) return;
+    
+    try {
+      setLoadingEntities(prev => ({ ...prev, assignments: true }));
+      
+      const params = new URLSearchParams();
+
+      // Add filter parameters if they exist
+      Object.entries(filterParams).forEach(([key, value]) => {
+        if (value && value.trim()) {
+          params.append(key, value);
+        }
+      });
+      const response = await axios.get(`${API_BASE_URL}/organization-setup/assignments/${organizationId}?${params}`);
+      if (response.data.success) {
+        setSectionClassAssignments(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching assignments:', error);
+      toast.error('Failed to fetch assignments');
+    } finally {
+      setLoadingEntities(prev => ({ ...prev, assignments: false }));
+    }
+  };
+
+  const createAssignment = async (assignmentData) => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/organization-setup/assignments`, {
+        ...assignmentData,
+        organizationId: selectedOrganization
+      });
+      if (response.data.success) {
+        // Handle multiple assignments if sectionIds is an array
+        if (Array.isArray(response.data.data)) {
+          setSectionClassAssignments(prev => [...prev, ...response.data.data]);
+        } else {
+          setSectionClassAssignments(prev => [...prev, response.data.data]);
+        }
+        toast.success('Assignment(s) created successfully');
+        return response.data.data;
+      }
+    } catch (error) {
+      handleApiError(error);
+      throw error;
+    }
+  };
+
+  const updateAssignment = async (assignmentId, assignmentData) => {
+    try {
+      const response = await axios.put(`${API_BASE_URL}/organization-setup/assignments/${assignmentId}`, assignmentData);
+      if (response.data.success) {
+        setSectionClassAssignments(prev => prev.map(assignment => 
+          assignment._id === assignmentId ? response.data.data : assignment
+        ));
+        toast.success('Assignment updated successfully');
+        return response.data.data;
+      }
+    } catch (error) {
+      handleApiError(error);
+      throw error;
+    }
+  };
+
+  const deleteAssignment = async (assignmentId) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/organization-setup/assignments/${assignmentId}`);
+      setSectionClassAssignments(prev => prev.filter(assignment => assignment._id !== assignmentId));
+      toast.success('Assignment deleted successfully');
+    } catch (error) {
+      handleApiError(error);
+      throw error;
+    }
+  };
+
+  const handleApiError = (error) => {
+    if (axios.isAxiosError(error)) {
+      const responseData = error.response?.data;
+      if (responseData?.message) {
+        toast.error(responseData.message);
+      } else {
+        toast.error('Something went wrong. Please try again.');
+      }
+    } else {
+      toast.error('Something went wrong. Please try again.');
+    }
+  };
+
+  // Location change handlers
+  const handleCountryChange = async (countryName) => {
+    setSelectedCountry(countryName);
+    setSelectedState('');
+    setSelectedDistrict('');
+    setSelectedOrganization('');
+    setOrganizations([]);
+    clearAllEntities();
+
+    if (countryName) {
+      const selectedCountryObj = locations.countries.find(c => c.name === countryName);
+      if (selectedCountryObj) {
+        await fetchStates(selectedCountryObj.code, false);
+      }
+    }
+  };
+
+  const handleStateChange = async (stateName) => {
+    setSelectedState(stateName);
+    setSelectedDistrict('');
+    setSelectedOrganization('');
+    setOrganizations([]);
+    clearAllEntities();
+
+    if (stateName) {
+      const selectedStateObj = locations.states.find(s => s.name === stateName);
+      if (selectedStateObj) {
+        await fetchDistricts(selectedStateObj.code, false);
+      }
+    }
+  };
+
+  const handleDistrictChange = async (districtName) => {
+    setSelectedDistrict(districtName);
+    setSelectedOrganization('');
+    clearAllEntities();
+
+    if (districtName && selectedCountry && selectedState) {
+      await fetchOrganizations({
+        country: selectedCountry,
+        state: selectedState,
+        district: districtName
+      });
+    }
+  };
+
+  const handleOrganizationChange = async (orgId) => {
+    setSelectedOrganization(orgId);
+    clearAllEntities();
+    // Reset filters when organization changes
+    setAssignmentFilters({ departmentId: '', classId: '' });
+    setAppliedFilters({ departmentId: '', classId: '' });
+    
+    if (orgId) {
+      // Fetch all entities for the selected organization
+      await Promise.all([
+        fetchDepartments(orgId),
+        fetchClasses(orgId),
+        fetchSections(orgId),
+        fetchSubjects(orgId),
+        fetchAssignments(orgId) // Fetch assignments without filters initially
+      ]);
+    }
+  };
+
+  const clearAllEntities = () => {
+    setDepartments([]);
+    setClasses([]);
+    setSections([]);
+    setSubjects([]);
+    setSectionClassAssignments([]);
+  };
+
+  // Get selected organization info
+  const getSelectedOrganizationInfo = () => {
+    if (!selectedOrganization) return null;
+    return organizations.find(org => org._id === selectedOrganization);
+  };
+
   useEffect(() => {
-    // Initialize countries, states, and schools
-    setCountries([
-      { id: 1, name: 'India' },
-      { id: 2, name: 'United States' },
-      { id: 3, name: 'United Kingdom' }
-    ]);
-
-    setStates([
-      { id: 1, name: 'Karnataka', countryId: 1 },
-      { id: 2, name: 'Tamil Nadu', countryId: 1 },
-      { id: 3, name: 'Maharashtra', countryId: 1 },
-      { id: 4, name: 'California', countryId: 2 },
-      { id: 5, name: 'Texas', countryId: 2 },
-      { id: 6, name: 'England', countryId: 3 },
-      { id: 7, name: 'Scotland', countryId: 3 }
-    ]);
-
-    setSchools([
-      { id: 1, name: 'Bangalore International School', stateId: 1, countryId: 1, countryName: 'India', stateName: 'Karnataka' },
-      { id: 2, name: 'Delhi Public School', stateId: 1, countryId: 1, countryName: 'India', stateName: 'Karnataka' },
-      { id: 3, name: 'Chennai Central School', stateId: 2, countryId: 1, countryName: 'India', stateName: 'Tamil Nadu' },
-      { id: 4, name: 'Mumbai High School', stateId: 3, countryId: 1, countryName: 'India', stateName: 'Maharashtra' },
-      { id: 5, name: 'Stanford Elementary', stateId: 4, countryId: 2, countryName: 'United States', stateName: 'California' },
-      { id: 6, name: 'Harvard Prep School', stateId: 4, countryId: 2, countryName: 'United States', stateName: 'California' },
-      { id: 7, name: 'Oxford Academy', stateId: 6, countryId: 3, countryName: 'United Kingdom', stateName: 'England' }
-    ]);
-
-    // Initialize global departments
-    setDepartments([
-      { id: 1, name: 'Science', description: 'Science department' },
-      { id: 2, name: 'Mathematics', description: 'Mathematics department' },
-      { id: 3, name: 'Languages', description: 'Languages department' },
-      { id: 4, name: 'Social Studies', description: 'Social Studies department' }
-    ]);
-
-    // Initialize global classes
-    setClasses([
-      { id: 1, name: 'Class 1', description: 'First grade' },
-      { id: 2, name: 'Class 2', description: 'Second grade' },
-      { id: 3, name: 'Class 3', description: 'Third grade' },
-      { id: 4, name: 'Class 4', description: 'Fourth grade' },
-      { id: 5, name: 'Class 5', description: 'Fifth grade' }
-    ]);
-
-    // Initialize global sections
-    setSections([
-      { id: 1, name: 'Section A', description: 'Section A' },
-      { id: 2, name: 'Section B', description: 'Section B' },
-      { id: 3, name: 'Section C', description: 'Section C' },
-      { id: 4, name: 'Section D', description: 'Section D' }
-    ]);
-
-    // Initialize global subjects
-    setSubjects([
-      { id: 1, name: 'Physics', code: 'PHY101', departmentId: 1, departmentName: 'Science', description: 'Basic Physics', credits: '4', type: 'core' },
-      { id: 2, name: 'Chemistry', code: 'CHE101', departmentId: 1, departmentName: 'Science', description: 'Basic Chemistry', credits: '4', type: 'core' },
-      { id: 3, name: 'Algebra', code: 'MATH101', departmentId: 2, departmentName: 'Mathematics', description: 'Basic Algebra', credits: '3', type: 'core' },
-      { id: 4, name: 'English', code: 'ENG101', departmentId: 3, departmentName: 'Languages', description: 'English Language', credits: '3', type: 'core' },
-      { id: 5, name: 'History', code: 'HIS101', departmentId: 4, departmentName: 'Social Studies', description: 'World History', credits: '3', type: 'core' }
-    ]);
-
-    // Initialize section-class assignments (junction table)
-    setSectionClassAssignments([
-      { id: 1, sectionId: 1, classId: 1, departmentId: 1, sectionName: 'Section A', className: 'Class 1', departmentName: 'Science' },
-      { id: 2, sectionId: 2, classId: 1, departmentId: 1, sectionName: 'Section B', className: 'Class 1', departmentName: 'Science' },
-      { id: 3, sectionId: 1, classId: 2, departmentId: 2, sectionName: 'Section A', className: 'Class 2', departmentName: 'Mathematics' },
-      { id: 4, sectionId: 3, classId: 2, departmentId: 2, sectionName: 'Section C', className: 'Class 2', departmentName: 'Mathematics' }
-    ]);
+    fetchCountries();
   }, []);
 
   // Department handlers
@@ -185,37 +630,31 @@ const MasterSchoolClassSetup = () => {
     setShowDeleteConfirm(true);
   };
 
-  const confirmDeleteDepartment = (id) => {
-    setDepartments(prev => prev.filter(dept => dept.id !== id));
-    // Also remove related classes, sections, and subjects
-    setClasses(prev => prev.filter(cls => cls.departmentId !== id));
-    setSections(prev => prev.filter(sec => {
-      const relatedClass = classes.find(cls => cls.id === sec.classId);
-      return relatedClass && relatedClass.departmentId !== id;
-    }));
-    setSubjects(prev => prev.filter(sub => sub.departmentId !== id));
-    setShowDeleteConfirm(false);
-    setItemToDelete(null);
-    setDeleteType('');
+  const confirmDeleteDepartment = async () => {
+    try {
+      await deleteDepartment(itemToDelete._id);
+      setShowDeleteConfirm(false);
+      setItemToDelete(null);
+      setDeleteType('');
+    } catch (error) {
+      // Error already handled in deleteDepartment
+    }
   };
 
-  const handleDepartmentSubmit = (e) => {
+  const handleDepartmentSubmit = async (e) => {
     e.preventDefault();
-    if (editingDepartment) {
-      setDepartments(prev => prev.map(dept => 
-        dept.id === editingDepartment.id 
-          ? { ...dept, ...departmentFormData }
-          : dept
-      ));
-    } else {
-      const newDepartment = {
-        id: Date.now(),
-        ...departmentFormData
-      };
-      setDepartments(prev => [...prev, newDepartment]);
+    try {
+      if (editingDepartment) {
+        await updateDepartment(editingDepartment._id, departmentFormData);
+      } else {
+        await createDepartment(departmentFormData);
+      }
+      setIsDepartmentModalOpen(false);
+      setDepartmentFormData({ name: '', description: '' });
+      setEditingDepartment(null);
+    } catch (error) {
+      // Error already handled in API functions
     }
-    setIsDepartmentModalOpen(false);
-    setDepartmentFormData({ name: '', description: '' });
   };
 
   // Class handlers
@@ -240,35 +679,34 @@ const MasterSchoolClassSetup = () => {
     setShowDeleteConfirm(true);
   };
 
-  const confirmDeleteClass = (id) => {
-    setClasses(prev => prev.filter(cls => cls.id !== id));
-    // Also remove related sections
-    setSections(prev => prev.filter(sec => sec.classId !== id));
-    setShowDeleteConfirm(false);
-    setItemToDelete(null);
-    setDeleteType('');
-  };
-
-  const handleClassSubmit = (e) => {
-    e.preventDefault();
-    if (editingClass) {
-      setClasses(prev => prev.map(cls => 
-        cls.id === editingClass.id 
-          ? { ...cls, ...classFormData }
-          : cls
-      ));
-    } else {
-      const newClass = {
-        id: Date.now(),
-        ...classFormData
-      };
-      setClasses(prev => [...prev, newClass]);
+  const confirmDeleteClass = async () => {
+    try {
+      await deleteClass(itemToDelete._id);
+      setShowDeleteConfirm(false);
+      setItemToDelete(null);
+      setDeleteType('');
+    } catch (error) {
+      // Error already handled
     }
-    setIsClassModalOpen(false);
-    setClassFormData({ name: '', description: '' });
   };
 
-  // Section handlers (now global)
+  const handleClassSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingClass) {
+        await updateClass(editingClass._id, classFormData);
+      } else {
+        await createClass(classFormData);
+      }
+      setIsClassModalOpen(false);
+      setClassFormData({ name: '', description: '' });
+      setEditingClass(null);
+    } catch (error) {
+      // Error already handled in API functions
+    }
+  };
+
+  // Section handlers
   const handleAddSection = () => {
     setEditingSection(null);
     setSectionFormData({ name: '', description: '' });
@@ -290,36 +728,34 @@ const MasterSchoolClassSetup = () => {
     setShowDeleteConfirm(true);
   };
 
-  const confirmDeleteSection = (id) => {
-    setSections(prev => prev.filter(sec => sec.id !== id));
-    // Also remove related assignments
-    setSectionClassAssignments(prev => prev.filter(assignment => assignment.sectionId !== id));
-    setShowDeleteConfirm(false);
-    setItemToDelete(null);
-    setDeleteType('');
-  };
-
-  const handleSectionSubmit = (e) => {
-    e.preventDefault();
-    
-    if (editingSection) {
-      setSections(prev => prev.map(sec => 
-        sec.id === editingSection.id 
-          ? { ...sec, ...sectionFormData }
-          : sec
-      ));
-    } else {
-      const newSection = {
-        id: Date.now(),
-        ...sectionFormData
-      };
-      setSections(prev => [...prev, newSection]);
+  const confirmDeleteSection = async () => {
+    try {
+      await deleteSection(itemToDelete._id);
+      setShowDeleteConfirm(false);
+      setItemToDelete(null);
+      setDeleteType('');
+    } catch (error) {
+      // Error already handled
     }
-    setIsSectionModalOpen(false);
-    setSectionFormData({ name: '', description: '' });
   };
 
-  // Assignment handlers (junction table)
+  const handleSectionSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingSection) {
+        await updateSection(editingSection._id, sectionFormData);
+      } else {
+        await createSection(sectionFormData);
+      }
+      setIsSectionModalOpen(false);
+      setSectionFormData({ name: '', description: '' });
+      setEditingSection(null);
+    } catch (error) {
+      // Error already handled in API functions
+    }
+  };
+
+  // Assignment handlers
   const handleAddAssignment = () => {
     setEditingAssignment(null);
     setAssignmentFormData({ sectionIds: [], classId: '', departmentId: '' });
@@ -329,9 +765,9 @@ const MasterSchoolClassSetup = () => {
   const handleEditAssignment = (assignment) => {
     setEditingAssignment(assignment);
     setAssignmentFormData({ 
-      sectionIds: [assignment.sectionId], 
-      classId: assignment.classId, 
-      departmentId: assignment.departmentId 
+      sectionIds: [assignment.sectionId || assignment.section?._id], 
+      classId: assignment.classId || assignment.class?._id, 
+      departmentId: assignment.departmentId || assignment.department?._id
     });
     setIsAssignmentModalOpen(true);
   };
@@ -342,52 +778,39 @@ const MasterSchoolClassSetup = () => {
     setShowDeleteConfirm(true);
   };
 
-  const confirmDeleteAssignment = (id) => {
-    setSectionClassAssignments(prev => prev.filter(assignment => assignment.id !== id));
-    setShowDeleteConfirm(false);
-    setItemToDelete(null);
-    setDeleteType('');
+  const confirmDeleteAssignment = async () => {
+    try {
+      await deleteAssignment(itemToDelete._id);
+      setShowDeleteConfirm(false);
+      setItemToDelete(null);
+      setDeleteType('');
+      // Refresh assignments after deletion
+      await fetchAssignments(selectedOrganization, appliedFilters);
+    } catch (error) {
+      // Error already handled
+    }
   };
 
-  const handleAssignmentSubmit = (e) => {
+  const handleAssignmentSubmit = async (e) => {
     e.preventDefault();
-    const classItem = classes.find(cls => cls.id === parseInt(assignmentFormData.classId));
-    const department = departments.find(dept => dept.id === parseInt(assignmentFormData.departmentId));
-    
-    if (editingAssignment) {
-      // For editing, update the single assignment
-      const section = sections.find(sec => sec.id === parseInt(assignmentFormData.sectionIds[0]));
-      setSectionClassAssignments(prev => prev.map(assignment => 
-        assignment.id === editingAssignment.id 
-          ? { 
-              ...assignment, 
-              sectionId: assignmentFormData.sectionIds[0],
-              classId: assignmentFormData.classId,
-              departmentId: assignmentFormData.departmentId,
-              sectionName: section?.name || '',
-              className: classItem?.name || '',
-              departmentName: department?.name || ''
-            }
-          : assignment
-      ));
-    } else {
-      // For creating, create multiple assignments for each selected section
-      const newAssignments = assignmentFormData.sectionIds.map(sectionId => {
-        const section = sections.find(sec => sec.id === parseInt(sectionId));
-        return {
-          id: Date.now() + Math.random(), // Unique ID for each assignment
-          sectionId: parseInt(sectionId),
-          classId: parseInt(assignmentFormData.classId),
-          departmentId: parseInt(assignmentFormData.departmentId),
-          sectionName: section?.name || '',
-          className: classItem?.name || '',
-          departmentName: department?.name || ''
-        };
-      });
-      setSectionClassAssignments(prev => [...prev, ...newAssignments]);
+    try {
+      if (editingAssignment) {
+        await updateAssignment(editingAssignment._id, {
+          sectionId: assignmentFormData.sectionIds[0],
+          classId: assignmentFormData.classId,
+          departmentId: assignmentFormData.departmentId
+        });
+      } else {
+        await createAssignment(assignmentFormData);
+      }
+      setIsAssignmentModalOpen(false);
+      setAssignmentFormData({ sectionIds: [], classId: '', departmentId: '' });
+      setEditingAssignment(null);
+      // Refresh assignments after creation/update
+      await fetchAssignments(selectedOrganization, appliedFilters);
+    } catch (error) {
+      // Error already handled in API functions
     }
-    setIsAssignmentModalOpen(false);
-    setAssignmentFormData({ sectionIds: [], classId: '', departmentId: '' });
   };
 
   // Subject handlers
@@ -409,7 +832,7 @@ const MasterSchoolClassSetup = () => {
     setSubjectFormData({ 
       name: subject.name, 
       code: subject.code, 
-      departmentId: subject.departmentId, 
+      departmentId: subject.departmentId || subject.department?._id, 
       description: subject.description,
       credits: subject.credits,
       type: subject.type
@@ -423,39 +846,38 @@ const MasterSchoolClassSetup = () => {
     setShowDeleteConfirm(true);
   };
 
-  const confirmDeleteSubject = (id) => {
-    setSubjects(prev => prev.filter(sub => sub.id !== id));
-    setShowDeleteConfirm(false);
-    setItemToDelete(null);
-    setDeleteType('');
+  const confirmDeleteSubject = async () => {
+    try {
+      await deleteSubject(itemToDelete._id);
+      setShowDeleteConfirm(false);
+      setItemToDelete(null);
+      setDeleteType('');
+    } catch (error) {
+      // Error already handled
+    }
   };
 
-  const handleSubjectSubmit = (e) => {
+  const handleSubjectSubmit = async (e) => {
     e.preventDefault();
-    const department = departments.find(dept => dept.id === parseInt(subjectFormData.departmentId));
-    if (editingSubject) {
-      setSubjects(prev => prev.map(sub => 
-        sub.id === editingSubject.id 
-          ? { ...sub, ...subjectFormData, departmentName: department?.name || 'No Department' }
-          : sub
-      ));
-    } else {
-      const newSubject = {
-        id: Date.now(),
-        ...subjectFormData,
-        departmentName: department?.name || 'No Department'
-      };
-      setSubjects(prev => [...prev, newSubject]);
+    try {
+      if (editingSubject) {
+        await updateSubject(editingSubject._id, subjectFormData);
+      } else {
+        await createSubject(subjectFormData);
+      }
+      setIsSubjectModalOpen(false);
+      setSubjectFormData({ 
+        name: '', 
+        code: '', 
+        departmentId: '', 
+        description: '',
+        credits: '',
+        type: 'core'
+      });
+      setEditingSubject(null);
+    } catch (error) {
+      // Error already handled in API functions
     }
-    setIsSubjectModalOpen(false);
-    setSubjectFormData({ 
-      name: '', 
-      code: '', 
-      departmentId: '', 
-      description: '',
-      credits: '',
-      type: 'core'
-    });
   };
 
   // CSV download and upload handlers
@@ -470,94 +892,22 @@ const MasterSchoolClassSetup = () => {
     window.URL.revokeObjectURL(url);
   };
 
-  const handleCsvUpload = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setCsvFile(file);
-      setIsUploading(true);
-      
-      // Simulate CSV processing
-      setTimeout(() => {
-        const newSubjects = [
-          { id: Date.now() + 1, name: 'Biology', code: 'BIO101', departmentName: 'Science', description: 'Basic Biology', credits: '4', type: 'core' },
-          { id: Date.now() + 2, name: 'History', code: 'HIS101', departmentName: 'No Department', description: 'World History', credits: '3', type: 'core' }
-        ];
-        setSubjects(prev => [...prev, ...newSubjects]);
-        setIsUploading(false);
-        setCsvFile(null);
-        alert('Subjects uploaded successfully!');
-      }, 2000);
-    }
-  };
-
-  // School selection handlers
-  const handleCountryChange = (countryId) => {
-    setSelectedCountry(countryId);
-    setSelectedState('');
-    setSelectedSchool('');
-  };
-
-  const handleStateChange = (stateId) => {
-    setSelectedState(stateId);
-    setSelectedSchool('');
-  };
-
-  const handleSchoolChange = (schoolId) => {
-    setSelectedSchool(schoolId);
-  };
-
-  // Helper functions to get filtered states and schools
-  const getFilteredStates = () => {
-    if (!selectedCountry) return [];
-    return states.filter(state => state.countryId === parseInt(selectedCountry));
-  };
-
-  const getFilteredSchools = () => {
-    if (!selectedState) return [];
-    return schools.filter(school => school.stateId === parseInt(selectedState));
-  };
-
-  const getSelectedSchoolInfo = () => {
-    if (!selectedSchool) return null;
-    return schools.find(school => school.id === parseInt(selectedSchool));
-  };
-
-  // Filter handlers for global entities
-  const handleDepartmentFilter = (departmentId) => {
-    setSelectedDepartment(departmentId);
-    setSelectedClass('');
-    setSelectedSection('');
-  };
-
-  const handleClassFilter = (classId) => {
-    setSelectedClass(classId);
-    setSelectedSection('');
-  };
-
-  const handleSectionFilter = (sectionId) => {
-    setSelectedSection(sectionId);
-  };
-
-  // Get filtered assignments based on selections
-  const getFilteredAssignments = () => {
-    let filtered = sectionClassAssignments;
+  // Assignment filter handlers - Updated
+  const handleApplyFilters = async () => {
+    if (!selectedOrganization) return;
     
-    if (selectedDepartment) {
-      filtered = filtered.filter(assignment => assignment.departmentId === parseInt(selectedDepartment));
-    }
-    
-    if (selectedClass) {
-      filtered = filtered.filter(assignment => assignment.classId === parseInt(selectedClass));
-    }
-    
-    if (selectedSection) {
-      filtered = filtered.filter(assignment => assignment.sectionId === parseInt(selectedSection));
-    }
-    
-    return filtered;
+    setAppliedFilters(assignmentFilters);
+    await fetchAssignments(selectedOrganization, assignmentFilters);
   };
 
-  const filteredAssignments = getFilteredAssignments();
+  const handleClearFilters = async () => {
+    if (!selectedOrganization) return;
+    
+    const emptyFilters = { departmentId: '', classId: '' };
+    setAssignmentFilters(emptyFilters);
+    setAppliedFilters(emptyFilters);
+    await fetchAssignments(selectedOrganization, emptyFilters);
+  };
 
   // View handlers
   const handleViewEntity = (type, item) => {
@@ -591,13 +941,6 @@ const MasterSchoolClassSetup = () => {
     }
   };
 
-
-  const handleBulkDelete = (type) => {
-    setBulkOperationType(type);
-    setSelectedItems([]);
-    setIsBulkDeleteModalOpen(true);
-  };
-
   const getEntityList = (type) => {
     switch (type) {
       case 'department':
@@ -613,47 +956,18 @@ const MasterSchoolClassSetup = () => {
     }
   };
 
-
-  const handleBulkDeleteSubmit = (e) => {
-    e.preventDefault();
-    
-    if (selectedItems.length === 0) {
-      alert('Please select at least one item to delete');
-      return;
-    }
-
-    // Perform bulk delete based on entity type
-    switch (bulkOperationType) {
-      case 'department':
-        setDepartments(prev => prev.filter(dept => !selectedItems.includes(dept.id)));
-        // Also remove related assignments
-        setSectionClassAssignments(prev => prev.filter(assignment => !selectedItems.includes(assignment.departmentId)));
-        break;
-      case 'class':
-        setClasses(prev => prev.filter(cls => !selectedItems.includes(cls.id)));
-        // Also remove related assignments
-        setSectionClassAssignments(prev => prev.filter(assignment => !selectedItems.includes(assignment.classId)));
-        break;
-      case 'section':
-        setSections(prev => prev.filter(sec => !selectedItems.includes(sec.id)));
-        // Also remove related assignments
-        setSectionClassAssignments(prev => prev.filter(assignment => !selectedItems.includes(assignment.sectionId)));
-        break;
-      case 'subject':
-        setSubjects(prev => prev.filter(sub => !selectedItems.includes(sub.id)));
-        break;
-      default:
-        break;
-    }
-
-    alert(`Successfully deleted ${selectedItems.length} ${bulkOperationType}(s)`);
-    setIsBulkDeleteModalOpen(false);
-    setSelectedItems([]);
-  };
-
   // Navigation handler
   const handlePageChange = (pageId) => {
     console.log(`Navigating to: ${pageId}`);
+  };
+
+  // Helper function to get display value from entity
+  const getEntityDisplayValue = (entity, field) => {
+    // Handle both populated and non-populated references
+    if (typeof entity[field] === 'object' && entity[field] !== null) {
+      return entity[field].name || entity[field];
+    }
+    return entity[`${field}Name`] || entity[field] || '';
   };
 
   // Base styles
@@ -665,10 +979,12 @@ const MasterSchoolClassSetup = () => {
   const btnSlateClass = `${btnBaseClass} bg-slate-200 hover:bg-slate-300 text-slate-800`;
 
   // Check if any modal is open
-  const isAnyModalOpen = isDepartmentModalOpen || isClassModalOpen || isSectionModalOpen || isSubjectModalOpen || isAssignmentModalOpen || isViewModalOpen || isEditListModalOpen || isBulkDeleteModalOpen;
+  const isAnyModalOpen = isDepartmentModalOpen || isClassModalOpen || isSectionModalOpen || isSubjectModalOpen || isAssignmentModalOpen || isViewModalOpen || isEditListModalOpen;
 
   return (
     <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
+      <Toaster position="top-right" />
+      
       {/* Navigation Component - hidden when modal is open */}
       {!isAnyModalOpen && <Navigation currentPage="school-class-setup" onPageChange={handlePageChange} />}
 
@@ -679,33 +995,33 @@ const MasterSchoolClassSetup = () => {
           <header className="flex justify-between items-center flex-wrap gap-4">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-slate-900">School Class Setup</h1>
-              <p className="text-slate-500 text-sm">Select a school first, then manage departments, classes, sections, subjects, and assignments</p>
+              <p className="text-slate-500 text-sm">Select an organization first, then manage departments, classes, sections, subjects, and assignments</p>
             </div>
           </header>
 
-          {/* School Selection Filter */}
+          {/* Organization Selection Filter */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">Select School</h2>
-                <p className="text-slate-500 text-sm">Choose country, state, and school to manage class setup</p>
+                <h2 className="text-lg font-bold text-slate-900">Select Organization</h2>
+                <p className="text-slate-500 text-sm">Choose country, state, district, and organization to manage class setup</p>
               </div>
-              {selectedSchool && (
+              {selectedOrganization && (
                 <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-2">
                   <div className="flex items-center gap-2">
                     <i className="fas fa-check-circle text-green-600"></i>
                     <span className="text-green-800 font-medium">
-                      {getSelectedSchoolInfo()?.name}
+                      {getSelectedOrganizationInfo()?.name}
                     </span>
                   </div>
                   <p className="text-green-600 text-sm">
-                    {getSelectedSchoolInfo()?.stateName}, {getSelectedSchoolInfo()?.countryName}
+                    {selectedState}, {selectedCountry}
                   </p>
                 </div>
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Country *
@@ -717,8 +1033,8 @@ const MasterSchoolClassSetup = () => {
                   required
                 >
                   <option value="">Select Country</option>
-                  {countries.map(country => (
-                    <option key={country.id} value={country.id}>{country.name}</option>
+                  {locations.countries.map((country) => (
+                    <option key={country.code} value={country.name}>{country.name}</option>
                   ))}
                 </select>
               </div>
@@ -735,55 +1051,76 @@ const MasterSchoolClassSetup = () => {
                   required
                 >
                   <option value="">Select State</option>
-                  {getFilteredStates().map(state => (
-                    <option key={state.id} value={state.id}>{state.name}</option>
+                  {locations.states.map((state) => (
+                    <option key={state.code} value={state.name}>{state.name}</option>
                   ))}
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  School *
+                  District *
                 </label>
                 <select
-                  value={selectedSchool}
-                  onChange={(e) => handleSchoolChange(e.target.value)}
+                  value={selectedDistrict}
+                  onChange={(e) => handleDistrictChange(e.target.value)}
                   className={inputBaseClass}
                   disabled={!selectedState}
                   required
                 >
-                  <option value="">Select School</option>
-                  {getFilteredSchools().map(school => (
-                    <option key={school.id} value={school.id}>{school.name}</option>
+                  <option value="">Select District</option>
+                  {locations.districts.map((district) => (
+                    <option key={district.code} value={district.name}>{district.name}</option>
                   ))}
                 </select>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Organization *
+                </label>
+                <select
+                  value={selectedOrganization}
+                  onChange={(e) => handleOrganizationChange(e.target.value)}
+                  className={inputBaseClass}
+                  disabled={!selectedDistrict || isLoading}
+                  required
+                >
+                  <option value="">Select Organization</option>
+                  {organizations.map(org => (
+                    <option key={org._id} value={org._id}>{org.name}</option>
+                  ))}
+                </select>
+                {isLoading && selectedDistrict && (
+                  <p className="text-sm text-slate-500 mt-1">Loading organizations...</p>
+                )}
+              </div>
             </div>
 
-            {!selectedSchool && (
+            {!selectedOrganization && (
               <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                 <div className="flex items-center gap-3">
                   <i className="fas fa-info-circle text-amber-600"></i>
                   <div>
-                    <h3 className="font-semibold text-amber-900">School Selection Required</h3>
-                    <p className="text-sm text-amber-700">Please select a country, state, and school to manage class setup and assignments.</p>
+                    <h3 className="font-semibold text-amber-900">Organization Selection Required</h3>
+                    <p className="text-sm text-amber-700">Please select a country, state, district, and organization to manage class setup and assignments.</p>
                   </div>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Global Entity Management Tabs - Only show when school is selected */}
-          {selectedSchool && (
+          {/* Global Entity Management Tabs - Only show when organization is selected */}
+          {selectedOrganization && (
             <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-xl font-bold text-slate-900">Entity Management</h2>
-                <p className="text-slate-500 text-sm">Manage departments, classes, sections, and subjects for {getSelectedSchoolInfo()?.name}</p>
+                <p className="text-slate-500 text-sm">Manage departments, classes, sections, and subjects for {getSelectedOrganizationInfo()?.name}</p>
               </div>
               <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
                 <span className="text-blue-800 text-sm font-medium">
-                  School: {getSelectedSchoolInfo()?.name}
+                  Organization: {getSelectedOrganizationInfo()?.name}
                 </span>
               </div>
             </div>
@@ -794,11 +1131,14 @@ const MasterSchoolClassSetup = () => {
                   <h3 className="font-semibold text-blue-900">Departments</h3>
                   <i className="fas fa-building text-blue-600"></i>
                 </div>
-                <p className="text-blue-700 text-sm mb-3">{departments.length} departments</p>
+                <p className="text-blue-700 text-sm mb-3">
+                  {loadingEntities.departments ? 'Loading...' : `${departments.length} departments`}
+                </p>
                 <div className="space-y-2">
                   <button
                     onClick={handleAddDepartment}
                     className="w-full bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    disabled={loadingEntities.departments}
                   >
                     Add Department
                   </button>
@@ -824,13 +1164,6 @@ const MasterSchoolClassSetup = () => {
                     >
                       <i className="fas fa-plus"></i>
                     </button>
-                    <button
-                      onClick={() => handleBulkDelete('department')}
-                      className="flex-1 bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1.5 rounded text-xs font-medium transition-colors"
-                      title="Bulk delete departments"
-                    >
-                      <i className="fas fa-trash"></i>
-                    </button>
                   </div>
                 </div>
               </div>
@@ -841,11 +1174,14 @@ const MasterSchoolClassSetup = () => {
                   <h3 className="font-semibold text-green-900">Classes</h3>
                   <i className="fas fa-graduation-cap text-green-600"></i>
                 </div>
-                <p className="text-green-700 text-sm mb-3">{classes.length} classes</p>
+                <p className="text-green-700 text-sm mb-3">
+                  {loadingEntities.classes ? 'Loading...' : `${classes.length} classes`}
+                </p>
                 <div className="space-y-2">
                   <button
                     onClick={handleAddClass}
                     className="w-full bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    disabled={loadingEntities.classes}
                   >
                     Add Class
                   </button>
@@ -871,13 +1207,6 @@ const MasterSchoolClassSetup = () => {
                     >
                       <i className="fas fa-plus"></i>
                     </button>
-                    <button
-                      onClick={() => handleBulkDelete('class')}
-                      className="flex-1 bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1.5 rounded text-xs font-medium transition-colors"
-                      title="Bulk delete classes"
-                    >
-                      <i className="fas fa-trash"></i>
-                    </button>
                   </div>
                 </div>
               </div>
@@ -888,11 +1217,14 @@ const MasterSchoolClassSetup = () => {
                   <h3 className="font-semibold text-purple-900">Sections</h3>
                   <i className="fas fa-layer-group text-purple-600"></i>
                 </div>
-                <p className="text-purple-700 text-sm mb-3">{sections.length} sections</p>
+                <p className="text-purple-700 text-sm mb-3">
+                  {loadingEntities.sections ? 'Loading...' : `${sections.length} sections`}
+                </p>
                 <div className="space-y-2">
                   <button
                     onClick={handleAddSection}
                     className="w-full bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    disabled={loadingEntities.sections}
                   >
                     Add Section
                   </button>
@@ -918,13 +1250,6 @@ const MasterSchoolClassSetup = () => {
                     >
                       <i className="fas fa-plus"></i>
                     </button>
-                    <button
-                      onClick={() => handleBulkDelete('section')}
-                      className="flex-1 bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1.5 rounded text-xs font-medium transition-colors"
-                      title="Bulk delete sections"
-                    >
-                      <i className="fas fa-trash"></i>
-                    </button>
                   </div>
                 </div>
               </div>
@@ -935,11 +1260,14 @@ const MasterSchoolClassSetup = () => {
                   <h3 className="font-semibold text-orange-900">Subjects</h3>
                   <i className="fas fa-book text-orange-600"></i>
                 </div>
-                <p className="text-orange-700 text-sm mb-3">{subjects.length} subjects</p>
+                <p className="text-orange-700 text-sm mb-3">
+                  {loadingEntities.subjects ? 'Loading...' : `${subjects.length} subjects`}
+                </p>
                 <div className="space-y-2">
                   <button
                     onClick={handleAddSubject}
                     className="w-full bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    disabled={loadingEntities.subjects}
                   >
                     Add Subject
                   </button>
@@ -965,13 +1293,6 @@ const MasterSchoolClassSetup = () => {
                     >
                       <i className="fas fa-plus"></i>
                     </button>
-                    <button
-                      onClick={() => handleBulkDelete('subject')}
-                      className="flex-1 bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1.5 rounded text-xs font-medium transition-colors"
-                      title="Bulk delete subjects"
-                    >
-                      <i className="fas fa-trash"></i>
-                    </button>
                   </div>
                 </div>
               </div>
@@ -979,113 +1300,154 @@ const MasterSchoolClassSetup = () => {
           </div>
           )}
 
-          {/* Assignment Management - Only show when school is selected */}
-          {selectedSchool && (
+          {/* Assignment Management - Only show when organization is selected */}
+          {selectedOrganization && (
             <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-xl font-bold text-slate-900">Section-Class Assignments</h2>
-                <p className="text-slate-500 text-sm">Assign sections to classes under specific departments for {getSelectedSchoolInfo()?.name}</p>
+                <p className="text-slate-500 text-sm">Assign sections to classes under specific departments for {getSelectedOrganizationInfo()?.name}</p>
               </div>
               <button
                 onClick={handleAddAssignment}
                 className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                disabled={loadingEntities.assignments}
               >
                 <i className="fas fa-plus"></i>
                 Add Assignment
               </button>
             </div>
 
-            {/* Assignment Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            {/* Assignment Filters - Updated */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Filter by Department</label>
                 <select
-                  value={selectedDepartment}
-                  onChange={(e) => handleDepartmentFilter(e.target.value)}
+                  value={assignmentFilters.departmentId}
+                  onChange={(e) => setAssignmentFilters(prev => ({ ...prev, departmentId: e.target.value }))}
                   className={inputBaseClass}
                 >
                   <option value="">All Departments</option>
                   {departments.map(dept => (
-                    <option key={dept.id} value={dept.id}>{dept.name}</option>
+                    <option key={dept._id} value={dept._id}>{dept.name}</option>
                   ))}
                 </select>
               </div>
+              
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Filter by Class</label>
                 <select
-                  value={selectedClass}
-                  onChange={(e) => handleClassFilter(e.target.value)}
+                  value={assignmentFilters.classId}
+                  onChange={(e) => setAssignmentFilters(prev => ({ ...prev, classId: e.target.value }))}
                   className={inputBaseClass}
                 >
                   <option value="">All Classes</option>
                   {classes.map(cls => (
-                    <option key={cls.id} value={cls.id}>{cls.name}</option>
+                    <option key={cls._id} value={cls._id}>{cls.name}</option>
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Filter by Section</label>
-                <select
-                  value={selectedSection}
-                  onChange={(e) => handleSectionFilter(e.target.value)}
-                  className={inputBaseClass}
+
+              <div className="flex items-end">
+                <button
+                  onClick={handleApplyFilters}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2 w-full"
+                  disabled={loadingEntities.assignments}
                 >
-                  <option value="">All Sections</option>
-                  {sections.map(sec => (
-                    <option key={sec.id} value={sec.id}>{sec.name}</option>
-                  ))}
-                </select>
+                  <i className="fas fa-filter"></i>
+                  Apply Filters
+                </button>
+              </div>
+
+              <div className="flex items-end">
+                <button
+                  onClick={handleClearFilters}
+                  className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2 w-full"
+                  disabled={loadingEntities.assignments}
+                >
+                  <i className="fas fa-times"></i>
+                  Clear Filters
+                </button>
               </div>
             </div>
 
-            {/* Assignments Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-slate-100 text-slate-600">
-                    <th className="p-3 text-left font-semibold">Section</th>
-                    <th className="p-3 text-left font-semibold">Class</th>
-                    <th className="p-3 text-left font-semibold">Department</th>
-                    <th className="p-3 text-center font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAssignments.map(assignment => (
-                    <tr key={assignment.id} className="border-b border-slate-200 hover:bg-slate-50">
-                      <td className="p-3">{assignment.sectionName}</td>
-                      <td className="p-3">{assignment.className}</td>
-                      <td className="p-3">{assignment.departmentName}</td>
-                      <td className="p-3">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleEditAssignment(assignment)}
-                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                            title="Edit Assignment"
-                          >
-                            <i className="fas fa-edit"></i>
-                          </button>
-                          <button
-                            onClick={() => handleDeleteAssignment(assignment)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete Assignment"
-                          >
-                            <i className="fas fa-trash"></i>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {filteredAssignments.length === 0 && (
-                    <tr>
-                      <td colSpan="4" className="text-center p-8 text-slate-500">
-                        No assignments found. Create your first assignment to get started.
-                      </td>
-                    </tr>
+            {/* Active filters indicator */}
+            {(appliedFilters.departmentId || appliedFilters.classId) && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <i className="fas fa-filter text-blue-600"></i>
+                  <span className="font-medium text-blue-900">Active Filters:</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {appliedFilters.departmentId && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      Department: {departments.find(d => d._id === appliedFilters.departmentId)?.name}
+                    </span>
                   )}
-                </tbody>
-              </table>
-            </div>
+                  {appliedFilters.classId && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Class: {classes.find(c => c._id === appliedFilters.classId)?.name}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Loading state for assignments */}
+            {loadingEntities.assignments ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                <span className="ml-3 text-slate-600">Loading assignments...</span>
+              </div>
+            ) : (
+              /* Assignments Table */
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-600">
+                      <th className="p-3 text-left font-semibold">Section</th>
+                      <th className="p-3 text-left font-semibold">Class</th>
+                      <th className="p-3 text-left font-semibold">Department</th>
+                      <th className="p-3 text-center font-semibold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sectionClassAssignments.map(assignment => (
+                      <tr key={assignment._id} className="border-b border-slate-200 hover:bg-slate-50">
+                        <td className="p-3">{getEntityDisplayValue(assignment, 'section')}</td>
+                        <td className="p-3">{getEntityDisplayValue(assignment, 'class')}</td>
+                        <td className="p-3">{getEntityDisplayValue(assignment, 'department')}</td>
+                        <td className="p-3">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleEditAssignment(assignment)}
+                              className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                              title="Edit Assignment"
+                            >
+                              <i className="fas fa-edit"></i>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteAssignment(assignment)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete Assignment"
+                            >
+                              <i className="fas fa-trash"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {sectionClassAssignments.length === 0 && (
+                      <tr>
+                        <td colSpan="4" className="text-center p-8 text-slate-500">
+                          No assignments found. Create your first assignment or adjust your filters to see results.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
           )}
         </main>
@@ -1139,6 +1501,8 @@ const MasterSchoolClassSetup = () => {
         inputBaseClass={inputBaseClass}
         btnTealClass={btnTealClass}
         btnSlateClass={btnSlateClass}
+        onDownloadTemplate={handleDownloadTemplate}
+        isUploading={isUploading}
       />
 
       {/* Assignment Modal - Simple form for creating assignments */}
@@ -1169,7 +1533,7 @@ const MasterSchoolClassSetup = () => {
                   >
                     <option value="">Select Department</option>
                     {departments.map(dept => (
-                      <option key={dept.id} value={dept.id}>{dept.name}</option>
+                      <option key={dept._id} value={dept._id}>{dept.name}</option>
                     ))}
                   </select>
                 </div>
@@ -1184,7 +1548,7 @@ const MasterSchoolClassSetup = () => {
                   >
                     <option value="">Select Class</option>
                     {classes.map(cls => (
-                      <option key={cls.id} value={cls.id}>{cls.name}</option>
+                      <option key={cls._id} value={cls._id}>{cls.name}</option>
                     ))}
                   </select>
                 </div>
@@ -1202,7 +1566,7 @@ const MasterSchoolClassSetup = () => {
                             if (e.target.checked) {
                               setAssignmentFormData(prev => ({ 
                                 ...prev, 
-                                sectionIds: sections.map(sec => sec.id)
+                                sectionIds: sections.map(sec => sec._id)
                               }));
                             } else {
                               setAssignmentFormData(prev => ({ 
@@ -1212,6 +1576,7 @@ const MasterSchoolClassSetup = () => {
                             }
                           }}
                           className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          disabled={editingAssignment} // Disable for editing
                         />
                         <span className="text-sm font-medium text-slate-700">Select All Sections</span>
                       </label>
@@ -1222,24 +1587,34 @@ const MasterSchoolClassSetup = () => {
                       {sections.length > 0 ? (
                         <div className="space-y-2">
                           {sections.map((sec) => (
-                            <label key={sec.id} className="flex items-center space-x-2 hover:bg-slate-50 p-1 rounded">
+                            <label key={sec._id} className="flex items-center space-x-2 hover:bg-slate-50 p-1 rounded">
                               <input
                                 type="checkbox"
-                                checked={assignmentFormData.sectionIds.includes(sec.id)}
+                                checked={assignmentFormData.sectionIds.includes(sec._id)}
                                 onChange={(e) => {
-                                  if (e.target.checked) {
+                                  if (editingAssignment) {
+                                    // For editing, allow only one selection
                                     setAssignmentFormData(prev => ({ 
                                       ...prev, 
-                                      sectionIds: [...prev.sectionIds, sec.id] 
+                                      sectionIds: e.target.checked ? [sec._id] : []
                                     }));
                                   } else {
-                                    setAssignmentFormData(prev => ({ 
-                                      ...prev, 
-                                      sectionIds: prev.sectionIds.filter(id => id !== sec.id) 
-                                    }));
+                                    // For creating, allow multiple selections
+                                    if (e.target.checked) {
+                                      setAssignmentFormData(prev => ({ 
+                                        ...prev, 
+                                        sectionIds: [...prev.sectionIds, sec._id] 
+                                      }));
+                                    } else {
+                                      setAssignmentFormData(prev => ({ 
+                                        ...prev, 
+                                        sectionIds: prev.sectionIds.filter(id => id !== sec._id) 
+                                      }));
+                                    }
                                   }
                                 }}
                                 className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                disabled={editingAssignment && assignmentFormData.sectionIds.length > 0 && !assignmentFormData.sectionIds.includes(sec._id)}
                               />
                               <span className="text-sm text-slate-700">{sec.name}</span>
                             </label>
@@ -1252,6 +1627,11 @@ const MasterSchoolClassSetup = () => {
                       )}
                     </div>
                   </div>
+                  {editingAssignment && (
+                    <p className="text-xs text-slate-500 mt-1">
+                      Note: When editing, you can only select one section.
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-3 pt-4">
@@ -1310,13 +1690,13 @@ const MasterSchoolClassSetup = () => {
                   </thead>
                   <tbody>
                     {viewingItem && viewingItem.map((item, index) => (
-                      <tr key={item.id || index} className="border-b border-slate-200 hover:bg-slate-50">
+                      <tr key={item._id || index} className="border-b border-slate-200 hover:bg-slate-50">
                         <td className="p-3 font-medium">{item.name}</td>
                         <td className="p-3 text-slate-600">{item.description || '-'}</td>
                         {viewModalType === 'subject' && (
                           <>
                             <td className="p-3 text-slate-600">{item.code}</td>
-                            <td className="p-3 text-slate-600">{item.departmentName}</td>
+                            <td className="p-3 text-slate-600">{getEntityDisplayValue(item, 'department')}</td>
                             <td className="p-3 text-slate-600">{item.credits}</td>
                             <td className="p-3 text-slate-600 capitalize">{item.type}</td>
                           </>
@@ -1364,7 +1744,7 @@ const MasterSchoolClassSetup = () => {
                 ) : (
                   <div className="space-y-3">
                     {editListItems.map((item, index) => (
-                      <div key={item.id || index} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
+                      <div key={item._id || index} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
                         <div className="flex-1">
                           <h3 className="font-semibold text-slate-900">{item.name}</h3>
                           <p className="text-sm text-slate-600">{item.description || 'No description'}</p>
@@ -1441,96 +1821,16 @@ const MasterSchoolClassSetup = () => {
         </div>
       )}
 
-      {/* Bulk Edit Modal */}
-
-      {/* Bulk Delete Modal */}
-      {isBulkDeleteModalOpen && (
-        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-slate-200">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-slate-900">
-                  Bulk Delete {bulkOperationType.charAt(0).toUpperCase() + bulkOperationType.slice(1)}s
-                </h2>
-                <button
-                  onClick={() => setIsBulkDeleteModalOpen(false)}
-                  className="p-2 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
-                >
-                  <i className="fas fa-times text-lg"></i>
-                </button>
-              </div>
-
-              <form onSubmit={handleBulkDeleteSubmit} className="space-y-6">
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <div className="flex items-center gap-3">
-                    <i className="fas fa-exclamation-triangle text-red-500 text-lg"></i>
-                    <div>
-                      <h3 className="font-semibold text-red-900">Warning</h3>
-                      <p className="text-sm text-red-700">This action cannot be undone. Selected items will be permanently deleted.</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-3">
-                    Select {bulkOperationType}s to delete:
-                  </label>
-                  <div className="border border-slate-200 rounded-md max-h-60 overflow-y-auto">
-                    {getEntityList(bulkOperationType).map((item, index) => (
-                      <label key={item.id || index} className="flex items-center space-x-3 p-3 hover:bg-slate-50 border-b border-slate-100 last:border-b-0">
-                        <input
-                          type="checkbox"
-                          checked={selectedItems.includes(item.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedItems(prev => [...prev, item.id]);
-                            } else {
-                              setSelectedItems(prev => prev.filter(id => id !== item.id));
-                            }
-                          }}
-                          className="rounded border-slate-300 text-red-600 focus:ring-red-500"
-                        />
-                        <div className="flex-1">
-                          <div className="font-medium text-slate-900">{item.name}</div>
-                          <div className="text-sm text-slate-500">{item.description || 'No description'}</div>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsBulkDeleteModalOpen(false)}
-                    className={btnSlateClass}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={selectedItems.length === 0}
-                    className={`${btnRoseClass} ${selectedItems.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    Delete Selected ({selectedItems.length})
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
       <DeleteConfirmationModal 
         isOpen={showDeleteConfirm}
         itemToDelete={itemToDelete}
         deleteType={deleteType}
         onConfirm={() => {
-          if (deleteType === 'department') confirmDeleteDepartment(itemToDelete.id);
-          if (deleteType === 'class') confirmDeleteClass(itemToDelete.id);
-          if (deleteType === 'section') confirmDeleteSection(itemToDelete.id);
-          if (deleteType === 'subject') confirmDeleteSubject(itemToDelete.id);
-          if (deleteType === 'assignment') confirmDeleteAssignment(itemToDelete.id);
+          if (deleteType === 'department') confirmDeleteDepartment();
+          if (deleteType === 'class') confirmDeleteClass();
+          if (deleteType === 'section') confirmDeleteSection();
+          if (deleteType === 'subject') confirmDeleteSubject();
+          if (deleteType === 'assignment') confirmDeleteAssignment();
         }}
         onCancel={() => {
           setShowDeleteConfirm(false);
