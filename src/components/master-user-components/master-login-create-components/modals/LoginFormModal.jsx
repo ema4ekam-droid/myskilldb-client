@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
 const LoginFormModal = ({
   isOpen,
@@ -12,27 +13,29 @@ const LoginFormModal = ({
   btnSlateClass
 }) => {
   const [localFormData, setLocalFormData] = useState({
-    schoolId: '',
-    userType: '',
+    organizationId: '',
+    role: '',
     name: '',
     email: '',
     mobileNumber: '',
-    department: ''
+    departmentId: '',
+    classId: '',
+    sectionId: ''
   });
 
   const [errors, setErrors] = useState({});
+  const [departments, setDepartments] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [sections, setSections] = useState([]);
+  const [isLoadingData, setIsLoadingData] = useState(false);
 
-  const userTypes = [
+  const API_BASE_URL = `${import.meta.env.VITE_SERVER_API_URL}/api`;
+
+  const roles = [
     { key: 'principal', label: 'Principal', icon: 'fas fa-user-tie', description: 'School principal login' },
     { key: 'hod', label: 'Head of Department', icon: 'fas fa-user-graduate', description: 'Department head login' },
     { key: 'teacher', label: 'Teacher', icon: 'fas fa-chalkboard-teacher', description: 'Teacher login' },
-    { key: 'parent', label: 'Parent/Student', icon: 'fas fa-users', description: 'Parent or student login' }
-  ];
-
-  const departments = [
-    'Mathematics', 'Science', 'English', 'Social Studies', 'Physical Education',
-    'Computer Science', 'Art', 'Music', 'Languages', 'Commerce', 'Biology',
-    'Chemistry', 'Physics', 'History', 'Geography', 'Economics', 'Business Studies'
+    { key: 'student', label: 'Student', icon: 'fas fa-user-graduate', description: 'Student login' }
   ];
 
   useEffect(() => {
@@ -42,24 +45,126 @@ const LoginFormModal = ({
     }
   }, [isOpen, formData]);
 
+  // Fetch departments, classes, and sections when organization is selected
+  useEffect(() => {
+    if (localFormData.organizationId) {
+      fetchOrganizationData(localFormData.organizationId);
+    } else {
+      // Reset data when no organization is selected
+      setDepartments([]);
+      setClasses([]);
+      setSections([]);
+      setLocalFormData(prev => ({
+        ...prev,
+        departmentId: '',
+        classId: '',
+        sectionId: ''
+      }));
+    }
+  }, [localFormData.organizationId]);
+
+  const fetchOrganizationData = async (organizationId) => {
+    try {
+      setIsLoadingData(true);
+      
+      // Fetch departments, classes, and sections in parallel
+      await Promise.all([
+        fetchDepartments(organizationId),
+        fetchClasses(organizationId),
+        fetchSections(organizationId)
+      ]);
+    } catch (error) {
+      console.error('Error fetching organization data:', error);
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
+  const fetchDepartments = async (organizationId) => {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/organization-setup/departments/${organizationId}`
+      );
+      
+      if (response.data.success) {
+        // Assuming response.data.data is an array of objects with '_id' and 'name' fields
+        setDepartments(response.data.data || []);
+      } else {
+        setDepartments([]);
+        console.error('Failed to fetch departments:', response.data.message);
+      }
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+      setDepartments([]);
+    }
+  };
+
+  const fetchClasses = async (organizationId) => {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/organization-setup/classes/${organizationId}`
+      );
+      
+      if (response.data.success) {
+        // Assuming response.data.data is an array of objects with '_id' and 'name' fields
+        setClasses(response.data.data || []);
+      } else {
+        setClasses([]);
+        console.error('Failed to fetch classes:', response.data.message);
+      }
+    } catch (error) {
+      console.error('Error fetching classes:', error);
+      setClasses([]);
+    }
+  };
+
+  const fetchSections = async (organizationId) => {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/organization-setup/sections/${organizationId}`
+      );
+      
+      if (response.data.success) {
+        // Assuming response.data.data is an array of objects with '_id' and 'name' fields
+        setSections(response.data.data || []);
+      } else {
+        setSections([]);
+        console.error('Failed to fetch sections:', response.data.message);
+      }
+    } catch (error) {
+      console.error('Error fetching sections:', error);
+      setSections([]);
+    }
+  };
+
   const handleInputChange = (field, value) => {
     setLocalFormData(prev => ({ ...prev, [field]: value }));
-    
+
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+
+    // Reset dependent fields when organization changes
+    if (field === 'organizationId') {
+      setLocalFormData(prev => ({
+        ...prev,
+        departmentId: '',
+        classId: '',
+        sectionId: ''
+      }));
     }
   };
 
   const validateForm = () => {
     const newErrors = {};
 
-    if (!localFormData.schoolId) {
-      newErrors.schoolId = 'Please select a school';
+    if (!localFormData.organizationId) {
+      newErrors.organizationId = 'Please select a school';
     }
 
-    if (!localFormData.userType) {
-      newErrors.userType = 'Please select a user type';
+    if (!localFormData.role) {
+      newErrors.role = 'Please select a role';
     }
 
     if (!localFormData.name.trim()) {
@@ -79,9 +184,21 @@ const LoginFormModal = ({
       newErrors.mobileNumber = 'Please enter a valid mobile number';
     }
 
-    // Department is required for HOD
-    if (localFormData.userType === 'hod' && !localFormData.department) {
-      newErrors.department = 'Department is required for HOD';
+    // Department and class/section validation based on role
+    if (localFormData.role === 'hod' && !localFormData.departmentId) {
+      newErrors.departmentId = 'Department is required for HOD';
+    }
+
+    if (localFormData.role === 'student') {
+      if (!localFormData.departmentId) {
+        newErrors.departmentId = 'Department is required for Student';
+      }
+      if (!localFormData.classId) {
+        newErrors.classId = 'Class is required for Student';
+      }
+      if (!localFormData.sectionId) {
+        newErrors.sectionId = 'Section is required for Student';
+      }
     }
 
     setErrors(newErrors);
@@ -90,36 +207,53 @@ const LoginFormModal = ({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     if (validateForm()) {
-      onSubmit(localFormData);
+      // Prepare the data with IDs for API submission
+      const submissionData = {
+        organizationId: localFormData.organizationId,
+        role: localFormData.role,
+        name: localFormData.name,
+        email: localFormData.email,
+        mobile: localFormData.mobileNumber, // Note: changed to 'mobile' to match schema
+        ...(localFormData.departmentId && { departmentId: localFormData.departmentId }),
+        ...(localFormData.classId && { classId: localFormData.classId }),
+        ...(localFormData.sectionId && { sectionId: localFormData.sectionId }),
+      };
+
+      onSubmit(submissionData);
     }
   };
 
   const handleClose = () => {
     setLocalFormData({
-      schoolId: '',
-      userType: '',
+      organizationId: '',
+      role: '',
       name: '',
       email: '',
       mobileNumber: '',
-      department: ''
+      departmentId: '',
+      classId: '',
+      sectionId: ''
     });
     setErrors({});
+    setDepartments([]);
+    setClasses([]);
+    setSections([]);
     onClose();
   };
 
-  const selectedUserType = userTypes.find(ut => ut.key === localFormData.userType);
-  const selectedSchool = schools.find(s => s._id === localFormData.schoolId);
+  const selectedRole = roles.find(r => r.key === localFormData.role);
+  const selectedSchool = schools.find(s => s._id === localFormData.organizationId);
 
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onClick={handleClose}
     >
-      <div 
+      <div
         className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
@@ -145,10 +279,10 @@ const LoginFormModal = ({
               Select School *
             </label>
             <select
-              className={`${inputBaseClass} ${errors.schoolId ? 'border-red-300 focus:ring-red-500' : ''}`}
-              value={localFormData.schoolId}
-              onChange={(e) => handleInputChange('schoolId', e.target.value)}
-              disabled={!!formData.schoolId} // Disable if pre-selected
+              className={`${inputBaseClass} ${errors.organizationId ? 'border-red-300 focus:ring-red-500' : ''}`}
+              value={localFormData.organizationId}
+              onChange={(e) => handleInputChange('organizationId', e.target.value)}
+              disabled={!!formData.organizationId} // Disable if pre-selected
             >
               <option value="">Choose a school...</option>
               {schools.map(school => (
@@ -157,8 +291,8 @@ const LoginFormModal = ({
                 </option>
               ))}
             </select>
-            {errors.schoolId && (
-              <p className="mt-1 text-sm text-red-600">{errors.schoolId}</p>
+            {errors.organizationId && (
+              <p className="mt-1 text-sm text-red-600">{errors.organizationId}</p>
             )}
             {selectedSchool && (
               <p className="mt-1 text-sm text-slate-500">
@@ -168,37 +302,37 @@ const LoginFormModal = ({
             )}
           </div>
 
-          {/* User Type Selection */}
+          {/* Role Selection */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-3">
-              User Type *
+              Role *
             </label>
             <div className="grid grid-cols-2 gap-3">
-              {userTypes.map(userType => (
+              {roles.map(role => (
                 <button
-                  key={userType.key}
+                  key={role.key}
                   type="button"
-                  onClick={() => handleInputChange('userType', userType.key)}
+                  onClick={() => handleInputChange('role', role.key)}
                   className={`p-4 rounded-lg border-2 transition-all text-left ${
-                    localFormData.userType === userType.key
+                    localFormData.role === role.key
                       ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                       : 'border-slate-200 hover:border-slate-300 text-slate-700'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <i className={`${userType.icon} text-lg ${
-                      localFormData.userType === userType.key ? 'text-indigo-500' : 'text-slate-400'
+                    <i className={`${role.icon} text-lg ${
+                      localFormData.role === role.key ? 'text-indigo-500' : 'text-slate-400'
                     }`}></i>
                     <div>
-                      <div className="font-medium">{userType.label}</div>
-                      <div className="text-xs text-slate-500">{userType.description}</div>
+                      <div className="font-medium">{role.label}</div>
+                      <div className="text-xs text-slate-500">{role.description}</div>
                     </div>
                   </div>
                 </button>
               ))}
             </div>
-            {errors.userType && (
-              <p className="mt-1 text-sm text-red-600">{errors.userType}</p>
+            {errors.role && (
+              <p className="mt-1 text-sm text-red-600">{errors.role}</p>
             )}
           </div>
 
@@ -239,11 +373,11 @@ const LoginFormModal = ({
             </div>
           </div>
 
-            {/* Mobile Number */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Mobile Number *
-              </label>
+          {/* Mobile Number */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Mobile Number *
+            </label>
             <input
               type="tel"
               className={`${inputBaseClass} ${errors.mobileNumber ? 'border-red-300 focus:ring-red-500' : ''}`}
@@ -256,41 +390,101 @@ const LoginFormModal = ({
             )}
           </div>
 
-          {/* Department (for HOD only) */}
-          {localFormData.userType === 'hod' && (
+          {/* Department (for HOD and Student) */}
+          {(localFormData.role === 'hod' || localFormData.role === 'student' || localFormData.role === 'teacher') && (
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Department *
+                Department {localFormData.role === 'teacher' ? '(Optional)' : '*'}
+                {isLoadingData && <span className="text-slate-400 text-xs ml-2">Loading...</span>}
               </label>
               <select
-                className={`${inputBaseClass} ${errors.department ? 'border-red-300 focus:ring-red-500' : ''}`}
-                value={localFormData.department}
-                onChange={(e) => handleInputChange('department', e.target.value)}
+                className={`${inputBaseClass} ${errors.departmentId ? 'border-red-300 focus:ring-red-500' : ''} ${
+                  !localFormData.organizationId || isLoadingData ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+                value={localFormData.departmentId}
+                onChange={(e) => handleInputChange('departmentId', e.target.value)}
+                disabled={!localFormData.organizationId || isLoadingData}
               >
                 <option value="">Select Department</option>
-                {departments.map(dept => (
-                  <option key={dept} value={dept}>{dept}</option>
+                {departments.map((dept) => (
+                  <option key={dept._id} value={dept._id}>{dept.name}</option>
                 ))}
               </select>
-              {errors.department && (
-                <p className="mt-1 text-sm text-red-600">{errors.department}</p>
+              {errors.departmentId && (
+                <p className="mt-1 text-sm text-red-600">{errors.departmentId}</p>
+              )}
+              {!localFormData.organizationId && (
+                <p className="mt-1 text-xs text-slate-500">Please select a school first</p>
               )}
             </div>
           )}
 
+          {/* Class and Section (for Student only) */}
+          {localFormData.role === 'student' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Class *
+                  {isLoadingData && <span className="text-slate-400 text-xs ml-2">Loading...</span>}
+                </label>
+                <select
+                  className={`${inputBaseClass} ${errors.classId ? 'border-red-300 focus:ring-red-500' : ''} ${
+                    !localFormData.organizationId || isLoadingData ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  value={localFormData.classId}
+                  onChange={(e) => handleInputChange('classId', e.target.value)}
+                  disabled={!localFormData.organizationId || isLoadingData}
+                >
+                  <option value="">Select Class</option>
+                  {classes.map((cls) => (
+                    <option key={cls._id} value={cls._id}>{cls.name}</option>
+                  ))}
+                </select>
+                {errors.classId && (
+                  <p className="mt-1 text-sm text-red-600">{errors.classId}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Section *
+                  {isLoadingData && <span className="text-slate-400 text-xs ml-2">Loading...</span>}
+                </label>
+                <select
+                  className={`${inputBaseClass} ${errors.sectionId ? 'border-red-300 focus:ring-red-500' : ''} ${
+                    !localFormData.organizationId || isLoadingData ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  value={localFormData.sectionId}
+                  onChange={(e) => handleInputChange('sectionId', e.target.value)}
+                  disabled={!localFormData.organizationId || isLoadingData}
+                >
+                  <option value="">Select Section</option>
+                  {sections.map((section) => (
+                    <option key={section._id} value={section._id}>{section.name}</option>
+                  ))}
+                </select>
+                {errors.sectionId && (
+                  <p className="mt-1 text-sm text-red-600">{errors.sectionId}</p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Information Box */}
-          {selectedUserType && (
+          {selectedRole && (
             <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
               <div className="flex items-start gap-3">
-                <i className={`${selectedUserType.icon} text-lg text-indigo-500 mt-1`}></i>
+                <i className={`${selectedRole.icon} text-lg text-indigo-500 mt-1`}></i>
                 <div>
-                  <h4 className="font-medium text-slate-900">{selectedUserType.label} Login</h4>
+                  <h4 className="font-medium text-slate-900">{selectedRole.label} Login</h4>
                   <p className="text-sm text-slate-600 mt-1">
-                    {selectedUserType.description}. Login credentials will be automatically generated and can be emailed to the user.
+                    {selectedRole.description}. Login credentials will be automatically generated and can be emailed to the user.
                   </p>
                   <div className="mt-2 text-xs text-slate-500">
                     <div><strong>Required:</strong> Name, Email, Mobile Number</div>
-                    {localFormData.userType === 'hod' && <div><strong>Also Required:</strong> Department</div>}
+                    {localFormData.role === 'hod' && <div><strong>Also Required:</strong> Department</div>}
+                    {localFormData.role === 'student' && <div><strong>Also Required:</strong> Department, Class, Section</div>}
+                    {localFormData.role === 'teacher' && <div><strong>Optional:</strong> Department</div>}
                   </div>
                 </div>
               </div>
@@ -311,7 +505,7 @@ const LoginFormModal = ({
             <button
               type="submit"
               className={btnTealClass}
-              disabled={isLoading}
+              disabled={isLoading || isLoadingData}
             >
               <i className="fas fa-user-plus"></i>
               {isLoading ? 'Creating...' : 'Create Login'}
