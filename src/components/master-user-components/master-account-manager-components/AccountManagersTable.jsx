@@ -3,7 +3,6 @@ import Pagination from '../shared/Pagination';
 
 const AccountManagersTable = ({
   accountManagers,
-  schools,
   isLoading,
   selectedAccountManagerIds,
   allChecked,
@@ -20,14 +19,6 @@ const AccountManagersTable = ({
   btnSecondaryClass,
   btnDangerClass
 }) => {
-  const getAssignedSchoolsNames = (schoolIds) => {
-    if (!schoolIds || schoolIds.length === 0) return 'No schools assigned';
-    return schoolIds.map(schoolId => {
-      const school = schools.find(s => s._id === schoolId);
-      return school ? school.name : 'Unknown School';
-    }).join(', ');
-  };
-
   const getStatusBadge = (status) => {
     const statusConfig = {
       active: { label: 'Active', class: 'bg-green-100 text-green-800' },
@@ -53,10 +44,9 @@ const AccountManagersTable = ({
     });
   };
 
-  const formatAdharCard = (adharNumber) => {
-    if (!adharNumber) return 'Not provided';
-    // Format as XXXX-XXXX-XXXX
-    return adharNumber.replace(/(\d{4})(\d{4})(\d{4})/, '$1-$2-$3');
+  const formatMobile = (mobile) => {
+    if (!mobile) return 'Not provided';
+    return `+91-${mobile}`;
   };
 
   return (
@@ -89,7 +79,8 @@ const AccountManagersTable = ({
               <th className="p-4 text-left font-semibold text-slate-700">Email</th>
               <th className="p-4 text-left font-semibold text-slate-700">Mobile</th>
               <th className="p-4 text-left font-semibold text-slate-700">Status</th>
-              <th className="p-4 text-left font-semibold text-slate-700">Last Login</th>
+              <th className="p-4 text-left font-semibold text-slate-700">Verified</th>
+              <th className="p-4 text-left font-semibold text-slate-700">Created</th>
               <th className="p-4 text-center font-semibold text-slate-700">Actions</th>
             </tr>
           </thead>
@@ -108,11 +99,19 @@ const AccountManagersTable = ({
                 <td className="p-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                      <i className="fas fa-user text-indigo-600"></i>
+                      {accountManager.image ? (
+                        <img 
+                          src={accountManager.image} 
+                          alt={accountManager.name}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <i className="fas fa-user text-indigo-600"></i>
+                      )}
                     </div>
                     <div>
                       <div className="font-semibold text-slate-900">{accountManager.name}</div>
-                      <div className="text-sm text-slate-500">ID: {accountManager._id}</div>
+                      <div className="text-sm text-slate-500 capitalize">{accountManager.role}</div>
                     </div>
                   </div>
                 </td>
@@ -127,19 +126,37 @@ const AccountManagersTable = ({
                 <td className="p-4">
                   <div className="flex items-center gap-2">
                     <i className="fas fa-phone text-slate-400"></i>
-                    <span className="text-slate-700">{accountManager.mobileNumber}</span>
+                    <span className="text-slate-700">{formatMobile(accountManager.mobile)}</span>
                   </div>
                 </td>
-                
-                
                 
                 <td className="p-4">
                   {getStatusBadge(accountManager.status)}
                 </td>
+
+                <td className="p-4">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    accountManager.isVerified 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {accountManager.isVerified ? (
+                      <>
+                        <i className="fas fa-check-circle mr-1"></i>
+                        Verified
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-clock mr-1"></i>
+                        Pending
+                      </>
+                    )}
+                  </span>
+                </td>
                 
                 <td className="p-4">
                   <div className="text-sm text-slate-600">
-                    {formatDate(accountManager.lastLogin)}
+                    {formatDate(accountManager.createdAt)}
                   </div>
                 </td>
                 
@@ -173,8 +190,18 @@ const AccountManagersTable = ({
               </tr>
             )) : (
               <tr>
-                <td colSpan="7" className="text-center p-8 text-slate-500">
-                  {isLoading ? 'Loading account managers...' : 'No account managers found.'}
+                <td colSpan="8" className="text-center p-8 text-slate-500">
+                  {isLoading ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <i className="fas fa-spinner fa-spin"></i>
+                      Loading account managers...
+                    </div>
+                  ) : (
+                    <div>
+                      <i className="fas fa-users text-4xl text-slate-300 mb-2"></i>
+                      <p>No account managers found.</p>
+                    </div>
+                  )}
                 </td>
               </tr>
             )}
@@ -183,13 +210,15 @@ const AccountManagersTable = ({
       </div>
       
       {/* Pagination */}
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={onPageChange}
-        totalItems={accountManagers.length}
-        itemsPerPage={itemsPerPage}
-      />
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+          totalItems={accountManagers.length}
+          itemsPerPage={itemsPerPage}
+        />
+      )}
     </section>
   );
 };

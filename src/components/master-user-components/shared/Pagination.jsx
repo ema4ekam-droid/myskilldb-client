@@ -1,44 +1,48 @@
 import React from 'react';
 
-const Pagination = ({ 
-  currentPage, 
-  totalPages, 
-  onPageChange, 
-  totalItems, 
-  itemsPerPage,
-  className = ""
-}) => {
-  const startItem = (currentPage - 1) * itemsPerPage + 1;
-  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+const Pagination = ({ currentPage, totalPages, onPageChange, totalItems, itemsPerPage }) => {
+  const startIndex = (currentPage - 1) * itemsPerPage + 1;
+  const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
+  
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      onPageChange(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      onPageChange(currentPage + 1);
+    }
+  };
 
   const getPageNumbers = () => {
     const pages = [];
-    const maxVisiblePages = 5;
+    const maxVisible = 5;
     
-    if (totalPages <= maxVisiblePages) {
+    if (totalPages <= maxVisible) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
     } else {
-      if (currentPage <= 3) {
-        for (let i = 1; i <= 4; i++) {
-          pages.push(i);
-        }
-        pages.push('...');
-        pages.push(totalPages);
-      } else if (currentPage >= totalPages - 2) {
+      const start = Math.max(1, currentPage - 2);
+      const end = Math.min(totalPages, start + maxVisible - 1);
+      
+      if (start > 1) {
         pages.push(1);
-        pages.push('...');
-        for (let i = totalPages - 3; i <= totalPages; i++) {
-          pages.push(i);
+        if (start > 2) {
+          pages.push('...');
         }
-      } else {
-        pages.push(1);
-        pages.push('...');
-        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
-          pages.push(i);
+      }
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      
+      if (end < totalPages) {
+        if (end < totalPages - 1) {
+          pages.push('...');
         }
-        pages.push('...');
         pages.push(totalPages);
       }
     }
@@ -46,54 +50,57 @@ const Pagination = ({
     return pages;
   };
 
-  if (totalPages <= 1) return null;
+  if (totalPages <= 1) {
+    return null;
+  }
 
   return (
-    <div className={`flex items-center justify-between px-4 py-3 bg-white border-t border-slate-200 ${className}`}>
-      <div className="flex items-center text-sm text-slate-700">
-        <span>
-          Showing <span className="font-medium">{startItem}</span> to{' '}
-          <span className="font-medium">{endItem}</span> of{' '}
-          <span className="font-medium">{totalItems}</span> results
-        </span>
+    <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 bg-white">
+      <div className="text-sm text-slate-600">
+        Showing {startIndex} to {endIndex} of {totalItems} results
       </div>
       
-      <div className="flex items-center space-x-2">
-        {/* Previous Button */}
+      <div className="flex items-center gap-2">
         <button
-          onClick={() => onPageChange(currentPage - 1)}
+          onClick={handlePreviousPage}
           disabled={currentPage === 1}
-          className="relative inline-flex items-center px-3 py-2 text-sm font-medium text-slate-500 bg-white border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className={`px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
+            currentPage === 1
+              ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+          }`}
         >
           <i className="fas fa-chevron-left mr-1"></i>
           Previous
         </button>
-
-        {/* Page Numbers */}
-        <div className="flex items-center space-x-1">
+        
+        <div className="flex items-center gap-1">
           {getPageNumbers().map((page, index) => (
             <button
               key={index}
               onClick={() => typeof page === 'number' && onPageChange(page)}
               disabled={page === '...'}
-              className={`relative inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                 page === currentPage
-                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  ? 'bg-indigo-600 text-white'
                   : page === '...'
                   ? 'text-slate-400 cursor-default'
-                  : 'text-slate-700 bg-white border border-slate-300 hover:bg-slate-50'
+                  : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
               }`}
             >
               {page}
             </button>
           ))}
         </div>
-
-        {/* Next Button */}
+        
         <button
-          onClick={() => onPageChange(currentPage + 1)}
+          onClick={handleNextPage}
           disabled={currentPage === totalPages}
-          className="relative inline-flex items-center px-3 py-2 text-sm font-medium text-slate-500 bg-white border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className={`px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
+            currentPage === totalPages
+              ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+          }`}
         >
           Next
           <i className="fas fa-chevron-right ml-1"></i>
