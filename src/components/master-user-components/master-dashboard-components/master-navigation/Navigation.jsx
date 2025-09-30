@@ -61,13 +61,13 @@ const Navigation = ({ currentPage = 'dashboard', onPageChange }) => {
   const handleMenuClick = (itemId) => {
     // Navigate to the appropriate route
     const routes = {
-      'dashboard': '/',
-      'location-manager': '/location-manager',
-      'school-class-setup': '/school-class-setup',
-      'school-logins': '/school-logins',
-      'account-managers': '/account-managers',
-      'analytics': '/analytics',
-      'settings': '/settings'
+      'dashboard': '/master/dashboard',
+      'location-manager': '/master/location-manager',
+      'school-class-setup': '/master/school-class-setup',
+      'school-logins': '/master/school-logins',
+      'account-managers': '/master/account-managers',
+      'analytics': '/master/analytics',
+      'settings': '/master/settings'
     };
     
     if (routes[itemId]) {

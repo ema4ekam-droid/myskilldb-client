@@ -6,27 +6,29 @@ import LocationManager from './master/master-location-manager/location_manager.j
 import MasterSchoolClassSetup from './master/master-school-manage/master-school-class-setup.jsx';
 import SchoolLoginManager from './master/master-login-create/school_login_manager.jsx';
 import AccountManagers from './master/master-account-managers/account_managers.jsx';
+import HomePage from './Home.jsx';
 
 function App() {
-
   return (
     <>
-     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/" element={<MasterDashboard />} />
-        <Route path="/master" element={<MasterDashboard />} />
-        <Route path="/schools" element={<h1 className="p-8">Schools - Coming Soon</h1>} />
-        <Route path="/school-class-setup" element={<MasterSchoolClassSetup />} />
-        <Route path="/school-logins" element={<SchoolLoginManager />} />
-        <Route path="/location-manager" element={<LocationManager />} />
-        <Route path="/account-managers" element={<AccountManagers />} />
-        <Route path="/analytics" element={<h1 className="p-8">System Analytics - Coming Soon</h1>} />
-        <Route path="/settings" element={<h1 className="p-8">Settings - Coming Soon</h1>} />
-      </Routes>
-     </BrowserRouter>
+      <BrowserRouter>
+        <Routes>
+          {/* Login stays at root */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<HomePage />} />
+
+
+          {/* Grouped under /master */}
+          <Route path="/master/dashboard" element={<MasterDashboard />} />
+          <Route path="/master/school-class-setup" element={<MasterSchoolClassSetup />} />
+          <Route path="/master/school-logins" element={<SchoolLoginManager />} />
+          <Route path="/master/location-manager" element={<LocationManager />} />
+          <Route path="/master/account-managers" element={<AccountManagers />} />
+          <Route path="/master/analytics" element={<h1 className="p-8">System Analytics - Coming Soon</h1>} />
+        </Routes>
+      </BrowserRouter>
     </>
-  ) 
+  );
 }
 
-export default App
+export default App;
