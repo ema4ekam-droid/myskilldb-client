@@ -23,14 +23,14 @@ const Navigation = ({ currentPage = 'dashboard', onPageChange }) => {
     },
     {
       id: 'school-class-setup',
-      label: 'School Class Setup',
+      label: 'Organization Class Setup',
       icon: 'fas fa-graduation-cap',
       path: '/school-class-setup',
       color: 'emerald'
     },
     {
       id: 'school-logins',
-      label: 'School Logins',
+      label: 'Organization Logins',
       icon: 'fas fa-user-lock',
       path: '/school-logins',
       color: 'teal'
