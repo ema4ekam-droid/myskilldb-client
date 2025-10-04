@@ -23,8 +23,6 @@ const Navigation = ({ currentPage = 'dashboard', onPageChange }) => {
     },
     {
       id: 'organization-setup',
-      label: 'organization Setup',
-      id: 'school-class-setup',
       label: 'Organization Class Setup',
       icon: 'fas fa-graduation-cap',
       path: '/organization-setup',
@@ -32,8 +30,6 @@ const Navigation = ({ currentPage = 'dashboard', onPageChange }) => {
     },
     {
       id: 'organization-logins',
-      label: 'organization Logins',
-      id: 'school-logins',
       label: 'Organization Logins',
       icon: 'fas fa-user-lock',
       path: '/organization-logins',
@@ -46,20 +42,6 @@ const Navigation = ({ currentPage = 'dashboard', onPageChange }) => {
       path: '/account-managers',
       color: 'purple'
     },
-    {
-      id: 'analytics',
-      label: 'System Analytics',
-      icon: 'fas fa-chart-line',
-      path: '/analytics',
-      color: 'orange'
-    },
-    {
-      id: 'settings',
-      label: 'Settings',
-      icon: 'fas fa-sliders-h',
-      path: '/settings',
-      color: 'gray'
-    }
   ];
 
   const handleMenuClick = (itemId) => {
@@ -70,8 +52,6 @@ const Navigation = ({ currentPage = 'dashboard', onPageChange }) => {
       'organization-setup': '/master/organization-setup',
       'organization-logins': '/master/organization-logins',
       'account-managers': '/master/account-managers',
-      'analytics': '/master/analytics',
-      'settings': '/master/settings'
     };
     
     if (routes[itemId]) {
