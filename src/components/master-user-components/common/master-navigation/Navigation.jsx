@@ -24,6 +24,8 @@ const Navigation = ({ currentPage = 'dashboard', onPageChange }) => {
     {
       id: 'organization-setup',
       label: 'organization Setup',
+      id: 'school-class-setup',
+      label: 'Organization Class Setup',
       icon: 'fas fa-graduation-cap',
       path: '/organization-setup',
       color: 'emerald'
@@ -31,6 +33,8 @@ const Navigation = ({ currentPage = 'dashboard', onPageChange }) => {
     {
       id: 'organization-logins',
       label: 'organization Logins',
+      id: 'school-logins',
+      label: 'Organization Logins',
       icon: 'fas fa-user-lock',
       path: '/organization-logins',
       color: 'teal'

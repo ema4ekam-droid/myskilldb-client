@@ -48,6 +48,12 @@ const MasterOrganizationSetup = () => {
   const [viewModalType, setViewModalType] = useState(''); // 'department', 'class', 'section', 'subject'
   const [viewingItem, setViewingItem] = useState(null);
   
+  // Sections view modal state
+  const [isSectionsViewModalOpen, setIsSectionsViewModalOpen] = useState(false);
+  const [viewingSections, setViewingSections] = useState([]);
+  const [viewingDepartment, setViewingDepartment] = useState(null);
+  const [viewingClass, setViewingClass] = useState(null);
+  
   // Edit list modal states
   const [isEditListModalOpen, setIsEditListModalOpen] = useState(false);
   const [editListType, setEditListType] = useState(''); // 'department', 'class', 'section', 'subject'
@@ -1009,6 +1015,44 @@ const MasterOrganizationSetup = () => {
     return entity[`${field}Name`] || entity[field] || '';
   };
 
+  // Helper function to group assignments by department and class
+  const getGroupedAssignments = () => {
+    const grouped = {};
+    
+    sectionClassAssignments.forEach(assignment => {
+      const departmentId = assignment.departmentId || assignment.department?._id;
+      const classId = assignment.classId || assignment.class?._id;
+      const sectionId = assignment.sectionId || assignment.section?._id;
+      
+      if (!grouped[departmentId]) {
+        grouped[departmentId] = {};
+      }
+      
+      if (!grouped[departmentId][classId]) {
+        grouped[departmentId][classId] = [];
+      }
+      
+      grouped[departmentId][classId].push({
+        ...assignment,
+        sectionId,
+        sectionName: getEntityDisplayValue(assignment, 'section')
+      });
+    });
+    
+    return grouped;
+  };
+
+  // Handler to view sections for a department-class combination
+  const handleViewSections = (departmentId, classId) => {
+    const groupedAssignments = getGroupedAssignments();
+    const sections = groupedAssignments[departmentId]?.[classId] || [];
+    
+    setViewingSections(sections);
+    setViewingDepartment(departments.find(d => d._id === departmentId));
+    setViewingClass(classes.find(c => c._id === classId));
+    setIsSectionsViewModalOpen(true);
+  };
+
   // Base styles
   const inputBaseClass = "w-full bg-slate-100 border-slate-200 rounded-md p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-200 disabled:cursor-not-allowed";
   const btnBaseClass = "font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors transform active:scale-95";
@@ -1018,7 +1062,7 @@ const MasterOrganizationSetup = () => {
   const btnSlateClass = `${btnBaseClass} bg-slate-200 hover:bg-slate-300 text-slate-800`;
 
   // Check if any modal is open
-  const isAnyModalOpen = isDepartmentModalOpen || isClassModalOpen || isSectionModalOpen || isSubjectModalOpen || isAssignmentModalOpen || isViewModalOpen || isEditListModalOpen;
+  const isAnyModalOpen = isDepartmentModalOpen || isClassModalOpen || isSectionModalOpen || isSubjectModalOpen || isAssignmentModalOpen || isViewModalOpen || isEditListModalOpen || isSectionsViewModalOpen;
 
   // Get grouped assignments for display
   const groupedAssignments = getGroupedAssignments();
@@ -1036,7 +1080,11 @@ const MasterOrganizationSetup = () => {
           {/* Header */}
           <header className="flex justify-between items-center flex-wrap gap-4">
             <div>
+<<<<<<< HEAD:src/master/master-organization-setup/master-organization-setup.jsx
               <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Organization Setup</h1>
+=======
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Organization Class Setup</h1>
+>>>>>>> 9e45f2f3a562541edef3e48ca4bb7c8419a067f5:src/master/master-school-manage/master-school-class-setup.jsx
               <p className="text-slate-500 text-sm">Select an organization first, then manage departments, classes, sections, subjects, and assignments</p>
             </div>
           </header>
@@ -1442,6 +1490,7 @@ const MasterOrganizationSetup = () => {
                 <span className="ml-3 text-slate-600">Loading assignments...</span>
               </div>
             ) : (
+<<<<<<< HEAD:src/master/master-organization-setup/master-organization-setup.jsx
               /* Hierarchical Assignments View - Like the image */
               <div className="space-y-4">
                 {Object.keys(groupedAssignments).length === 0 ? (
@@ -1535,6 +1584,107 @@ const MasterOrganizationSetup = () => {
                     </div>
                   ))
                 )}
+=======
+              /* Hierarchical Assignments Table */
+              <div className="overflow-x-auto">
+                {(() => {
+                  const groupedAssignments = getGroupedAssignments();
+                  const departmentIds = Object.keys(groupedAssignments);
+                  
+                  if (departmentIds.length === 0) {
+                    return (
+                      <div className="text-center p-8 text-slate-500">
+                        No assignments found. Create your first assignment or adjust your filters to see results.
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-4">
+                      {departmentIds.map(departmentId => {
+                        const department = departments.find(d => d._id === departmentId);
+                        const classIds = Object.keys(groupedAssignments[departmentId]);
+                        
+                        return (
+                          <div key={departmentId} className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                            {/* Department Header */}
+                            <div className="bg-blue-50 px-4 py-3 border-b border-slate-200">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <i className="fas fa-building text-blue-600"></i>
+                                  <h3 className="font-semibold text-blue-900">{department?.name}</h3>
+                                </div>
+                                <div className="text-sm text-blue-700">
+                                  {classIds.length} class{classIds.length !== 1 ? 'es' : ''}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Classes under this department */}
+                            <div className="divide-y divide-slate-200">
+                              {classIds.map(classId => {
+                                const classItem = classes.find(c => c._id === classId);
+                                const assignments = groupedAssignments[departmentId][classId];
+                                const sectionsCount = assignments.length;
+                                
+                                return (
+                                  <div key={classId} className="p-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                      <div className="flex items-center gap-3">
+                                        <i className="fas fa-graduation-cap text-green-600"></i>
+                                        <h4 className="font-medium text-slate-900">{classItem?.name}</h4>
+                                        <span className="text-sm text-slate-500">
+                                          ({sectionsCount} section{sectionsCount !== 1 ? 's' : ''})
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => handleViewSections(departmentId, classId)}
+                                          className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md text-sm font-medium transition-colors flex items-center gap-2"
+                                          title="View Sections"
+                                        >
+                                          <i className="fas fa-eye"></i>
+                                          View Sections
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteAssignment(assignments[0])}
+                                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                          title="Delete Assignment"
+                                        >
+                                          <i className="fas fa-trash"></i>
+                                        </button>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Quick preview of sections */}
+                                    <div className="pl-8">
+                                      <div className="flex flex-wrap gap-2">
+                                        {assignments.slice(0, 3).map((assignment, index) => (
+                                          <span 
+                                            key={assignment._id} 
+                                            className="px-2 py-1 bg-slate-100 text-slate-700 rounded text-sm"
+                                          >
+                                            {assignment.sectionName}
+                                          </span>
+                                        ))}
+                                        {assignments.length > 3 && (
+                                          <span className="px-2 py-1 bg-slate-200 text-slate-600 rounded text-sm">
+                                            +{assignments.length - 3} more
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+>>>>>>> 9e45f2f3a562541edef3e48ca4bb7c8419a067f5:src/master/master-school-manage/master-school-class-setup.jsx
               </div>
             )}
           </div>
@@ -1975,6 +2125,110 @@ const MasterOrganizationSetup = () => {
                   className={btnSlateClass}
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sections View Modal */}
+      {isSectionsViewModalOpen && (
+        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-slate-200">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">View Sections</h2>
+                  <p className="text-slate-500 text-sm">
+                    Sections assigned to <span className="font-medium text-slate-700">{viewingClass?.name}</span> 
+                    under <span className="font-medium text-slate-700">{viewingDepartment?.name}</span> department
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsSectionsViewModalOpen(false)}
+                  className="p-2 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
+                >
+                  <i className="fas fa-times text-lg"></i>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Department and Class Info */}
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-600 mb-1">Department</label>
+                      <div className="flex items-center gap-2">
+                        <i className="fas fa-building text-blue-600"></i>
+                        <span className="font-medium text-slate-900">{viewingDepartment?.name}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-600 mb-1">Class</label>
+                      <div className="flex items-center gap-2">
+                        <i className="fas fa-graduation-cap text-green-600"></i>
+                        <span className="font-medium text-slate-900">{viewingClass?.name}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sections List */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-slate-900">Assigned Sections</h3>
+                    <span className="text-sm text-slate-500">
+                      {viewingSections.length} section{viewingSections.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  
+                  {viewingSections.length > 0 ? (
+                    <div className="space-y-2">
+                      {viewingSections.map((assignment, index) => (
+                        <div key={assignment._id || index} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <i className="fas fa-layer-group text-purple-600"></i>
+                            <span className="font-medium text-slate-900">{assignment.sectionName}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleDeleteAssignment(assignment)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Delete Assignment"
+                            >
+                              <i className="fas fa-trash"></i>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-slate-500">
+                      <i className="fas fa-layer-group text-4xl mb-4 text-slate-300"></i>
+                      <p>No sections assigned to this class yet.</p>
+                      <p className="text-sm">Use the "Add Assignment" button to assign sections.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setIsSectionsViewModalOpen(false)}
+                  className={btnSlateClass}
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    setIsSectionsViewModalOpen(false);
+                    handleAddAssignment();
+                  }}
+                  className={btnIndigoClass}
+                >
+                  <i className="fas fa-plus"></i>
+                  Add More Sections
                 </button>
               </div>
             </div>

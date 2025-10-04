@@ -296,10 +296,10 @@ const handleLoginFormSubmit = async (formData) => {
           <header className="flex justify-between items-center flex-wrap gap-4">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
-                School Login Manager
+                Organization Login Manager
               </h1>
               <p className="text-slate-500 text-sm">
-                Create, edit and manage school user logins
+                Create, edit and manage organization user logins
               </p>
             </div>
             <div className="flex items-center gap-4">
@@ -342,7 +342,7 @@ const handleLoginFormSubmit = async (formData) => {
           {/* Filter Section */}
           <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
             <h2 className="text-xl font-bold mb-5 text-slate-900">
-              Filter Schools
+              Filter Organizations
             </h2>
             <form
               onSubmit={handleFilterSubmit}
@@ -350,7 +350,7 @@ const handleLoginFormSubmit = async (formData) => {
             >
               <input
                 type="text"
-                placeholder="School Name..."
+                placeholder="Organization Name..."
                 className={`${inputBaseClass} sm:col-span-2 lg:col-span-4`}
                 value={filters.name}
                 onChange={(e) =>
