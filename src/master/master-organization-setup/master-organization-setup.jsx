@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import Navigation from '../../components/master-user-components/master-dashboard-components/master-navigation/Navigation';
+import Navigation from "../../components/master-user-components/common/master-navigation/Navigation";
 import {
   DepartmentModal,
   ClassModal,
@@ -10,7 +10,7 @@ import {
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 
-const MasterSchoolClassSetup = () => {
+const MasterOrganizationSetup = () => {
   const API_BASE_URL = useMemo(() => `${import.meta.env.VITE_SERVER_API_URL}/api`, []);
   
   // State for global entities
@@ -112,15 +112,15 @@ const MasterSchoolClassSetup = () => {
     assignments: false
   });
 
+  // State to track expanded departments in assignment view
+  const [expandedDepartments, setExpandedDepartments] = useState({});
+
   // --- API CALLS FOR LOCATIONS ---
   const fetchCountries = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/locations/countries`);
       if (response.data.success) {
-        const countries = response.data.data.map(country => ({
-          name: country.country,
-          code: country.countryCode
-        }));
+        const countries = response.data.data
         setLocations(prev => ({ ...prev, countries }));
       }
     } catch (error) {
@@ -133,10 +133,7 @@ const MasterSchoolClassSetup = () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/locations/states/${countryCode}`);
       if (response.data.success) {
-        const states = response.data.data.map(state => ({
-          name: state.state,
-          code: state.stateCode
-        }));
+        const states = response.data.data
         if (forFilter) {
           setLocations(prev => ({ ...prev, filterStates: states }));
         } else {
@@ -153,10 +150,7 @@ const MasterSchoolClassSetup = () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/locations/districts/state/${stateCode}`);
       if (response.data.success) {
-        const districts = response.data.data.map(district => ({
-          name: district.district,
-          code: district.districtCode
-        }));
+        const districts = response.data.data
         if (forFilter) {
           setLocations(prev => ({ ...prev, filterDistricts: districts }));
         } else {
@@ -179,13 +173,13 @@ const MasterSchoolClassSetup = () => {
           params.append(key, value);
         }
       });
+      params.append("status", "active");
 
       const response = await axios.get(`${API_BASE_URL}/organization?${params}`);
       
       if (response.data.success) {
         const allOrgs = response.data.data;
-        const activeOrgs = allOrgs.filter(org => org.status === 'active');
-        setOrganizations(activeOrgs);
+        setOrganizations(allOrgs);
       }
     } catch (error) {
       console.error('Error fetching organizations:', error);
@@ -222,7 +216,6 @@ const MasterSchoolClassSetup = () => {
         organizationId: selectedOrganization
       });
       if (response.data.success) {
-        setDepartments(prev => [...prev, response.data.data]);
         toast.success('Department created successfully');
         return response.data.data;
       }
@@ -236,9 +229,6 @@ const MasterSchoolClassSetup = () => {
     try {
       const response = await axios.put(`${API_BASE_URL}/organization-setup/departments/${departmentId}`, departmentData);
       if (response.data.success) {
-        setDepartments(prev => prev.map(dept => 
-          dept._id === departmentId ? response.data.data : dept
-        ));
         toast.success('Department updated successfully');
         return response.data.data;
       }
@@ -251,7 +241,6 @@ const MasterSchoolClassSetup = () => {
   const deleteDepartment = async (departmentId) => {
     try {
       await axios.delete(`${API_BASE_URL}/organization-setup/departments/${departmentId}`);
-      setDepartments(prev => prev.filter(dept => dept._id !== departmentId));
       toast.success('Department deleted successfully');
     } catch (error) {
       handleApiError(error);
@@ -284,7 +273,6 @@ const MasterSchoolClassSetup = () => {
         organizationId: selectedOrganization
       });
       if (response.data.success) {
-        setClasses(prev => [...prev, response.data.data]);
         toast.success('Class created successfully');
         return response.data.data;
       }
@@ -298,9 +286,6 @@ const MasterSchoolClassSetup = () => {
     try {
       const response = await axios.put(`${API_BASE_URL}/organization-setup/classes/${classId}`, classData);
       if (response.data.success) {
-        setClasses(prev => prev.map(cls => 
-          cls._id === classId ? response.data.data : cls
-        ));
         toast.success('Class updated successfully');
         return response.data.data;
       }
@@ -313,7 +298,6 @@ const MasterSchoolClassSetup = () => {
   const deleteClass = async (classId) => {
     try {
       await axios.delete(`${API_BASE_URL}/organization-setup/classes/${classId}`);
-      setClasses(prev => prev.filter(cls => cls._id !== classId));
       toast.success('Class deleted successfully');
     } catch (error) {
       handleApiError(error);
@@ -346,7 +330,6 @@ const MasterSchoolClassSetup = () => {
         organizationId: selectedOrganization
       });
       if (response.data.success) {
-        setSections(prev => [...prev, response.data.data]);
         toast.success('Section created successfully');
         return response.data.data;
       }
@@ -360,9 +343,6 @@ const MasterSchoolClassSetup = () => {
     try {
       const response = await axios.put(`${API_BASE_URL}/organization-setup/sections/${sectionId}`, sectionData);
       if (response.data.success) {
-        setSections(prev => prev.map(sec => 
-          sec._id === sectionId ? response.data.data : sec
-        ));
         toast.success('Section updated successfully');
         return response.data.data;
       }
@@ -375,7 +355,6 @@ const MasterSchoolClassSetup = () => {
   const deleteSection = async (sectionId) => {
     try {
       await axios.delete(`${API_BASE_URL}/organization-setup/sections/${sectionId}`);
-      setSections(prev => prev.filter(sec => sec._id !== sectionId));
       toast.success('Section deleted successfully');
     } catch (error) {
       handleApiError(error);
@@ -408,7 +387,6 @@ const MasterSchoolClassSetup = () => {
         organizationId: selectedOrganization
       });
       if (response.data.success) {
-        setSubjects(prev => [...prev, response.data.data]);
         toast.success('Subject created successfully');
         return response.data.data;
       }
@@ -422,9 +400,6 @@ const MasterSchoolClassSetup = () => {
     try {
       const response = await axios.put(`${API_BASE_URL}/organization-setup/subjects/${subjectId}`, subjectData);
       if (response.data.success) {
-        setSubjects(prev => prev.map(sub => 
-          sub._id === subjectId ? response.data.data : sub
-        ));
         toast.success('Subject updated successfully');
         return response.data.data;
       }
@@ -437,7 +412,6 @@ const MasterSchoolClassSetup = () => {
   const deleteSubject = async (subjectId) => {
     try {
       await axios.delete(`${API_BASE_URL}/organization-setup/subjects/${subjectId}`);
-      setSubjects(prev => prev.filter(sub => sub._id !== subjectId));
       toast.success('Subject deleted successfully');
     } catch (error) {
       handleApiError(error);
@@ -479,12 +453,6 @@ const MasterSchoolClassSetup = () => {
         organizationId: selectedOrganization
       });
       if (response.data.success) {
-        // Handle multiple assignments if sectionIds is an array
-        if (Array.isArray(response.data.data)) {
-          setSectionClassAssignments(prev => [...prev, ...response.data.data]);
-        } else {
-          setSectionClassAssignments(prev => [...prev, response.data.data]);
-        }
         toast.success('Assignment(s) created successfully');
         return response.data.data;
       }
@@ -498,9 +466,6 @@ const MasterSchoolClassSetup = () => {
     try {
       const response = await axios.put(`${API_BASE_URL}/organization-setup/assignments/${assignmentId}`, assignmentData);
       if (response.data.success) {
-        setSectionClassAssignments(prev => prev.map(assignment => 
-          assignment._id === assignmentId ? response.data.data : assignment
-        ));
         toast.success('Assignment updated successfully');
         return response.data.data;
       }
@@ -513,7 +478,6 @@ const MasterSchoolClassSetup = () => {
   const deleteAssignment = async (assignmentId) => {
     try {
       await axios.delete(`${API_BASE_URL}/organization-setup/assignments/${assignmentId}`);
-      setSectionClassAssignments(prev => prev.filter(assignment => assignment._id !== assignmentId));
       toast.success('Assignment deleted successfully');
     } catch (error) {
       handleApiError(error);
@@ -613,6 +577,59 @@ const MasterSchoolClassSetup = () => {
     return organizations.find(org => org._id === selectedOrganization);
   };
 
+  // Helper function to group assignments by department and class
+  const getGroupedAssignments = () => {
+    const grouped = {};
+    
+    sectionClassAssignments.forEach(assignment => {
+      const departmentId = assignment.departmentId || assignment.department?._id;
+      const departmentName = getEntityDisplayValue(assignment, 'department');
+      const classId = assignment.classId || assignment.class?._id;
+      const className = getEntityDisplayValue(assignment, 'class');
+      const sectionName = getEntityDisplayValue(assignment, 'section');
+      
+      if (!grouped[departmentId]) {
+        grouped[departmentId] = {
+          name: departmentName,
+          classes: {}
+        };
+      }
+      
+      if (!grouped[departmentId].classes[classId]) {
+        grouped[departmentId].classes[classId] = {
+          name: className,
+          sections: []
+        };
+      }
+      
+      grouped[departmentId].classes[classId].sections.push({
+        id: assignment._id,
+        name: sectionName,
+        assignmentData: assignment
+      });
+    });
+    
+    return grouped;
+  };
+
+  // Get already assigned sections for a specific department and class
+  const getAssignedSectionIds = (departmentId, classId) => {
+    return sectionClassAssignments
+      .filter(assignment => 
+        (assignment.departmentId === departmentId || assignment.department?._id === departmentId) &&
+        (assignment.classId === classId || assignment.class?._id === classId)
+      )
+      .map(assignment => assignment.sectionId || assignment.section?._id);
+  };
+
+  // Toggle department expansion
+  const toggleDepartment = (departmentId) => {
+    setExpandedDepartments(prev => ({
+      ...prev,
+      [departmentId]: !prev[departmentId]
+    }));
+  };
+
   useEffect(() => {
     fetchCountries();
   }, []);
@@ -642,6 +659,10 @@ const MasterSchoolClassSetup = () => {
       setShowDeleteConfirm(false);
       setItemToDelete(null);
       setDeleteType('');
+      // Refetch departments after deletion
+      await fetchDepartments(selectedOrganization);
+      // Also refetch assignments as they might be affected
+      await fetchAssignments(selectedOrganization, appliedFilters);
     } catch (error) {
       // Error already handled in deleteDepartment
     }
@@ -658,6 +679,8 @@ const MasterSchoolClassSetup = () => {
       setIsDepartmentModalOpen(false);
       setDepartmentFormData({ name: '', description: '' });
       setEditingDepartment(null);
+      // Refetch departments after successful operation
+      await fetchDepartments(selectedOrganization);
     } catch (error) {
       // Error already handled in API functions
     }
@@ -691,6 +714,10 @@ const MasterSchoolClassSetup = () => {
       setShowDeleteConfirm(false);
       setItemToDelete(null);
       setDeleteType('');
+      // Refetch classes after deletion
+      await fetchClasses(selectedOrganization);
+      // Also refetch assignments as they might be affected
+      await fetchAssignments(selectedOrganization, appliedFilters);
     } catch (error) {
       // Error already handled
     }
@@ -707,6 +734,8 @@ const MasterSchoolClassSetup = () => {
       setIsClassModalOpen(false);
       setClassFormData({ name: '', description: '' });
       setEditingClass(null);
+      // Refetch classes after successful operation
+      await fetchClasses(selectedOrganization);
     } catch (error) {
       // Error already handled in API functions
     }
@@ -740,6 +769,10 @@ const MasterSchoolClassSetup = () => {
       setShowDeleteConfirm(false);
       setItemToDelete(null);
       setDeleteType('');
+      // Refetch sections after deletion
+      await fetchSections(selectedOrganization);
+      // Also refetch assignments as they might be affected
+      await fetchAssignments(selectedOrganization, appliedFilters);
     } catch (error) {
       // Error already handled
     }
@@ -756,6 +789,8 @@ const MasterSchoolClassSetup = () => {
       setIsSectionModalOpen(false);
       setSectionFormData({ name: '', description: '' });
       setEditingSection(null);
+      // Refetch sections after successful operation
+      await fetchSections(selectedOrganization);
     } catch (error) {
       // Error already handled in API functions
     }
@@ -858,6 +893,8 @@ const MasterSchoolClassSetup = () => {
       setShowDeleteConfirm(false);
       setItemToDelete(null);
       setDeleteType('');
+      // Refetch subjects after deletion
+      await fetchSubjects(selectedOrganization);
     } catch (error) {
       // Error already handled
     }
@@ -881,6 +918,8 @@ const MasterSchoolClassSetup = () => {
         type: 'core'
       });
       setEditingSubject(null);
+      // Refetch subjects after successful operation
+      await fetchSubjects(selectedOrganization);
     } catch (error) {
       // Error already handled in API functions
     }
@@ -1025,12 +1064,15 @@ const MasterSchoolClassSetup = () => {
   // Check if any modal is open
   const isAnyModalOpen = isDepartmentModalOpen || isClassModalOpen || isSectionModalOpen || isSubjectModalOpen || isAssignmentModalOpen || isViewModalOpen || isEditListModalOpen || isSectionsViewModalOpen;
 
+  // Get grouped assignments for display
+  const groupedAssignments = getGroupedAssignments();
+
   return (
     <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
       <Toaster position="top-right" />
       
       {/* Navigation Component - hidden when modal is open */}
-      {!isAnyModalOpen && <Navigation currentPage="school-class-setup" onPageChange={handlePageChange} />}
+      {!isAnyModalOpen && <Navigation currentPage="organization-setup" onPageChange={handlePageChange} />}
 
       {/* Main Content */}
       <div className={isAnyModalOpen ? "" : "lg:ml-72"}>
@@ -1038,7 +1080,11 @@ const MasterSchoolClassSetup = () => {
           {/* Header */}
           <header className="flex justify-between items-center flex-wrap gap-4">
             <div>
+<<<<<<< HEAD:src/master/master-organization-setup/master-organization-setup.jsx
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Organization Setup</h1>
+=======
               <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Organization Class Setup</h1>
+>>>>>>> 9e45f2f3a562541edef3e48ca4bb7c8419a067f5:src/master/master-school-manage/master-school-class-setup.jsx
               <p className="text-slate-500 text-sm">Select an organization first, then manage departments, classes, sections, subjects, and assignments</p>
             </div>
           </header>
@@ -1444,6 +1490,101 @@ const MasterSchoolClassSetup = () => {
                 <span className="ml-3 text-slate-600">Loading assignments...</span>
               </div>
             ) : (
+<<<<<<< HEAD:src/master/master-organization-setup/master-organization-setup.jsx
+              /* Hierarchical Assignments View - Like the image */
+              <div className="space-y-4">
+                {Object.keys(groupedAssignments).length === 0 ? (
+                  <div className="text-center py-8 text-slate-500">
+                    <i className="fas fa-inbox text-4xl mb-4"></i>
+                    <p>No assignments found. Create your first assignment or adjust your filters to see results.</p>
+                  </div>
+                ) : (
+                  Object.entries(groupedAssignments).map(([deptId, deptData]) => (
+                    <div key={deptId} className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                      {/* Department Header */}
+                      <div 
+                        className="bg-gradient-to-r from-blue-50 to-blue-100 border-b border-blue-200 p-4 cursor-pointer hover:bg-blue-50 transition-colors"
+                        onClick={() => toggleDepartment(deptId)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <i className={`fas fa-chevron-${expandedDepartments[deptId] ? 'down' : 'right'} text-blue-600 transition-transform`}></i>
+                            <h3 className="text-lg font-semibold text-blue-900">{deptData.name}</h3>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span className="text-sm text-blue-700 bg-blue-200 px-2 py-1 rounded-full">
+                              {Object.keys(deptData.classes).length} classes
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddAssignment();
+                              }}
+                              className="p-2 text-blue-600 hover:bg-blue-200 rounded-lg transition-colors"
+                              title="Add assignment to this department"
+                            >
+                              <i className="fas fa-plus"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Classes and Sections - Collapsible */}
+                      {expandedDepartments[deptId] && (
+                        <div className="divide-y divide-slate-100">
+                          {Object.entries(deptData.classes).map(([classId, classData]) => (
+                            <div key={classId} className="p-4 bg-slate-50">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-3">
+                                  <i className="fas fa-graduation-cap text-green-600"></i>
+                                  <h4 className="font-semibold text-slate-900">{classData.name}</h4>
+                                  <span className="text-sm text-slate-600 bg-slate-200 px-2 py-1 rounded-full">
+                                    {classData.sections.length} sections
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    // Add new section to this class
+                                    setAssignmentFormData({ 
+                                      sectionIds: [], 
+                                      classId: classId, 
+                                      departmentId: deptId 
+                                    });
+                                    setIsAssignmentModalOpen(true);
+                                  }}
+                                  className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-sm rounded-md transition-colors flex items-center gap-2"
+                                >
+                                  <i className="fas fa-plus"></i>
+                                  Add Section
+                                </button>
+                              </div>
+
+                              {/* Sections Grid */}
+                              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                                {classData.sections.map((section) => (
+                                  <div key={section.id} className="bg-white border border-slate-200 rounded-lg p-3 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <i className="fas fa-layer-group text-purple-500"></i>
+                                      <span className="font-medium text-slate-700">{section.name}</span>
+                                    </div>
+                                    <button
+                                      onClick={() => handleDeleteAssignment(section.assignmentData)}
+                                      className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+                                      title="Delete assignment"
+                                    >
+                                      <i className="fas fa-times"></i>
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+=======
               /* Hierarchical Assignments Table */
               <div className="overflow-x-auto">
                 {(() => {
@@ -1543,6 +1684,7 @@ const MasterSchoolClassSetup = () => {
                     </div>
                   );
                 })()}
+>>>>>>> 9e45f2f3a562541edef3e48ca4bb7c8419a067f5:src/master/master-school-manage/master-school-class-setup.jsx
               </div>
             )}
           </div>
@@ -1602,155 +1744,227 @@ const MasterSchoolClassSetup = () => {
         isUploading={isUploading}
       />
 
-      {/* Assignment Modal - Simple form for creating assignments */}
-      {isAssignmentModalOpen && (
-        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-slate-200">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-slate-900">
-                  {editingAssignment ? 'Edit Assignment' : 'Add Assignment'}
-                </h2>
-                <button
-                  onClick={() => setIsAssignmentModalOpen(false)}
-                  className="p-2 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
-                >
-                  <i className="fas fa-times text-lg"></i>
-                </button>
-              </div>
 
-              <form onSubmit={handleAssignmentSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Department *</label>
-                  <select
-                    value={assignmentFormData.departmentId}
-                    onChange={(e) => setAssignmentFormData(prev => ({ ...prev, departmentId: e.target.value }))}
-                    className={inputBaseClass}
-                    required
-                  >
-                    <option value="">Select Department</option>
-                    {departments.map(dept => (
-                      <option key={dept._id} value={dept._id}>{dept.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Class *</label>
-                  <select
-                    value={assignmentFormData.classId}
-                    onChange={(e) => setAssignmentFormData(prev => ({ ...prev, classId: e.target.value }))}
-                    className={inputBaseClass}
-                    required
-                  >
-                    <option value="">Select Class</option>
-                    {classes.map(cls => (
-                      <option key={cls._id} value={cls._id}>{cls.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Sections *</label>
-                  <div className="border border-slate-200 rounded-md">
-                    {/* Select All Option */}
-                    <div className="p-2 border-b border-slate-200 bg-slate-50">
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={sections.length > 0 && assignmentFormData.sectionIds.length === sections.length}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setAssignmentFormData(prev => ({ 
-                                ...prev, 
-                                sectionIds: sections.map(sec => sec._id)
-                              }));
-                            } else {
-                              setAssignmentFormData(prev => ({ 
-                                ...prev, 
-                                sectionIds: []
-                              }));
-                            }
-                          }}
-                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                          disabled={editingAssignment} // Disable for editing
-                        />
-                        <span className="text-sm font-medium text-slate-700">Select All Sections</span>
-                      </label>
-                    </div>
-                    
-                    {/* Scrollable Sections List */}
-                    <div className="max-h-40 overflow-y-auto p-2">
-                      {sections.length > 0 ? (
-                        <div className="space-y-2">
-                          {sections.map((sec) => (
-                            <label key={sec._id} className="flex items-center space-x-2 hover:bg-slate-50 p-1 rounded">
-                              <input
-                                type="checkbox"
-                                checked={assignmentFormData.sectionIds.includes(sec._id)}
-                                onChange={(e) => {
-                                  if (editingAssignment) {
-                                    // For editing, allow only one selection
-                                    setAssignmentFormData(prev => ({ 
-                                      ...prev, 
-                                      sectionIds: e.target.checked ? [sec._id] : []
-                                    }));
-                                  } else {
-                                    // For creating, allow multiple selections
-                                    if (e.target.checked) {
-                                      setAssignmentFormData(prev => ({ 
-                                        ...prev, 
-                                        sectionIds: [...prev.sectionIds, sec._id] 
-                                      }));
-                                    } else {
-                                      setAssignmentFormData(prev => ({ 
-                                        ...prev, 
-                                        sectionIds: prev.sectionIds.filter(id => id !== sec._id) 
-                                      }));
-                                    }
-                                  }
-                                }}
-                                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                                disabled={editingAssignment && assignmentFormData.sectionIds.length > 0 && !assignmentFormData.sectionIds.includes(sec._id)}
-                              />
-                              <span className="text-sm text-slate-700">{sec.name}</span>
-                            </label>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-sm text-slate-500 text-center py-2">
-                          No sections available. Please add sections first.
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  {editingAssignment && (
-                    <p className="text-xs text-slate-500 mt-1">
-                      Note: When editing, you can only select one section.
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex justify-end gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setIsAssignmentModalOpen(false)}
-                    className={btnSlateClass}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className={btnIndigoClass}
-                  >
-                    {editingAssignment ? 'Update Assignment' : 'Create Assignment'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
+{/* Assignment Modal - Fixed section selection logic */}
+{isAssignmentModalOpen && (
+  <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-slate-200">
+      <div className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-slate-900">
+            {editingAssignment ? 'Edit Assignment' : 'Add Assignment'}
+          </h2>
+          <button
+            onClick={() => setIsAssignmentModalOpen(false)}
+            className="p-2 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
+          >
+            <i className="fas fa-times text-lg"></i>
+          </button>
         </div>
-      )}
+
+        <form onSubmit={handleAssignmentSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Department *</label>
+            <select
+              value={assignmentFormData.departmentId}
+              onChange={(e) => setAssignmentFormData(prev => ({ ...prev, departmentId: e.target.value }))}
+              className={inputBaseClass}
+              required
+              disabled={editingAssignment} // Disable department selection when editing
+            >
+              <option value="">Select Department</option>
+              {departments.map(dept => (
+                <option key={dept._id} value={dept._id}>{dept.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Class *</label>
+            <select
+              value={assignmentFormData.classId}
+              onChange={(e) => setAssignmentFormData(prev => ({ ...prev, classId: e.target.value }))}
+              className={inputBaseClass}
+              required
+              disabled={editingAssignment} // Disable class selection when editing
+            >
+              <option value="">Select Class</option>
+              {classes.map(cls => (
+                <option key={cls._id} value={cls._id}>{cls.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Sections *</label>
+            <div className="border border-slate-200 rounded-md">
+              {/* Select All Option - FIXED: Only selects available sections */}
+              <div className="p-2 border-b border-slate-200 bg-slate-50">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={(() => {
+                      if (!assignmentFormData.departmentId || !assignmentFormData.classId) {
+                        return sections.length > 0 && assignmentFormData.sectionIds.length === sections.length;
+                      }
+                      
+                      const availableSections = sections.filter(sec => 
+                        !getAssignedSectionIds(assignmentFormData.departmentId, assignmentFormData.classId).includes(sec._id)
+                      );
+                      
+                      return availableSections.length > 0 && 
+                        assignmentFormData.sectionIds.length === availableSections.length;
+                    })()}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        if (assignmentFormData.departmentId && assignmentFormData.classId) {
+                          // Only select sections that are NOT already assigned
+                          const availableSections = sections.filter(sec => 
+                            !getAssignedSectionIds(assignmentFormData.departmentId, assignmentFormData.classId).includes(sec._id)
+                          );
+                          setAssignmentFormData(prev => ({ 
+                            ...prev, 
+                            sectionIds: availableSections.map(sec => sec._id)
+                          }));
+                        } else {
+                          // If no department/class selected, select all sections
+                          setAssignmentFormData(prev => ({ 
+                            ...prev, 
+                            sectionIds: sections.map(sec => sec._id)
+                          }));
+                        }
+                      } else {
+                        // Deselect all sections
+                        setAssignmentFormData(prev => ({ 
+                          ...prev, 
+                          sectionIds: []
+                        }));
+                      }
+                    }}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    disabled={
+                      editingAssignment || 
+                      sections.length === 0 ||
+                      (assignmentFormData.departmentId && assignmentFormData.classId && 
+                       sections.filter(sec => 
+                         !getAssignedSectionIds(assignmentFormData.departmentId, assignmentFormData.classId).includes(sec._id)
+                       ).length === 0)
+                    }
+                  />
+                  <span className="text-sm font-medium text-slate-700">
+                    {assignmentFormData.departmentId && assignmentFormData.classId 
+                      ? 'Select All Available Sections'
+                      : 'Select All Sections'
+                    }
+                  </span>
+                </label>
+                {assignmentFormData.departmentId && assignmentFormData.classId && (
+                  <p className="text-xs text-slate-500 mt-1">
+                    Only selects sections that are not already assigned to this department and class
+                  </p>
+                )}
+              </div>
+              
+              {/* Scrollable Sections List */}
+              <div className="max-h-40 overflow-y-auto p-2">
+                {sections.length > 0 ? (
+                  <div className="space-y-2">
+                    {sections.map((sec) => {
+                      // Check if this section is already assigned to the selected department and class
+                      const isAlreadyAssigned = assignmentFormData.departmentId && assignmentFormData.classId && 
+                        getAssignedSectionIds(assignmentFormData.departmentId, assignmentFormData.classId).includes(sec._id);
+                      
+                      const isSelected = assignmentFormData.sectionIds.includes(sec._id);
+                      const isAvailable = !isAlreadyAssigned;
+                      
+                      return (
+                        <label 
+                          key={sec._id} 
+                          className={`flex items-center space-x-2 p-1 rounded ${
+                            !isAvailable ? 'bg-amber-50 cursor-not-allowed' : 'hover:bg-slate-50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (editingAssignment) {
+                                // For editing, allow only one selection
+                                setAssignmentFormData(prev => ({ 
+                                  ...prev, 
+                                  sectionIds: e.target.checked ? [sec._id] : []
+                                }));
+                              } else {
+                                // For creating, allow multiple selections
+                                if (e.target.checked) {
+                                  setAssignmentFormData(prev => ({ 
+                                    ...prev, 
+                                    sectionIds: [...prev.sectionIds, sec._id] 
+                                  }));
+                                } else {
+                                  setAssignmentFormData(prev => ({ 
+                                    ...prev, 
+                                    sectionIds: prev.sectionIds.filter(id => id !== sec._id) 
+                                  }));
+                                }
+                              }
+                            }}
+                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                            disabled={
+                              (editingAssignment && assignmentFormData.sectionIds.length > 0 && !assignmentFormData.sectionIds.includes(sec._id)) ||
+                              !isAvailable // Disable already assigned sections
+                            }
+                          />
+                          <span className={`text-sm ${!isAvailable ? 'text-amber-600' : 'text-slate-700'}`}>
+                            {sec.name}
+                            {!isAvailable && (
+                              <span className="text-xs text-amber-500 ml-1">(already assigned)</span>
+                            )}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-sm text-slate-500 text-center py-2">
+                    No sections available. Please add sections first.
+                  </div>
+                )}
+              </div>
+            </div>
+            {editingAssignment && (
+              <p className="text-xs text-slate-500 mt-1">
+                Note: When editing, you can only select one section.
+              </p>
+            )}
+            {assignmentFormData.departmentId && assignmentFormData.classId && (
+              <p className="text-xs text-amber-600 mt-1">
+                Note: Sections already assigned to this department and class are disabled and cannot be selected.
+              </p>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={() => setIsAssignmentModalOpen(false)}
+              className={btnSlateClass}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className={btnIndigoClass}
+              disabled={assignmentFormData.sectionIds.length === 0}
+            >
+              {editingAssignment ? 'Update Assignment' : 'Create Assignment'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+)}
 
       {/* View Modal */}
       {isViewModalOpen && (
@@ -2043,4 +2257,4 @@ const MasterSchoolClassSetup = () => {
   );
 };
 
-export default MasterSchoolClassSetup;
+export default MasterOrganizationSetup;

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import Pagination from "../shared/Pagination";
-
+import ConfirmModal from '../../common/ConfirmModal';
 const DistrictTable = ({ 
   districts, 
   countries, 
@@ -12,15 +11,15 @@ const DistrictTable = ({
   onAddDistrict, 
   onEditDistrict, 
   onDeleteDistrict, 
-  isLoading,
-  currentPage,
-  totalPages,
-  onPageChange,
-  itemsPerPage
+  isLoading
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDistrict, setEditingDistrict] = useState(null);
   const [formData, setFormData] = useState({ name: '', code: '', countryCode: '', stateCode: '' });
+  
+  // Confirm modal state
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [districtToDelete, setDistrictToDelete] = useState(null);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -46,17 +45,23 @@ const DistrictTable = ({
   const handleEdit = (district) => {
     setEditingDistrict(district);
     setFormData({ 
-      name: district.district, 
-      code: district.districtCode, 
+      name: district.name, // Changed from district.district
+      code: district.code, // Changed from district.districtCode
       countryCode: district.countryCode, 
       stateCode: district.stateCode 
     });
     setIsModalOpen(true);
   };
 
-  const handleDelete = (districtId) => {
-    if (confirm('Are you sure you want to delete this district?')) {
-      onDeleteDistrict(districtId);
+  const handleDeleteClick = (districtId) => {
+    setDistrictToDelete(districtId);
+    setIsConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (districtToDelete) {
+      onDeleteDistrict(districtToDelete);
+      setDistrictToDelete(null);
     }
   };
 
@@ -72,6 +77,10 @@ const DistrictTable = ({
     ? states.filter(state => state.countryCode === selectedCountry)
     : states;
 
+  // Button classes for ConfirmModal
+  const btnSlateClass = "font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors transform active:scale-95 bg-slate-200 hover:bg-slate-300 text-slate-800";
+  const btnRoseClass = "font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors transform active:scale-95 bg-rose-500 hover:bg-rose-600 text-white";
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
       <div className="p-4 border-b border-slate-200">
@@ -80,6 +89,7 @@ const DistrictTable = ({
           <button
             onClick={() => setIsModalOpen(true)}
             className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold px-3 py-2 rounded-lg text-sm transition-colors"
+            disabled={isLoading}
           >
             <i className="fas fa-plus mr-2"></i>Add District
           </button>
@@ -91,11 +101,12 @@ const DistrictTable = ({
             value={selectedCountry || ''}
             onChange={(e) => onCountryFilter(e.target.value)}
             className="bg-slate-100 border-slate-200 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+            disabled={isLoading}
           >
             <option value="">All Countries</option>
             {countries.map((country) => (
-              <option key={country._id} value={country.countryCode}>
-                {country.country}
+              <option key={country._id} value={country.code}> {/* Changed from countryCode to code */}
+                {country.name} {/* Changed from country to name */}
               </option>
             ))}
           </select>
@@ -103,12 +114,12 @@ const DistrictTable = ({
             value={selectedState || ''}
             onChange={(e) => onStateFilter(e.target.value)}
             className="bg-slate-100 border-slate-200 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-            disabled={!selectedCountry}
+            disabled={!selectedCountry || isLoading}
           >
             <option value="">All States</option>
             {filteredStates.map((state) => (
-              <option key={state._id} value={state.stateCode}>
-                {state.state}
+              <option key={state._id} value={state.code}> {/* Changed from stateCode to code */}
+                {state.name} {/* Changed from state to name */}
               </option>
             ))}
           </select>
@@ -129,25 +140,27 @@ const DistrictTable = ({
           <tbody className="divide-y divide-slate-200">
             {filteredDistricts.length > 0 ? filteredDistricts.map((district) => (
               <tr key={district._id} className="hover:bg-slate-50">
-                <td className="p-3 font-medium text-slate-900">{district.district}</td>
-                <td className="p-3 text-slate-600">{district.districtCode}</td>
+                <td className="p-3 font-medium text-slate-900">{district.name}</td> {/* Changed from district to name */}
+                <td className="p-3 text-slate-600">{district.code}</td> {/* Changed from districtCode to code */}
                 <td className="p-3 text-slate-600">
-                  {states.find(s => s.stateCode === district.stateCode)?.state || 'Unknown'}
+                  {states.find(s => s.code === district.stateCode)?.name || district.stateCode} {/* Fixed field names */}
                 </td>
                 <td className="p-3 text-slate-600">
-                  {countries.find(c => c.countryCode === district.countryCode)?.country || 'Unknown'}
+                  {countries.find(c => c.code === district.countryCode)?.name || district.countryCode} {/* Fixed field names */}
                 </td>
                 <td className="p-3 text-center">
                   <div className="flex justify-center gap-2">
                     <button
                       onClick={() => handleEdit(district)}
                       className="text-indigo-600 hover:text-indigo-800 text-sm"
+                      disabled={isLoading}
                     >
                       Edit
                     </button>
                     <button
-                      onClick={() => handleDelete(district._id)}
+                      onClick={() => handleDeleteClick(district._id)}
                       className="text-red-600 hover:text-red-800 text-sm"
+                      disabled={isLoading}
                     >
                       Delete
                     </button>
@@ -164,15 +177,6 @@ const DistrictTable = ({
           </tbody>
         </table>
       </div>
-      
-      {/* Pagination */}
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={onPageChange}
-        totalItems={districts.length}
-        itemsPerPage={itemsPerPage}
-      />
 
       {/* Modal */}
       {isModalOpen && (
@@ -193,11 +197,12 @@ const DistrictTable = ({
                   }}
                   className="w-full bg-slate-100 border-slate-200 rounded-md p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                   required
+                  disabled={isLoading}
                 >
                   <option value="">Select Country</option>
                   {countries.map((country) => (
-                    <option key={country._id} value={country.countryCode}>
-                      {country.country}
+                    <option key={country._id} value={country.code}> {/* Changed from countryCode to code */}
+                      {country.name} {/* Changed from country to name */}
                     </option>
                   ))}
                 </select>
@@ -208,13 +213,13 @@ const DistrictTable = ({
                   value={formData.stateCode}
                   onChange={(e) => setFormData(prev => ({ ...prev, stateCode: e.target.value }))}
                   className="w-full bg-slate-100 border-slate-200 rounded-md p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                  disabled={!formData.countryCode}
+                  disabled={!formData.countryCode || isLoading}
                   required
                 >
                   <option value="">Select State</option>
                   {states.filter(s => s.countryCode === formData.countryCode).map((state) => (
-                    <option key={state._id} value={state.stateCode}>
-                      {state.state}
+                    <option key={state._id} value={state.code}> {/* Changed from stateCode to code */}
+                      {state.name} {/* Changed from state to name */}
                     </option>
                   ))}
                 </select>
@@ -228,6 +233,7 @@ const DistrictTable = ({
                   className="w-full bg-slate-100 border-slate-200 rounded-md p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                   placeholder="Enter district name"
                   required
+                  disabled={isLoading}
                 />
               </div>
               <div>
@@ -240,6 +246,7 @@ const DistrictTable = ({
                   placeholder="e.g., BLR, CHN, MUM"
                   maxLength="3"
                   required
+                  disabled={isLoading}
                 />
               </div>
               <div className="flex justify-end gap-3 pt-4">
@@ -251,20 +258,41 @@ const DistrictTable = ({
                     setEditingDistrict(null);
                   }}
                   className="px-4 py-2 border border-slate-300 text-slate-700 font-semibold rounded-lg text-sm hover:bg-slate-50"
+                  disabled={isLoading}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg text-sm"
+                  className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isLoading}
                 >
-                  {editingDistrict ? 'Update' : 'Add'} District
+                  {isLoading ? (
+                    <><i className="fas fa-spinner fa-spin mr-2"></i>Processing...</>
+                  ) : (
+                    editingDistrict ? 'Update' : 'Add'
+                  )} District
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Confirm Delete Modal */}
+      <ConfirmModal
+        isOpen={isConfirmOpen}
+        onClose={() => {
+          setIsConfirmOpen(false);
+          setDistrictToDelete(null);
+        }}
+        title="Delete District"
+        message="Are you sure you want to delete this district?"
+        onConfirm={handleConfirmDelete}
+        btnSlateClass={btnSlateClass}
+        btnRoseClass={btnRoseClass}
+        isLoading={isLoading}
+      />
     </div>
   );
 };

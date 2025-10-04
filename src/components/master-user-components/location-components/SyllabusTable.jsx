@@ -1,18 +1,22 @@
 import React, { useState } from 'react';
-import Pagination from "../shared/Pagination";
+import ConfirmModal from '../../common/ConfirmModal';
 
 const SyllabusTable = ({ 
   syllabi, 
   onAddSyllabus, 
   onDeleteSyllabus, 
-  isLoading,
-  currentPage,
-  totalPages,
-  onPageChange,
-  itemsPerPage
+  isLoading
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '' });
+  
+  // Confirm modal state
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [syllabusToDelete, setSyllabusToDelete] = useState(null);
+
+  // Button classes for ConfirmModal
+  const btnSlateClass = "font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors transform active:scale-95 bg-slate-200 hover:bg-slate-300 text-slate-800";
+  const btnRoseClass = "font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors transform active:scale-95 bg-rose-500 hover:bg-rose-600 text-white";
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -37,9 +41,15 @@ const SyllabusTable = ({
     handleCloseModal();
   };
 
-  const handleDelete = (syllabusId) => {
-    if (window.confirm('Are you sure you want to delete this syllabus? This action cannot be undone.')) {
-      onDeleteSyllabus(syllabusId);
+  const handleDeleteClick = (syllabusId) => {
+    setSyllabusToDelete(syllabusId);
+    setIsConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (syllabusToDelete) {
+      onDeleteSyllabus(syllabusToDelete);
+      setSyllabusToDelete(null);
     }
   };
 
@@ -95,7 +105,7 @@ const SyllabusTable = ({
                   <td className="p-3 text-center">
                     <div className="flex justify-center gap-2">
                       <button
-                        onClick={() => handleDelete(syllabus.id)}
+                        onClick={() => handleDeleteClick(syllabus.id)}
                         className="text-red-600 hover:text-red-800 text-sm font-medium transition-colors"
                         disabled={isLoading}
                       >
@@ -119,17 +129,8 @@ const SyllabusTable = ({
           </tbody>
         </table>
       </div>
-      
-      {/* Pagination */}
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={onPageChange}
-        totalItems={syllabi.length}
-        itemsPerPage={itemsPerPage}
-      />
 
-      {/* Modal */}
+      {/* Add Syllabus Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md border border-slate-200 max-h-[90vh] overflow-y-auto">
@@ -160,6 +161,7 @@ const SyllabusTable = ({
                   placeholder="e.g., Central Board of Secondary Education"
                   required
                   maxLength="100"
+                  disabled={isLoading}
                 />
                 <div className="text-xs text-slate-500 mt-1">
                   {formData.name.length}/100 characters
@@ -171,22 +173,44 @@ const SyllabusTable = ({
                   type="button"
                   onClick={handleCloseModal}
                   className="px-4 py-2 border border-slate-300 text-slate-700 font-medium rounded-lg text-sm hover:bg-slate-50 transition-colors"
+                  disabled={isLoading}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-lg text-sm transition-colors flex items-center gap-2"
+                  className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-lg text-sm transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={isLoading}
                 >
-                  {isLoading && <div className="animate-spin rounded-full h-3 w-3 border-b border-white"></div>}
-                  Add Syllabus
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3 w-3 border-b border-white"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    'Add Syllabus'
+                  )}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Confirm Delete Modal */}
+      <ConfirmModal
+        isOpen={isConfirmOpen}
+        onClose={() => {
+          setIsConfirmOpen(false);
+          setSyllabusToDelete(null);
+        }}
+        title="Delete Syllabus"
+        message="Are you sure you want to delete this syllabus? This action cannot be undone."
+        onConfirm={handleConfirmDelete}
+        btnSlateClass={btnSlateClass}
+        btnRoseClass={btnRoseClass}
+        isLoading={isLoading}
+      />
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
-import Navigation from "../../components/master-user-components/master-dashboard-components/master-navigation/Navigation";
+import Navigation from "../../components/master-user-components/common/master-navigation/Navigation";
 import SchoolsTable from "../../components/master-user-components/master-login-create-components/SchoolsTable";
 import LoginFormModal from "../../components/master-user-components/master-login-create-components/modals/LoginFormModal";
 import SchoolDetailsModal from "../../components/master-user-components/master-login-create-components/modals/SchoolDetailsModal";
@@ -70,7 +70,6 @@ function SchoolLoginManager() {
       const response = await axios.get(
         `${API_BASE_URL}/organization?${params}`
       );
-
       if (response.data.success) {
         const allOrgs = response.data.data;
         const activeOrgs = allOrgs.filter((org) => org.status === "active");
@@ -89,8 +88,8 @@ function SchoolLoginManager() {
       const response = await axios.get(`${API_BASE_URL}/locations/countries`);
       if (response.data.success) {
         const countries = response.data.data.map((country) => ({
-          name: country.country,
-          code: country.countryCode,
+          name: country.name,
+          code: country.code,
         }));
         setLocations((prev) => ({ ...prev, countries }));
       }
@@ -107,8 +106,8 @@ function SchoolLoginManager() {
       );
       if (response.data.success) {
         const states = response.data.data.map((state) => ({
-          name: state.state,
-          code: state.stateCode,
+          name: state.name,
+          code: state.code,
         }));
         if (forFilter) {
           setLocations((prev) => ({ ...prev, filterStates: states }));
@@ -129,8 +128,8 @@ function SchoolLoginManager() {
       );
       if (response.data.success) {
         const districts = response.data.data.map((district) => ({
-          name: district.district,
-          code: district.districtCode,
+          name: district.name,
+          code: district.code,
         }));
         if (forFilter) {
           setLocations((prev) => ({ ...prev, filterDistricts: districts }));
