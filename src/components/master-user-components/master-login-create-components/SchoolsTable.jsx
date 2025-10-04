@@ -11,6 +11,7 @@ const SchoolsTable = ({
   onOpenSchoolDetails,
   btnTealClass
 }) => {
+  console.log("Rendering SchoolsTable with schools:", schools);
   return (
     <section className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
       <div className="p-4 border-b border-slate-200">

@@ -1,9 +1,5 @@
-export { default as SetupStatusFilter } from './SetupStatusFilter';
-export { default as LocationFilter } from './LocationFilter';
-export { default as SchoolsTable } from './SchoolsTable';
-export { default as ClassSetupSection } from './ClassSetupSection';
-export { default as DepartmentModal } from './DepartmentModal';
-export { default as ClassModal } from './ClassModal';
-export { default as SectionModal } from './SectionModal';
-export { default as SubjectModal } from './SubjectModal';
-export { default as DeleteConfirmationModal } from './DeleteConfirmationModal';
+export { default as ClassModal } from "./ClassModal";
+export { default as DepartmentModal } from "./DepartmentModal";
+export { default as SectionModal } from "./SectionModal";
+export { default as SubjectModal } from "./SubjectModal";
+export { default as DeleteConfirmationModal } from "./DeleteConfirmationModal";

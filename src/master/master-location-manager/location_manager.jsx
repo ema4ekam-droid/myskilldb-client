@@ -1,17 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
-import Navigation from "../../components/master-user-components/master-dashboard-components/master-navigation/Navigation";
+import Navigation from "../../components/master-user-components/common/master-navigation/Navigation";
 import CountryTable from "../../components/master-user-components/location-components/CountryTable";
 import StateTable from "../../components/master-user-components/location-components/StateTable";
 import DistrictTable from "../../components/master-user-components/location-components/DistrictTable";
 import SyllabusTable from "../../components/master-user-components/location-components/SyllabusTable";
 import StatsCards from "../../components/master-user-components/location-components/StatsCards";
 import axios from "axios";
+import toast, { Toaster } from "react-hot-toast";
 
 function LocationManager() {
-  const API_BASE_URL = useMemo(() => `${import.meta.env.VITE_SERVER_API_URL}/api`, []);
-
-  // --- STATE MANAGEMENT ---
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const API_BASE_URL = useMemo(
+    () => `${import.meta.env.VITE_SERVER_API_URL}/api`,
+    []
+  );
 
   // Data arrays
   const [countries, setCountries] = useState([]);
@@ -28,54 +29,6 @@ function LocationManager() {
   const [isLoadingStates, setIsLoadingStates] = useState(false);
   const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
   const [isLoadingSyllabi, setIsLoadingSyllabi] = useState(false);
-
-  // Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
-  const [stateCurrentPage, setStateCurrentPage] = useState(1);
-  const [districtCurrentPage, setDistrictCurrentPage] = useState(1);
-  const [syllabusCurrentPage, setSyllabusCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(7);
-
-  // --- DERIVED STATE ---
-  const totalCountries = countries.length;
-  const totalStates = states.length;
-
-  // Pagination calculations
-  const totalPages = Math.ceil(countries.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedCountries = countries.slice(startIndex, endIndex);
-
-  const stateTotalPages = Math.ceil(states.length / itemsPerPage);
-  const stateStartIndex = (stateCurrentPage - 1) * itemsPerPage;
-  const stateEndIndex = stateStartIndex + itemsPerPage;
-  const paginatedStates = states.slice(stateStartIndex, stateEndIndex);
-
-  const districtTotalPages = Math.ceil(districts.length / itemsPerPage);
-  const districtStartIndex = (districtCurrentPage - 1) * itemsPerPage;
-  const districtEndIndex = districtStartIndex + itemsPerPage;
-  const paginatedDistricts = districts.slice(districtStartIndex, districtEndIndex);
-
-  const syllabusTotalPages = Math.ceil(syllabi.length / itemsPerPage);
-  const syllabusStartIndex = (syllabusCurrentPage - 1) * itemsPerPage;
-  const syllabusEndIndex = syllabusStartIndex + itemsPerPage;
-  const paginatedSyllabi = syllabi.slice(syllabusStartIndex, syllabusEndIndex);
-
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
-
-  const handleStatePageChange = (page) => {
-    setStateCurrentPage(page);
-  };
-
-  const handleDistrictPageChange = (page) => {
-    setDistrictCurrentPage(page);
-  };
-
-  const handleSyllabusPageChange = (page) => {
-    setSyllabusCurrentPage(page);
-  };
 
   // =========================
   // API CALLS
@@ -121,14 +74,16 @@ function LocationManager() {
   const fetchSyllabi = async () => {
     setIsLoadingSyllabi(true);
     try {
-      const response = await axios.get(`${API_BASE_URL}/system-manager/Syllabus`);
+      const response = await axios.get(
+        `${API_BASE_URL}/system-manager/Syllabus`
+      );
       if (response.data.success && response.data.data) {
         // Convert values array to syllabus objects
-        const parsedSyllabi = response.data.data.values.map((name, index) => ({
+        const parsedSyllabi = response.data.data.map((name, index) => ({
           id: index + 1, // Generate sequential ID
-          name: name
+          name: name,
         }));
-        
+
         setSyllabi(parsedSyllabi);
       } else {
         setSyllabi([]);
@@ -156,8 +111,8 @@ function LocationManager() {
         `${API_BASE_URL}/locations/countries`,
         data
       );
-      setCountries((prev) => [...prev, response.data.data]);
-      alert("Country added successfully!");
+      fetchCountries();
+      toast.success("Country added successfully!");
     } catch (error) {
       handleApiError("adding country", error, true);
     }
@@ -169,10 +124,8 @@ function LocationManager() {
         `${API_BASE_URL}/locations/countries/${id}`,
         data
       );
-      setCountries((prev) =>
-        prev.map((c) => (c._id === id ? response.data.data : c))
-      );
-      alert("Country updated successfully!");
+      fetchCountries();
+      toast.success("Country updated successfully!");
     } catch (error) {
       handleApiError("updating country", error, true);
     }
@@ -181,8 +134,8 @@ function LocationManager() {
   const handleDeleteCountry = async (id) => {
     try {
       await axios.delete(`${API_BASE_URL}/locations/countries/${id}`);
-      setCountries((prev) => prev.filter((c) => c._id !== id));
-      alert("Country deleted successfully!");
+      fetchCountries();
+      toast.success("Country deleted successfully!");
     } catch (error) {
       handleApiError("deleting country", error, true);
     }
@@ -191,9 +144,12 @@ function LocationManager() {
   // States
   const handleAddState = async (data) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/locations/states`, data);
-      setStates((prev) => [...prev, response.data.data]);
-      alert("State added successfully!");
+      const response = await axios.post(
+        `${API_BASE_URL}/locations/states`,
+        data
+      );
+      fetchStates();
+      toast.success("State added successfully!");
     } catch (error) {
       handleApiError("adding state", error, true);
     }
@@ -205,10 +161,8 @@ function LocationManager() {
         `${API_BASE_URL}/locations/states/${id}`,
         data
       );
-      setStates((prev) =>
-        prev.map((s) => (s._id === id ? response.data.data : s))
-      );
-      alert("State updated successfully!");
+      fetchStates();
+      toast.success("State updated successfully!");
     } catch (error) {
       handleApiError("updating state", error, true);
     }
@@ -217,8 +171,8 @@ function LocationManager() {
   const handleDeleteState = async (id) => {
     try {
       await axios.delete(`${API_BASE_URL}/locations/states/${id}`);
-      setStates((prev) => prev.filter((s) => s._id !== id));
-      alert("State deleted successfully!");
+      fetchStates();
+      toast.success("State deleted successfully!");
     } catch (error) {
       handleApiError("deleting state", error, true);
     }
@@ -231,8 +185,8 @@ function LocationManager() {
         `${API_BASE_URL}/locations/districts`,
         data
       );
-      setDistricts((prev) => [...prev, response.data.data]);
-      alert("District added successfully!");
+      fetchDistricts();
+      toast.success("District added successfully!");
     } catch (error) {
       handleApiError("adding district", error, true);
     }
@@ -244,10 +198,8 @@ function LocationManager() {
         `${API_BASE_URL}/locations/districts/${id}`,
         data
       );
-      setDistricts((prev) =>
-        prev.map((d) => (d._id === id ? response.data.data : d))
-      );
-      alert("District updated successfully!");
+      fetchDistricts();
+      toast.success("District updated successfully!");
     } catch (error) {
       handleApiError("updating district", error, true);
     }
@@ -256,8 +208,8 @@ function LocationManager() {
   const handleDeleteDistrict = async (id) => {
     try {
       await axios.delete(`${API_BASE_URL}/locations/districts/${id}`);
-      setDistricts((prev) => prev.filter((d) => d._id !== id));
-      alert("District deleted successfully!");
+      fetchDistricts();
+      toast.success("District deleted successfully!");
     } catch (error) {
       handleApiError("deleting district", error, true);
     }
@@ -267,12 +219,12 @@ function LocationManager() {
   const handleAddSyllabus = async (data) => {
     try {
       await axios.post(`${API_BASE_URL}/system-manager/Syllabus`, {
-        value: data.name
+        value: data.name,
       });
-      
+
       // Refresh syllabi list
       await fetchSyllabi();
-      alert("Syllabus added successfully!");
+      toast.success("Syllabus added successfully!");
     } catch (error) {
       handleApiError("adding syllabus", error, true);
     }
@@ -281,20 +233,20 @@ function LocationManager() {
   const handleDeleteSyllabus = async (id) => {
     try {
       // Find the syllabus to delete
-      const syllabusToDelete = syllabi.find(s => s.id === id);
+      const syllabusToDelete = syllabi.find((s) => s.id === id);
       if (!syllabusToDelete) {
-        alert("Syllabus not found!");
+        toast.error("Syllabus not found!");
         return;
       }
 
       // Call patch endpoint to remove the syllabus
       await axios.patch(`${API_BASE_URL}/system-manager/Syllabus`, {
-        value: syllabusToDelete.name
+        value: syllabusToDelete.name,
       });
-      
+
       // Refresh syllabi list
       await fetchSyllabi();
-      alert("Syllabus deleted successfully!");
+      toast.success("Syllabus deleted successfully!");
     } catch (error) {
       handleApiError("deleting syllabus", error, true);
     }
@@ -313,7 +265,7 @@ function LocationManager() {
       msg = error.message;
     }
     console.error(`Error ${action}:`, msg);
-    if (showAlert) alert(`Error ${action}: ${msg}`);
+    if (showAlert) toast.error(`Error ${action}: ${msg}`);
   };
 
   // =========================
@@ -336,7 +288,7 @@ function LocationManager() {
 
   return (
     <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
-      {/* Navigation */}
+      <Toaster position="top-right" />
       <Navigation
         currentPage="location-manager"
         onPageChange={(p) => console.log(`Navigating to: ${p}`)}
@@ -357,23 +309,24 @@ function LocationManager() {
           </header>
 
           {/* Stats */}
-          <StatsCards totalCountries={totalCountries} totalStates={totalStates} />
+          <StatsCards
+            totalCountries={countries.length}
+            totalStates={states.length}
+            totalDistricts={districts.length}
+            totalSyllabi={syllabi.length}
+          />
 
           {/* Country + State */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <CountryTable
-              countries={paginatedCountries}
+              countries={countries}
               onAddCountry={handleAddCountry}
               onEditCountry={handleEditCountry}
               onDeleteCountry={handleDeleteCountry}
               isLoading={isLoadingCountries}
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-              itemsPerPage={itemsPerPage}
             />
             <StateTable
-              states={paginatedStates}
+              states={states}
               countries={countries}
               selectedCountry={selectedCountry}
               onCountryFilter={handleCountryFilter}
@@ -381,17 +334,13 @@ function LocationManager() {
               onEditState={handleEditState}
               onDeleteState={handleDeleteState}
               isLoading={isLoadingStates}
-              currentPage={stateCurrentPage}
-              totalPages={stateTotalPages}
-              onPageChange={handleStatePageChange}
-              itemsPerPage={itemsPerPage}
             />
           </div>
 
           {/* District + Syllabus */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <DistrictTable
-              districts={paginatedDistricts}
+              districts={districts}
               countries={countries}
               states={states}
               selectedCountry={selectedCountry}
@@ -402,20 +351,12 @@ function LocationManager() {
               onEditDistrict={handleEditDistrict}
               onDeleteDistrict={handleDeleteDistrict}
               isLoading={isLoadingDistricts}
-              currentPage={districtCurrentPage}
-              totalPages={districtTotalPages}
-              onPageChange={handleDistrictPageChange}
-              itemsPerPage={itemsPerPage}
             />
             <SyllabusTable
-              syllabi={paginatedSyllabi}
+              syllabi={syllabi}
               onAddSyllabus={handleAddSyllabus}
               onDeleteSyllabus={handleDeleteSyllabus}
               isLoading={isLoadingSyllabi}
-              currentPage={syllabusCurrentPage}
-              totalPages={syllabusTotalPages}
-              onPageChange={handleSyllabusPageChange}
-              itemsPerPage={itemsPerPage}
             />
           </div>
         </main>

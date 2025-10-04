@@ -52,7 +52,7 @@ const SubjectModal = ({
             >
               <option value="">No Department</option>
               {departments.map((dept) => (
-                <option key={dept.id} value={dept.id}>{dept.name}</option>
+                <option key={dept._id} value={dept._id}>{dept.name}</option>
               ))}
             </select>
           </div>
