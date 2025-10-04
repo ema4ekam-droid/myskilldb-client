@@ -24,7 +24,6 @@ function App() {
           <Route path="/master/organization-logins" element={<SchoolLoginManager />} />
           <Route path="/master/location-manager" element={<LocationManager />} />
           <Route path="/master/account-managers" element={<AccountManagers />} />
-          <Route path="/master/analytics" element={<h1 className="p-8">System Analytics - Coming Soon</h1>} />
         </Routes>
       </BrowserRouter>
     </>
