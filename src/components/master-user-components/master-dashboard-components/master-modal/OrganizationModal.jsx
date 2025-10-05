@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import toast, { Toaster } from "react-hot-toast";
 
 const OrganizationModal = ({
   isOpen,
@@ -14,43 +15,46 @@ const OrganizationModal = ({
   handleInputChange,
   handleOrganizationFormSubmit,
   isLoading,
+  API_BASE_URL
 }) => {
   if (!isOpen) return null;
-  const API_BASE_URL = useMemo(() => `${import.meta.env.VITE_SERVER_API_URL}/api`, []);
+  
+  const apiBaseUrl = useMemo(
+    () => API_BASE_URL || `${import.meta.env.VITE_SERVER_API_URL}/api`,
+    [API_BASE_URL]
+  );
+
   const [syllabi, setSyllabi] = useState([]);
 
   const fetchSyllabi = async () => {
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/system-manager/Syllabus`
+        `${apiBaseUrl}/system-manager/Syllabus`
       );
-      if (response.data.success && response.data.data) {
-        // Convert values array to syllabus objects
-        const parsedSyllabi = response.data.data.values.map((name, index) => ({
-          id: index + 1, // Generate sequential ID
+      if (response.data && response.data.success && response.data.data) {
+        const parsedSyllabi = response.data.data.map((name, index) => ({
+          id: index + 1,
           name: name,
         }));
-        console.log(parsedSyllabi);
         setSyllabi(parsedSyllabi);
       } else {
         setSyllabi([]);
       }
     } catch (error) {
-      if (error.response?.status === 404) {
-        // No syllabi found yet
-        setSyllabi([]);
-      } else {
-        alert("fetching syllabi failed");
-      }
+      setSyllabi([]);
+      toast.error("Fetching syllabi failed");
     }
   };
 
   useEffect(() => {
-    fetchSyllabi();
-  }, []);
+    if (isOpen) {
+      fetchSyllabi();
+    }
+  }, [isOpen]);
 
   return (
     <div className="fixed inset-0 backdrop-blur-lg flex items-center justify-center z-[100] p-4">
+      <Toaster position="top-right" />
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-slate-200">
         <div className="p-6 border-b border-slate-200">
           <div className="flex justify-between items-center">

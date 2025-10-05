@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { toast, Toaster } from "react-hot-toast";
-import Navigation from "../../components/master-user-components/master-dashboard-components/master-navigation/Navigation";
+import Navigation from "../../components/master-user-components/common/master-navigation/Navigation";
 import AccountManagersTable from "../../components/master-user-components/master-account-manager-components/AccountManagersTable";
 import AccountManagerModal from "../../components/master-user-components/master-account-manager-components/modals/AccountManagerModal";
 import ViewAccountManagerModal from "../../components/master-user-components/master-account-manager-components/modals/ViewAccountManagerModal";

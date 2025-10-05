@@ -52,32 +52,9 @@ const SubjectModal = ({
             >
               <option value="">No Department</option>
               {departments.map((dept) => (
-                <option key={dept.id} value={dept.id}>{dept.name}</option>
+                <option key={dept._id} value={dept._id}>{dept.name}</option>
               ))}
             </select>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Credits</label>
-              <input
-                type="number"
-                className={inputBaseClass}
-                value={subjectFormData.credits}
-                onChange={(e) => setSubjectFormData(prev => ({ ...prev, credits: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Type</label>
-              <select
-                className={inputBaseClass}
-                value={subjectFormData.type}
-                onChange={(e) => setSubjectFormData(prev => ({ ...prev, type: e.target.value }))}
-              >
-                <option value="core">Core</option>
-                <option value="elective">Elective</option>
-                <option value="optional">Optional</option>
-              </select>
-            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
