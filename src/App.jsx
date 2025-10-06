@@ -12,6 +12,7 @@ import TeacherAssignments from './org_admin/teacher_management/teacher_assignmen
 import TopicManagement from './org_admin/skills_academics/topic_management.jsx';
 import HomePage from './Home.jsx';
 import MasterOrganizationSetup from './master/master-organization-setup/master-organization-setup.jsx';
+import AuthWrapper from './wrappers/AuthWrapper.jsx';
 
 function App() {
   return (
@@ -19,8 +20,10 @@ function App() {
       <BrowserRouter>
         <Routes>
           {/* Login stays at root */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/" element={<HomePage />} />
+          <Route element={<AuthWrapper />}>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<Login />} />
+          </Route>
 
 
           {/* Grouped under /master */}
