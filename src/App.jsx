@@ -3,7 +3,6 @@ import Login from './login/login.jsx'
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import MasterDashboard from './master/master-dashboard/master_dashboard.jsx';
 import LocationManager from './master/master-location-manager/location_manager.jsx';
-import SchoolLoginManager from './master/master-login-create/school_login_manager.jsx';
 import AccountManagers from './master/master-account-managers/account_managers.jsx';
 import OrgDashboard from './org_admin/org_admin-dashboard/org-dashboard.jsx';
 import AdminClassManage from './org_admin/class_management/admin_class_manage.jsx';
@@ -13,6 +12,7 @@ import TopicManagement from './org_admin/skills_academics/topic_management.jsx';
 import HomePage from './Home.jsx';
 import MasterOrganizationSetup from './master/master-organization-setup/master-organization-setup.jsx';
 import AuthWrapper from './wrappers/AuthWrapper.jsx';
+import OrganizationLoginManager from './master/master-login-create/organization_login_manager.jsx';
 
 function App() {
   return (
@@ -29,7 +29,7 @@ function App() {
           {/* Grouped under /master */}
           <Route path="/master/dashboard" element={<MasterDashboard />} />
           <Route path="/master/organization-setup" element={<MasterOrganizationSetup />} />
-          <Route path="/master/organization-logins" element={<SchoolLoginManager />} />
+          <Route path="/master/organization-logins" element={<OrganizationLoginManager />} />
           <Route path="/master/location-manager" element={<LocationManager />} />
           <Route path="/master/account-managers" element={<AccountManagers />} />
 
