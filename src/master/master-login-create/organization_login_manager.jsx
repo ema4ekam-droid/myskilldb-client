@@ -2,11 +2,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import Navigation from "../../components/master-user-components/common/master-navigation/Navigation";
-import SchoolsTable from "../../components/master-user-components/master-login-create-components/SchoolsTable";
-import LoginFormModal from "../../components/master-user-components/master-login-create-components/modals/LoginFormModal";
-import SchoolDetailsModal from "../../components/master-user-components/master-login-create-components/modals/SchoolDetailsModal";
+import OrganizationTable from "../../components/master-user-components/master-login-create-components/OrganizationTable";
+import LoginFormModal from "../../components/master-user-components/master-login-create-components/LoginFormModal";
+import Pagination from "../../components/common/Pagination";
+import FilterOrganizations from "../../components/master-user-components/common/FilterOrganizations";
 
-function SchoolLoginManager() {
+function OrganizationLoginManager() {
   const API_BASE_URL = useMemo(
     () => `${import.meta.env.VITE_SERVER_API_URL}/api`,
     []
@@ -14,9 +15,18 @@ function SchoolLoginManager() {
 
   // --- STATE MANAGEMENT ---
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [schools, setSchools] = useState([]);
+  const [organizations, setOrganizations] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedSchoolIds, setSelectedSchoolIds] = useState([]);
+
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    hasNext: false,
+    hasPrev: false,
+    limit: 5,
+  });
 
   // Filters
   const [filters, setFilters] = useState({
@@ -37,9 +47,6 @@ function SchoolLoginManager() {
 
   // Modal states
   const [isLoginFormOpen, setIsLoginFormOpen] = useState(false);
-  const [isSchoolDetailsOpen, setIsSchoolDetailsOpen] = useState(false);
-  const [selectedSchool, setSelectedSchool] = useState(null);
-
   const [loginFormData, setLoginFormData] = useState({
     organizationId: "",
     role: "",
@@ -53,13 +60,17 @@ function SchoolLoginManager() {
 
   // --- API CALLS ---
   const fetchData = async () => {
-    await Promise.all([fetchSchools(), fetchCountries()]);
+    await Promise.all([fetchOrganizations(1), fetchCountries()]);
   };
 
-  const fetchSchools = async (filterParams = {}) => {
+  const fetchOrganizations = async (page = 1, filterParams = {}) => {
     try {
       setIsLoading(true);
       const params = new URLSearchParams();
+
+      params.append("page", String(page));
+      params.append("limit", "5");
+      params.append("isSetupCompleted", "true"); // Add this back if needed
 
       Object.entries(filterParams).forEach(([key, value]) => {
         if (value && value.trim()) {
@@ -71,9 +82,36 @@ function SchoolLoginManager() {
         `${API_BASE_URL}/organization?${params}`
       );
       if (response.data.success) {
-        const allOrgs = response.data.data;
-        const activeOrgs = allOrgs.filter((org) => org.status === "active");
-        setSchools(activeOrgs);
+        const responseData = response.data.data;
+
+        // Check if the response has pagination structure
+        if (responseData.organizations && responseData.pagination) {
+          // New structure with pagination
+          setOrganizations(responseData.organizations);
+          setPagination(responseData.pagination);
+        } else if (Array.isArray(responseData)) {
+          // Old structure - just an array
+          setOrganizations(responseData);
+          setPagination((prev) => ({
+            ...prev,
+            currentPage: 1,
+            totalPages: 1,
+            totalCount: responseData.length,
+            hasNext: false,
+            hasPrev: false,
+          }));
+        } else {
+          // Fallback - assume it's the array directly
+          setOrganizations(responseData || []);
+          setPagination((prev) => ({
+            ...prev,
+            currentPage: 1,
+            totalPages: 1,
+            totalCount: (responseData || []).length,
+            hasNext: false,
+            hasPrev: false,
+          }));
+        }
       }
     } catch (error) {
       console.error("Error fetching organizations:", error);
@@ -176,12 +214,11 @@ function SchoolLoginManager() {
   }, [isUserMenuOpen]);
 
   // --- EVENT HANDLERS ---
-  const handleFilterSubmit = (e) => {
-    e.preventDefault();
-    fetchSchools(filters);
+  const handleFilterSubmit = () => {
+    fetchOrganizations(1, filters); // Reset to page 1 when filters change
   };
 
-  const handleFilterLocationChange = async (field, value) => {
+  const handleFilterChange = async (field, value) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
 
     if (field === "country") {
@@ -201,16 +238,9 @@ function SchoolLoginManager() {
     }
   };
 
-  const toggleSelectAll = (checked) => {
-    setSelectedSchoolIds(checked ? schools.map((school) => school._id) : []);
-  };
-
-  const toggleSelectOne = (schoolId, checked) => {
-    setSelectedSchoolIds((prev) =>
-      checked
-        ? [...new Set([...prev, schoolId])]
-        : prev.filter((id) => id !== schoolId)
-    );
+  // Pagination handler
+  const handlePageChange = (page) => {
+    fetchOrganizations(page, filters);
   };
 
   const openLoginForm = (organizationId, role = "") => {
@@ -227,51 +257,45 @@ function SchoolLoginManager() {
     setIsLoginFormOpen(true);
   };
 
-  const openSchoolDetails = (school) => {
-    setSelectedSchool(school);
-    setIsSchoolDetailsOpen(true);
+  const handleLoginFormSubmit = async (formData) => {
+    try {
+      setIsLoading(true);
+      console.log("Submitting form data:", formData);
+      // Prepare user data for API
+      const userData = {
+        organizationId: formData.organizationId,
+        role: formData.role,
+        name: formData.name,
+        email: formData.email,
+        mobile: formData.mobile,
+        ...(formData.departmentId && { departmentId: formData.departmentId }),
+        ...(formData.assignmentId && { assignmentId: formData.assignmentId }),
+      };
+      console.log("Prepared user data:", userData);
+      // Make API call using axios
+      const response = await axios.post(`${API_BASE_URL}/users`, userData, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.data.success) {
+        toast.success(
+          `Successfully created ${formData.role} login for ${formData.name}`
+        );
+        setIsLoginFormOpen(false);
+      } else {
+        toast.error(response.data.message || "Failed to create user");
+      }
+    } catch (error) {
+      handleApiError(error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-const handleLoginFormSubmit = async (formData) => {
-  try {
-    setIsLoading(true);
-
-    // Prepare user data for API
-    const userData = {
-      organizationId: formData.organizationId,
-      role: formData.role,
-      name: formData.name,
-      email: formData.email,
-      mobile: formData.mobile, // Using 'mobile' field to match schema
-      ...(formData.departmentId && { departmentId: formData.departmentId }),
-      ...(formData.classId && { classId: formData.classId }),
-      ...(formData.sectionId && { sectionId: formData.sectionId }),
-    };
-
-    // Make API call using axios
-    const response = await axios.post(`${API_BASE_URL}/users`, userData, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (response.data.success) {
-      toast.success(
-        `Successfully created ${formData.role} login for ${formData.name}`
-      );
-      setIsLoginFormOpen(false);
-    } else {
-      toast.error(response.data.message || "Failed to create user");
-    }
-  } catch (error) {
-    handleApiError(error);
-  } finally {
-    setIsLoading(false);
-  }
-};
-
   // Navigation handler
-  const handlePageChange = (pageId) => {
+  const handlePageChangeNav = (pageId) => {
     console.log(`Navigating to: ${pageId}`);
   };
 
@@ -283,15 +307,27 @@ const handleLoginFormSubmit = async (formData) => {
   const btnTealClass = `${btnBaseClass} bg-teal-500 hover:bg-teal-600 text-white`;
   const btnIndigoClass = `${btnBaseClass} bg-indigo-500 hover:bg-indigo-600 text-white`;
 
+  // Prepare locations data for FilterOrganizations component
+  const filterLocations = {
+    countries: locations.countries,
+    states: locations.filterStates,
+    districts: locations.filterDistricts,
+  };
+
   return (
     <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
       <Toaster position="top-right" />
 
-      {/* Navigation Component */}
-      <Navigation currentPage="school-logins" onPageChange={handlePageChange} />
+      {/* Navigation Component with blur effect when modal is open */}
+      <div className={isLoginFormOpen ? "backdrop-blur-sm" : ""}>
+        <Navigation
+          currentPage="organization-logins"
+          onPageChange={handlePageChangeNav}
+        />
+      </div>
 
-      {/* Main Content with offset for sidebar */}
-      <div className="lg:ml-72">
+      {/* Main Content with offset for sidebar and blur effect when modal is open */}
+      <div className={`lg:ml-72 ${isLoginFormOpen ? "backdrop-blur-sm" : ""}`}>
         <main id="mainContent" className="flex-1 p-4 md:p-8 space-y-8">
           <header className="flex justify-between items-center flex-wrap gap-4">
             <div>
@@ -339,97 +375,35 @@ const handleLoginFormSubmit = async (formData) => {
             </div>
           </header>
 
-          {/* Filter Section */}
-          <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-            <h2 className="text-xl font-bold mb-5 text-slate-900">
-              Filter Organizations
-            </h2>
-            <form
-              onSubmit={handleFilterSubmit}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end"
-            >
-              <input
-                type="text"
-                placeholder="Organization Name..."
-                className={`${inputBaseClass} sm:col-span-2 lg:col-span-4`}
-                value={filters.name}
-                onChange={(e) =>
-                  setFilters((f) => ({ ...f, name: e.target.value }))
-                }
-              />
-
-              <select
-                className={inputBaseClass}
-                value={filters.country}
-                onChange={(e) =>
-                  handleFilterLocationChange("country", e.target.value)
-                }
-              >
-                <option value="">Select Country</option>
-                {locations.countries.map((country) => (
-                  <option key={country.code} value={country.name}>
-                    {country.name}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                className={inputBaseClass}
-                disabled={!filters.country}
-                value={filters.state}
-                onChange={(e) =>
-                  handleFilterLocationChange("state", e.target.value)
-                }
-              >
-                <option value="">Select State</option>
-                {locations.filterStates.map((state) => (
-                  <option key={state.code} value={state.name}>
-                    {state.name}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                className={inputBaseClass}
-                disabled={!filters.state}
-                value={filters.district}
-                onChange={(e) =>
-                  setFilters((f) => ({ ...f, district: e.target.value }))
-                }
-              >
-                <option value="">Select District</option>
-                {locations.filterDistricts.map((district) => (
-                  <option key={district.code} value={district.name}>
-                    {district.name}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                type="submit"
-                className={`${btnIndigoClass} w-full`}
-                disabled={isLoading}
-              >
-                <i className="fas fa-search"></i>
-                {isLoading ? "Filtering..." : "Apply Filters"}
-              </button>
-            </form>
-          </section>
-
-          {/* Schools Table */}
-          <SchoolsTable
-            schools={schools}
+          {/* Filter Section using reusable component */}
+          <FilterOrganizations
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            onSubmit={handleFilterSubmit}
             isLoading={isLoading}
-            selectedSchoolIds={selectedSchoolIds}
-            allChecked={
-              schools.length > 0 && selectedSchoolIds.length === schools.length
-            }
-            onToggleSelectAll={toggleSelectAll}
-            onToggleSelectOne={toggleSelectOne}
-            onOpenLoginForm={openLoginForm}
-            onOpenSchoolDetails={openSchoolDetails}
-            btnTealClass={btnTealClass}
+            locations={filterLocations}
+            inputBaseClass={inputBaseClass}
+            btnClass={btnIndigoClass}
+            title="Filter Organizations"
+            namePlaceholder="Organization Name..."
           />
+
+          {/* Organizations Table */}
+          <div className="space-y-4">
+            <OrganizationTable
+              organizations={organizations}
+              isLoading={isLoading}
+              onOpenLoginForm={openLoginForm}
+              btnTealClass={btnTealClass}
+            />
+
+            {/* Pagination for Organizations */}
+            <Pagination
+              pagination={pagination}
+              onPageChange={handlePageChange}
+              entityName="organizations"
+            />
+          </div>
         </main>
       </div>
 
@@ -439,19 +413,9 @@ const handleLoginFormSubmit = async (formData) => {
         onClose={() => setIsLoginFormOpen(false)}
         onSubmit={handleLoginFormSubmit}
         formData={loginFormData}
-        schools={schools}
+        organizations={organizations}
         isLoading={isLoading}
         inputBaseClass={inputBaseClass}
-        btnTealClass={btnTealClass}
-        btnSlateClass={`${btnBaseClass} bg-slate-200 hover:bg-slate-300 text-slate-800`}
-      />
-
-      {/* School Details Modal */}
-      <SchoolDetailsModal
-        isOpen={isSchoolDetailsOpen}
-        onClose={() => setIsSchoolDetailsOpen(false)}
-        school={selectedSchool}
-        onOpenLoginForm={openLoginForm}
         btnTealClass={btnTealClass}
         btnSlateClass={`${btnBaseClass} bg-slate-200 hover:bg-slate-300 text-slate-800`}
       />
@@ -459,4 +423,4 @@ const handleLoginFormSubmit = async (formData) => {
   );
 }
 
-export default SchoolLoginManager;
+export default OrganizationLoginManager;
