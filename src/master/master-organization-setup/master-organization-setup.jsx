@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from "react";
 import Navigation from "../../components/master-user-components/common/master-navigation/Navigation";
 import {
   DepartmentModal,
@@ -12,34 +12,39 @@ import {
   ViewModal,
   EditListModal,
   SectionsViewModal,
-  EntityManagement
-} from '../../components/master-user-components/master-class-setup-components';
-import axios from 'axios';
-import toast, { Toaster } from 'react-hot-toast';
+  EntityManagement,
+} from "../../components/master-user-components/master-class-setup-components";
+import axios from "axios";
+import toast, { Toaster } from "react-hot-toast";
+import {
+  deleteRequest,
+  getRequest,
+  postRequest,
+  putRequest,
+} from "../../api/apiRequests";
 
 const MasterOrganizationSetup = () => {
-  const API_BASE_URL = useMemo(() => `${import.meta.env.VITE_SERVER_API_URL}/api`, []);
-  
+
   // State for global entities
   const [departments, setDepartments] = useState([]);
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
   const [subjects, setSubjects] = useState([]);
-  
+
   // Location and organization selection states
   const [locations, setLocations] = useState({
     countries: [],
     states: [],
     districts: [],
     filterStates: [],
-    filterDistricts: []
+    filterDistricts: [],
   });
   const [organizations, setOrganizations] = useState([]);
-  const [selectedCountry, setSelectedCountry] = useState('');
-  const [selectedState, setSelectedState] = useState('');
-  const [selectedDistrict, setSelectedDistrict] = useState('');
-  const [selectedOrganization, setSelectedOrganization] = useState('');
-  
+  const [selectedCountry, setSelectedCountry] = useState("");
+  const [selectedState, setSelectedState] = useState("");
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [selectedOrganization, setSelectedOrganization] = useState("");
+
   // Junction table for section-class assignments
   const [sectionClassAssignments, setSectionClassAssignments] = useState([]);
 
@@ -49,37 +54,46 @@ const MasterOrganizationSetup = () => {
   const [isSectionModalOpen, setIsSectionModalOpen] = useState(false);
   const [isSubjectModalOpen, setIsSubjectModalOpen] = useState(false);
   const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
-  
+
   // View modal states
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [viewModalType, setViewModalType] = useState('');
+  const [viewModalType, setViewModalType] = useState("");
   const [viewingItem, setViewingItem] = useState(null);
-  
+
   // Sections view modal state
   const [isSectionsViewModalOpen, setIsSectionsViewModalOpen] = useState(false);
   const [viewingSections, setViewingSections] = useState([]);
   const [viewingDepartment, setViewingDepartment] = useState(null);
   const [viewingClass, setViewingClass] = useState(null);
-  
+
   // Edit list modal states
   const [isEditListModalOpen, setIsEditListModalOpen] = useState(false);
-  const [editListType, setEditListType] = useState('');
+  const [editListType, setEditListType] = useState("");
   const [editListItems, setEditListItems] = useState([]);
 
   // Form data states
-  const [departmentFormData, setDepartmentFormData] = useState({ name: '', description: '' });
-  const [classFormData, setClassFormData] = useState({ name: '', description: '' });
-  const [sectionFormData, setSectionFormData] = useState({ name: '', description: '' });
-  const [subjectFormData, setSubjectFormData] = useState({ 
-    name: '', 
-    code: '', 
-    departmentId: '', 
-    description: ''
+  const [departmentFormData, setDepartmentFormData] = useState({
+    name: "",
+    description: "",
   });
-  const [assignmentFormData, setAssignmentFormData] = useState({ 
-    sectionIds: [], 
-    classId: '', 
-    departmentId: '' 
+  const [classFormData, setClassFormData] = useState({
+    name: "",
+    description: "",
+  });
+  const [sectionFormData, setSectionFormData] = useState({
+    name: "",
+    description: "",
+  });
+  const [subjectFormData, setSubjectFormData] = useState({
+    name: "",
+    code: "",
+    departmentId: "",
+    description: "",
+  });
+  const [assignmentFormData, setAssignmentFormData] = useState({
+    sectionIds: [],
+    classId: "",
+    departmentId: "",
   });
 
   // Editing states
@@ -90,18 +104,18 @@ const MasterOrganizationSetup = () => {
 
   // Filter states for assignments
   const [assignmentFilters, setAssignmentFilters] = useState({
-    departmentId: '',
-    classId: ''
+    departmentId: "",
+    classId: "",
   });
   const [appliedFilters, setAppliedFilters] = useState({
-    departmentId: '',
-    classId: ''
+    departmentId: "",
+    classId: "",
   });
-  
+
   // Confirmation modal states
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
-  const [deleteType, setDeleteType] = useState('');
+  const [deleteType, setDeleteType] = useState("");
 
   // Loading states
   const [isLoading, setIsLoading] = useState(false);
@@ -110,7 +124,7 @@ const MasterOrganizationSetup = () => {
     classes: false,
     sections: false,
     subjects: false,
-    assignments: false
+    assignments: false,
   });
 
   // State to track expanded departments in assignment view
@@ -119,48 +133,52 @@ const MasterOrganizationSetup = () => {
   // --- API CALLS FOR LOCATIONS ---
   const fetchCountries = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/locations/countries`);
+      const response = await getRequest(`/locations/countries`);
       if (response.data.success) {
         const countries = response.data.data;
-        setLocations(prev => ({ ...prev, countries }));
+        setLocations((prev) => ({ ...prev, countries }));
       }
     } catch (error) {
-      console.error('Error fetching countries:', error);
-      toast.error('Failed to fetch countries');
+      console.error("Error fetching countries:", error);
+      toast.error("Failed to fetch countries");
     }
   };
 
   const fetchStates = async (countryCode, forFilter = false) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/locations/states/${countryCode}`);
+      const response = await getRequest(`/locations/states/${countryCode}`);
+
       if (response.data.success) {
         const states = response.data.data;
         if (forFilter) {
-          setLocations(prev => ({ ...prev, filterStates: states }));
+          setLocations((prev) => ({ ...prev, filterStates: states }));
         } else {
-          setLocations(prev => ({ ...prev, states }));
+          setLocations((prev) => ({ ...prev, states }));
         }
       }
     } catch (error) {
-      console.error('Error fetching states:', error);
-      toast.error('Failed to fetch states');
+      console.error("Error fetching states:", error);
+      toast.error("Failed to fetch states");
     }
   };
 
   const fetchDistricts = async (stateCode, forFilter = false) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/locations/districts/state/${stateCode}`);
+      const response = await getRequest(
+        `/locations/districts/state/${stateCode}`
+      );
+
       if (response.data.success) {
         const districts = response.data.data;
         if (forFilter) {
-          setLocations(prev => ({ ...prev, filterDistricts: districts }));
+          setLocations((prev) => ({ ...prev, filterDistricts: districts }));
         } else {
-          setLocations(prev => ({ ...prev, districts }));
+          setLocations((prev) => ({ ...prev, districts }));
         }
       }
     } catch (error) {
-      console.error('Error fetching districts:', error);
-      toast.error('Failed to fetch districts');
+      console.error("Error fetching districts:", error);
+      toast.error("Failed to fetch districts");
     }
   };
 
@@ -168,7 +186,7 @@ const MasterOrganizationSetup = () => {
     try {
       setIsLoading(true);
       const params = new URLSearchParams();
-      
+
       Object.entries(filterParams).forEach(([key, value]) => {
         if (value && value.trim()) {
           params.append(key, value);
@@ -176,48 +194,52 @@ const MasterOrganizationSetup = () => {
       });
       params.append("status", "active");
 
-      const response = await axios.get(`${API_BASE_URL}/organization?${params}`);
-      
+      const response = await getRequest(`/organization?${params}`);
+
       if (response.data.success) {
         const allOrgs = response.data.data;
         setOrganizations(allOrgs);
       }
     } catch (error) {
-      console.error('Error fetching organizations:', error);
-      toast.error('Failed to fetch organizations');
+      console.error("Error fetching organizations:", error);
+      toast.error("Failed to fetch organizations");
     } finally {
       setIsLoading(false);
     }
   };
 
   // --- API CALLS FOR ENTITIES ---
-  
+
   // Department API calls
   const fetchDepartments = async (organizationId) => {
     if (!organizationId) return;
-    
+
     try {
-      setLoadingEntities(prev => ({ ...prev, departments: true }));
-      const response = await axios.get(`${API_BASE_URL}/organization-setup/departments/${organizationId}`);
+      setLoadingEntities((prev) => ({ ...prev, departments: true }));
+      const response = await getRequest(
+        `/organization-setup/departments/${organizationId}`
+      );
+
       if (response.data.success) {
         setDepartments(response.data.data);
       }
     } catch (error) {
-      console.error('Error fetching departments:', error);
-      toast.error('Failed to fetch departments');
+      console.error("Error fetching departments:", error);
+      toast.error("Failed to fetch departments");
     } finally {
-      setLoadingEntities(prev => ({ ...prev, departments: false }));
+      setLoadingEntities((prev) => ({ ...prev, departments: false }));
     }
   };
 
   const createDepartment = async (departmentData) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/organization-setup/departments`, {
+      const response = await postRequest(`/organization-setup/departments`, {
         ...departmentData,
-        organizationId: selectedOrganization
+        organizationId: selectedOrganization,
       });
+
       if (response.data.success) {
-        toast.success('Department created successfully');
+        toast.success("Department created successfully");
         return response.data.data;
       }
     } catch (error) {
@@ -228,9 +250,16 @@ const MasterOrganizationSetup = () => {
 
   const updateDepartment = async (departmentId, departmentData) => {
     try {
-      const response = await axios.put(`${API_BASE_URL}/organization-setup/departments/${departmentId}`, { ...departmentData, organizationId: selectedOrganization });
+      const response = await putRequest(
+        `/organization-setup/departments/${departmentId}`,
+        {
+          ...departmentData,
+          organizationId: selectedOrganization,
+        }
+      );
+
       if (response.data.success) {
-        toast.success('Department updated successfully');
+        toast.success("Department updated successfully");
         return response.data.data;
       }
     } catch (error) {
@@ -241,8 +270,9 @@ const MasterOrganizationSetup = () => {
 
   const deleteDepartment = async (departmentId) => {
     try {
-      await axios.delete(`${API_BASE_URL}/organization-setup/departments/${departmentId}`);
-      toast.success('Department deleted successfully');
+      await deleteRequest(`/organization-setup/departments/${departmentId}`);
+
+      toast.success("Department deleted successfully");
     } catch (error) {
       handleApiError(error);
       throw error;
@@ -252,29 +282,33 @@ const MasterOrganizationSetup = () => {
   // Class API calls
   const fetchClasses = async (organizationId) => {
     if (!organizationId) return;
-    
+
     try {
-      setLoadingEntities(prev => ({ ...prev, classes: true }));
-      const response = await axios.get(`${API_BASE_URL}/organization-setup/classes/${organizationId}`);
+      setLoadingEntities((prev) => ({ ...prev, classes: true }));
+      const response = await getRequest(
+        `/organization-setup/classes/${organizationId}`
+      );
+
       if (response.data.success) {
         setClasses(response.data.data);
       }
     } catch (error) {
-      console.error('Error fetching classes:', error);
-      toast.error('Failed to fetch classes');
+      console.error("Error fetching classes:", error);
+      toast.error("Failed to fetch classes");
     } finally {
-      setLoadingEntities(prev => ({ ...prev, classes: false }));
+      setLoadingEntities((prev) => ({ ...prev, classes: false }));
     }
   };
 
   const createClass = async (classData) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/organization-setup/classes`, {
+      const response = await postRequest(`/organization-setup/classes`, {
         ...classData,
-        organizationId: selectedOrganization
+        organizationId: selectedOrganization,
       });
+
       if (response.data.success) {
-        toast.success('Class created successfully');
+        toast.success("Class created successfully");
         return response.data.data;
       }
     } catch (error) {
@@ -285,9 +319,16 @@ const MasterOrganizationSetup = () => {
 
   const updateClass = async (classId, classData) => {
     try {
-      const response = await axios.put(`${API_BASE_URL}/organization-setup/classes/${classId}`, { ...classData, organizationId: selectedOrganization });
+      const response = await putRequest(
+        `/organization-setup/classes/${classId}`,
+        {
+          ...classData,
+          organizationId: selectedOrganization,
+        }
+      );
+
       if (response.data.success) {
-        toast.success('Class updated successfully');
+        toast.success("Class updated successfully");
         return response.data.data;
       }
     } catch (error) {
@@ -298,8 +339,8 @@ const MasterOrganizationSetup = () => {
 
   const deleteClass = async (classId) => {
     try {
-      await axios.delete(`${API_BASE_URL}/organization-setup/classes/${classId}`);
-      toast.success('Class deleted successfully');
+      await deleteRequest(`/organization-setup/classes/${classId}`);
+      toast.success("Class deleted successfully");
     } catch (error) {
       handleApiError(error);
       throw error;
@@ -309,29 +350,33 @@ const MasterOrganizationSetup = () => {
   // Section API calls
   const fetchSections = async (organizationId) => {
     if (!organizationId) return;
-    
+
     try {
-      setLoadingEntities(prev => ({ ...prev, sections: true }));
-      const response = await axios.get(`${API_BASE_URL}/organization-setup/sections/${organizationId}`);
+      setLoadingEntities((prev) => ({ ...prev, sections: true }));
+      const response = await getRequest(
+        `/organization-setup/sections/${organizationId}`
+      );
+
       if (response.data.success) {
         setSections(response.data.data);
       }
     } catch (error) {
-      console.error('Error fetching sections:', error);
-      toast.error('Failed to fetch sections');
+      console.error("Error fetching sections:", error);
+      toast.error("Failed to fetch sections");
     } finally {
-      setLoadingEntities(prev => ({ ...prev, sections: false }));
+      setLoadingEntities((prev) => ({ ...prev, sections: false }));
     }
   };
 
   const createSection = async (sectionData) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/organization-setup/sections`, {
+      const response = await postRequest(`/organization-setup/sections`, {
         ...sectionData,
-        organizationId: selectedOrganization
+        organizationId: selectedOrganization,
       });
+
       if (response.data.success) {
-        toast.success('Section created successfully');
+        toast.success("Section created successfully");
         return response.data.data;
       }
     } catch (error) {
@@ -342,9 +387,16 @@ const MasterOrganizationSetup = () => {
 
   const updateSection = async (sectionId, sectionData) => {
     try {
-      const response = await axios.put(`${API_BASE_URL}/organization-setup/sections/${sectionId}`, {  ...sectionData, organizationId: selectedOrganization });
+      const response = await putRequest(
+        `/organization-setup/sections/${sectionId}`,
+        {
+          ...sectionData,
+          organizationId: selectedOrganization,
+        }
+      );
+
       if (response.data.success) {
-        toast.success('Section updated successfully');
+        toast.success("Section updated successfully");
         return response.data.data;
       }
     } catch (error) {
@@ -355,8 +407,8 @@ const MasterOrganizationSetup = () => {
 
   const deleteSection = async (sectionId) => {
     try {
-      await axios.delete(`${API_BASE_URL}/organization-setup/sections/${sectionId}`);
-      toast.success('Section deleted successfully');
+      await deleteRequest(`/organization-setup/sections/${sectionId}`);
+      toast.success("Section deleted successfully");
     } catch (error) {
       handleApiError(error);
       throw error;
@@ -366,29 +418,33 @@ const MasterOrganizationSetup = () => {
   // Subject API calls
   const fetchSubjects = async (organizationId) => {
     if (!organizationId) return;
-    
+
     try {
-      setLoadingEntities(prev => ({ ...prev, subjects: true }));
-      const response = await axios.get(`${API_BASE_URL}/organization-setup/subjects/${organizationId}`);
+      setLoadingEntities((prev) => ({ ...prev, subjects: true }));
+      const response = await getRequest(
+        `/organization-setup/subjects/${organizationId}`
+      );
+
       if (response.data.success) {
         setSubjects(response.data.data);
       }
     } catch (error) {
-      console.error('Error fetching subjects:', error);
-      toast.error('Failed to fetch subjects');
+      console.error("Error fetching subjects:", error);
+      toast.error("Failed to fetch subjects");
     } finally {
-      setLoadingEntities(prev => ({ ...prev, subjects: false }));
+      setLoadingEntities((prev) => ({ ...prev, subjects: false }));
     }
   };
 
   const createSubject = async (subjectData) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/organization-setup/subjects`, {
+      const response = await postRequest(`/organization-setup/subjects`, {
         ...subjectData,
-        organizationId: selectedOrganization
+        organizationId: selectedOrganization,
       });
+
       if (response.data.success) {
-        toast.success('Subject created successfully');
+        toast.success("Subject created successfully");
         return response.data.data;
       }
     } catch (error) {
@@ -399,9 +455,16 @@ const MasterOrganizationSetup = () => {
 
   const updateSubject = async (subjectId, subjectData) => {
     try {
-      const response = await axios.put(`${API_BASE_URL}/organization-setup/subjects/${subjectId}`, { ...subjectData, organizationId: selectedOrganization });
+      const response = await putRequest(
+        `/organization-setup/subjects/${subjectId}`,
+        {
+          ...subjectData,
+          organizationId: selectedOrganization,
+        }
+      );
+
       if (response.data.success) {
-        toast.success('Subject updated successfully');
+        toast.success("Subject updated successfully");
         return response.data.data;
       }
     } catch (error) {
@@ -412,8 +475,8 @@ const MasterOrganizationSetup = () => {
 
   const deleteSubject = async (subjectId) => {
     try {
-      await axios.delete(`${API_BASE_URL}/organization-setup/subjects/${subjectId}`);
-      toast.success('Subject deleted successfully');
+      await deleteRequest(`/organization-setup/subjects/${subjectId}`);
+      toast.success("Subject deleted successfully");
     } catch (error) {
       handleApiError(error);
       throw error;
@@ -423,10 +486,10 @@ const MasterOrganizationSetup = () => {
   // Assignment API calls
   const fetchAssignments = async (organizationId, filterParams = {}) => {
     if (!organizationId) return;
-    
+
     try {
-      setLoadingEntities(prev => ({ ...prev, assignments: true }));
-      
+      setLoadingEntities((prev) => ({ ...prev, assignments: true }));
+
       const params = new URLSearchParams();
 
       Object.entries(filterParams).forEach(([key, value]) => {
@@ -434,27 +497,31 @@ const MasterOrganizationSetup = () => {
           params.append(key, value);
         }
       });
-      
-      const response = await axios.get(`${API_BASE_URL}/organization-setup/assignments/${organizationId}?${params}`);
+
+      const response = await getRequest(
+        `/organization-setup/assignments/${organizationId}?${params}`
+      );
+
       if (response.data.success) {
         setSectionClassAssignments(response.data.data);
       }
     } catch (error) {
-      console.error('Error fetching assignments:', error);
-      toast.error('Failed to fetch assignments');
+      console.error("Error fetching assignments:", error);
+      toast.error("Failed to fetch assignments");
     } finally {
-      setLoadingEntities(prev => ({ ...prev, assignments: false }));
+      setLoadingEntities((prev) => ({ ...prev, assignments: false }));
     }
   };
 
   const createAssignment = async (assignmentData) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/organization-setup/assignments`, {
+      const response = await postRequest(`/organization-setup/assignments`, {
         ...assignmentData,
-        organizationId: selectedOrganization
+        organizationId: selectedOrganization,
       });
+
       if (response.data.success) {
-        toast.success('Assignment(s) created successfully');
+        toast.success("Assignment(s) created successfully");
         return response.data.data;
       }
     } catch (error) {
@@ -465,8 +532,8 @@ const MasterOrganizationSetup = () => {
 
   const deleteAssignment = async (assignmentId) => {
     try {
-      await axios.delete(`${API_BASE_URL}/organization-setup/assignments/${assignmentId}`);
-      toast.success('Assignment deleted successfully');
+      await deleteRequest(`/organization-setup/assignments/${assignmentId}`);
+      toast.success("Assignment deleted successfully");
     } catch (error) {
       handleApiError(error);
       throw error;
@@ -479,24 +546,26 @@ const MasterOrganizationSetup = () => {
       if (responseData?.message) {
         toast.error(responseData.message);
       } else {
-        toast.error('Something went wrong. Please try again.');
+        toast.error("Something went wrong. Please try again.");
       }
     } else {
-      toast.error('Something went wrong. Please try again.');
+      toast.error("Something went wrong. Please try again.");
     }
   };
 
   // Location change handlers
   const handleCountryChange = async (countryName) => {
     setSelectedCountry(countryName);
-    setSelectedState('');
-    setSelectedDistrict('');
-    setSelectedOrganization('');
+    setSelectedState("");
+    setSelectedDistrict("");
+    setSelectedOrganization("");
     setOrganizations([]);
     clearAllEntities();
 
     if (countryName) {
-      const selectedCountryObj = locations.countries.find(c => c.name === countryName);
+      const selectedCountryObj = locations.countries.find(
+        (c) => c.name === countryName
+      );
       if (selectedCountryObj) {
         await fetchStates(selectedCountryObj.code, false);
       }
@@ -505,13 +574,15 @@ const MasterOrganizationSetup = () => {
 
   const handleStateChange = async (stateName) => {
     setSelectedState(stateName);
-    setSelectedDistrict('');
-    setSelectedOrganization('');
+    setSelectedDistrict("");
+    setSelectedOrganization("");
     setOrganizations([]);
     clearAllEntities();
 
     if (stateName) {
-      const selectedStateObj = locations.states.find(s => s.name === stateName);
+      const selectedStateObj = locations.states.find(
+        (s) => s.name === stateName
+      );
       if (selectedStateObj) {
         await fetchDistricts(selectedStateObj.code, false);
       }
@@ -520,14 +591,14 @@ const MasterOrganizationSetup = () => {
 
   const handleDistrictChange = async (districtName) => {
     setSelectedDistrict(districtName);
-    setSelectedOrganization('');
+    setSelectedOrganization("");
     clearAllEntities();
 
     if (districtName && selectedCountry && selectedState) {
       await fetchOrganizations({
         country: selectedCountry,
         state: selectedState,
-        district: districtName
+        district: districtName,
       });
     }
   };
@@ -535,16 +606,16 @@ const MasterOrganizationSetup = () => {
   const handleOrganizationChange = async (orgId) => {
     setSelectedOrganization(orgId);
     clearAllEntities();
-    setAssignmentFilters({ departmentId: '', classId: '' });
-    setAppliedFilters({ departmentId: '', classId: '' });
-    
+    setAssignmentFilters({ departmentId: "", classId: "" });
+    setAppliedFilters({ departmentId: "", classId: "" });
+
     if (orgId) {
       await Promise.all([
         fetchDepartments(orgId),
         fetchClasses(orgId),
         fetchSections(orgId),
         fetchSubjects(orgId),
-        fetchAssignments(orgId)
+        fetchAssignments(orgId),
       ]);
     }
   };
@@ -560,78 +631,82 @@ const MasterOrganizationSetup = () => {
   // Get selected organization info
   const getSelectedOrganizationInfo = () => {
     if (!selectedOrganization) return null;
-    return organizations.find(org => org._id === selectedOrganization);
+    return organizations.find((org) => org._id === selectedOrganization);
   };
 
   // Helper function to get display value from entity
   const getEntityDisplayValue = (entity, field) => {
-    if (typeof entity[field] === 'object' && entity[field] !== null) {
+    if (typeof entity[field] === "object" && entity[field] !== null) {
       return entity[field].name || entity[field];
     }
-    return entity[`${field}Name`] || entity[field] || '';
+    return entity[`${field}Name`] || entity[field] || "";
   };
 
   // Get already assigned sections for a specific department and class
   const getAssignedSectionIds = (departmentId, classId) => {
     return sectionClassAssignments
-      .filter(assignment => 
-        (assignment.departmentId === departmentId || assignment.department?._id === departmentId) &&
-        (assignment.classId === classId || assignment.class?._id === classId)
+      .filter(
+        (assignment) =>
+          (assignment.departmentId === departmentId ||
+            assignment.department?._id === departmentId) &&
+          (assignment.classId === classId || assignment.class?._id === classId)
       )
-      .map(assignment => assignment.sectionId || assignment.section?._id);
+      .map((assignment) => assignment.sectionId || assignment.section?._id);
   };
 
   // Helper function to group assignments by department and class
   const getGroupedAssignments = () => {
     const grouped = {};
-    
-    sectionClassAssignments.forEach(assignment => {
-      const departmentId = assignment.departmentId || assignment.department?._id;
-      const departmentName = getEntityDisplayValue(assignment, 'department');
+
+    sectionClassAssignments.forEach((assignment) => {
+      const departmentId =
+        assignment.departmentId || assignment.department?._id;
+      const departmentName = getEntityDisplayValue(assignment, "department");
       const classId = assignment.classId || assignment.class?._id;
-      const className = getEntityDisplayValue(assignment, 'class');
-      const sectionName = getEntityDisplayValue(assignment, 'section');
-      
+      const className = getEntityDisplayValue(assignment, "class");
+      const sectionName = getEntityDisplayValue(assignment, "section");
+
       if (!grouped[departmentId]) {
         grouped[departmentId] = {
           name: departmentName,
-          classes: {}
+          classes: {},
         };
       }
-      
+
       if (!grouped[departmentId].classes[classId]) {
         grouped[departmentId].classes[classId] = {
           name: className,
-          sections: []
+          sections: [],
         };
       }
-      
+
       grouped[departmentId].classes[classId].sections.push({
         id: assignment._id,
         name: sectionName,
-        assignmentData: assignment
+        assignmentData: assignment,
       });
     });
-    
+
     return grouped;
   };
 
   // Toggle department expansion
   const toggleDepartment = (departmentId) => {
-    setExpandedDepartments(prev => ({
+    setExpandedDepartments((prev) => ({
       ...prev,
-      [departmentId]: !prev[departmentId]
+      [departmentId]: !prev[departmentId],
     }));
   };
 
   // Handler to view sections for a department-class combination
   const handleViewSections = (departmentId, classId) => {
     const groupedAssignments = getGroupedAssignments();
-    const sections = groupedAssignments[departmentId]?.classes[classId]?.sections || [];
-    
+    const sections =
+      groupedAssignments[departmentId]?.classes[classId]?.sections || [];
+
     setViewingSections(sections);
-    setViewingDepartment(departments.find(d => d._id === departmentId));
-    setViewingClass(classes.find(c => c._id === classId));
+    setViewingDepartment(departments.find((d) => d._id === departmentId));
+    setViewingClass(classes.find((c) => c._id === classId));
     setIsSectionsViewModalOpen(true);
   };
 
@@ -642,19 +717,22 @@ const MasterOrganizationSetup = () => {
   // Department handlers
   const handleAddDepartment = () => {
     setEditingDepartment(null);
-    setDepartmentFormData({ name: '', description: '' });
+    setDepartmentFormData({ name: "", description: "" });
     setIsDepartmentModalOpen(true);
   };
 
   const handleEditDepartment = (department) => {
     setEditingDepartment(department);
-    setDepartmentFormData({ name: department.name, description: department.description });
+    setDepartmentFormData({
+      name: department.name,
+      description: department.description,
+    });
     setIsDepartmentModalOpen(true);
   };
 
   const handleDeleteDepartment = (department) => {
     setItemToDelete(department);
-    setDeleteType('department');
+    setDeleteType("department");
     setShowDeleteConfirm(true);
   };
 
@@ -663,7 +741,7 @@ const MasterOrganizationSetup = () => {
       await deleteDepartment(itemToDelete._id);
       setShowDeleteConfirm(false);
       setItemToDelete(null);
-      setDeleteType('');
+      setDeleteType("");
       await fetchDepartments(selectedOrganization);
       await fetchAssignments(selectedOrganization, appliedFilters);
     } catch (error) {
@@ -680,7 +758,7 @@ const MasterOrganizationSetup = () => {
         await createDepartment(departmentFormData);
       }
       setIsDepartmentModalOpen(false);
-      setDepartmentFormData({ name: '', description: '' });
+      setDepartmentFormData({ name: "", description: "" });
       setEditingDepartment(null);
       await fetchDepartments(selectedOrganization);
     } catch (error) {
@@ -691,22 +769,22 @@ const MasterOrganizationSetup = () => {
   // Class handlers
   const handleAddClass = () => {
     setEditingClass(null);
-    setClassFormData({ name: '', description: '' });
+    setClassFormData({ name: "", description: "" });
     setIsClassModalOpen(true);
   };
 
   const handleEditClass = (classItem) => {
     setEditingClass(classItem);
-    setClassFormData({ 
-      name: classItem.name, 
-      description: classItem.description 
+    setClassFormData({
+      name: classItem.name,
+      description: classItem.description,
     });
     setIsClassModalOpen(true);
   };
 
   const handleDeleteClass = (classItem) => {
     setItemToDelete(classItem);
-    setDeleteType('class');
+    setDeleteType("class");
     setShowDeleteConfirm(true);
   };
 
@@ -715,7 +793,7 @@ const MasterOrganizationSetup = () => {
       await deleteClass(itemToDelete._id);
       setShowDeleteConfirm(false);
       setItemToDelete(null);
-      setDeleteType('');
+      setDeleteType("");
       await fetchClasses(selectedOrganization);
       await fetchAssignments(selectedOrganization, appliedFilters);
     } catch (error) {
@@ -732,7 +810,7 @@ const MasterOrganizationSetup = () => {
         await createClass(classFormData);
       }
       setIsClassModalOpen(false);
-      setClassFormData({ name: '', description: '' });
+      setClassFormData({ name: "", description: "" });
       setEditingClass(null);
       await fetchClasses(selectedOrganization);
     } catch (error) {
@@ -743,22 +821,22 @@ const MasterOrganizationSetup = () => {
   // Section handlers
   const handleAddSection = () => {
     setEditingSection(null);
-    setSectionFormData({ name: '', description: '' });
+    setSectionFormData({ name: "", description: "" });
     setIsSectionModalOpen(true);
   };
 
   const handleEditSection = (section) => {
     setEditingSection(section);
-    setSectionFormData({ 
-      name: section.name, 
-      description: section.description 
+    setSectionFormData({
+      name: section.name,
+      description: section.description,
     });
     setIsSectionModalOpen(true);
   };
 
   const handleDeleteSection = (section) => {
     setItemToDelete(section);
-    setDeleteType('section');
+    setDeleteType("section");
     setShowDeleteConfirm(true);
   };
 
@@ -767,7 +845,7 @@ const MasterOrganizationSetup = () => {
       await deleteSection(itemToDelete._id);
       setShowDeleteConfirm(false);
       setItemToDelete(null);
-      setDeleteType('');
+      setDeleteType("");
       await fetchSections(selectedOrganization);
       await fetchAssignments(selectedOrganization, appliedFilters);
     } catch (error) {
@@ -784,7 +862,7 @@ const MasterOrganizationSetup = () => {
         await createSection(sectionFormData);
       }
       setIsSectionModalOpen(false);
-      setSectionFormData({ name: '', description: '' });
+      setSectionFormData({ name: "", description: "" });
       setEditingSection(null);
       await fetchSections(selectedOrganization);
     } catch (error) {
@@ -794,13 +872,13 @@ const MasterOrganizationSetup = () => {
 
   // Assignment handlers
   const handleAddAssignment = () => {
-    setAssignmentFormData({ sectionIds: [], classId: '', departmentId: '' });
+    setAssignmentFormData({ sectionIds: [], classId: "", departmentId: "" });
     setIsAssignmentModalOpen(true);
   };
 
   const handleDeleteAssignment = (assignment) => {
     setItemToDelete(assignment);
-    setDeleteType('assignment');
+    setDeleteType("assignment");
     setShowDeleteConfirm(true);
   };
 
@@ -809,7 +887,7 @@ const MasterOrganizationSetup = () => {
       await deleteAssignment(itemToDelete._id);
       setShowDeleteConfirm(false);
       setItemToDelete(null);
-      setDeleteType('');
+      setDeleteType("");
       await fetchAssignments(selectedOrganization, appliedFilters);
     } catch (error) {
       // Error already handled
@@ -821,7 +899,7 @@ const MasterOrganizationSetup = () => {
     try {
       await createAssignment(assignmentFormData);
       setIsAssignmentModalOpen(false);
-      setAssignmentFormData({ sectionIds: [], classId: '', departmentId: '' });
+      setAssignmentFormData({ sectionIds: [], classId: "", departmentId: "" });
       await fetchAssignments(selectedOrganization, appliedFilters);
     } catch (error) {
       // Error already handled in API functions
@@ -831,29 +909,29 @@ const MasterOrganizationSetup = () => {
   // Subject handlers
   const handleAddSubject = () => {
     setEditingSubject(null);
-    setSubjectFormData({ 
-      name: '', 
-      code: '', 
-      departmentId: '', 
-      description: ''
+    setSubjectFormData({
+      name: "",
+      code: "",
+      departmentId: "",
+      description: "",
     });
     setIsSubjectModalOpen(true);
   };
 
   const handleEditSubject = (subject) => {
     setEditingSubject(subject);
-    setSubjectFormData({ 
-      name: subject.name, 
-      code: subject.code, 
-      departmentId: subject.departmentId || subject.department?._id, 
-      description: subject.description
+    setSubjectFormData({
+      name: subject.name,
+      code: subject.code,
+      departmentId: subject.departmentId || subject.department?._id,
+      description: subject.description,
     });
     setIsSubjectModalOpen(true);
   };
 
   const handleDeleteSubject = (subject) => {
     setItemToDelete(subject);
-    setDeleteType('subject');
+    setDeleteType("subject");
     setShowDeleteConfirm(true);
   };
 
@@ -862,7 +940,7 @@ const MasterOrganizationSetup = () => {
       await deleteSubject(itemToDelete._id);
       setShowDeleteConfirm(false);
       setItemToDelete(null);
-      setDeleteType('');
+      setDeleteType("");
       await fetchSubjects(selectedOrganization);
     } catch (error) {
       // Error already handled
@@ -878,11 +956,11 @@ const MasterOrganizationSetup = () => {
         await createSubject(subjectFormData);
       }
       setIsSubjectModalOpen(false);
-      setSubjectFormData({ 
-        name: '', 
-        code: '', 
-        departmentId: '', 
-        description: ''
+      setSubjectFormData({
+        name: "",
+        code: "",
+        departmentId: "",
+        description: "",
       });
       setEditingSubject(null);
       await fetchSubjects(selectedOrganization);
@@ -893,12 +971,13 @@ const MasterOrganizationSetup = () => {
 
   // CSV download handler
   const handleDownloadTemplate = () => {
-    const csvContent = "Subject Name,Subject Code,Department,Description\nPhysics,PHY101,Science,Basic Physics\nChemistry,CHE101,Science,Basic Chemistry\nMathematics,MATH101,Mathematics,Basic Math";
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const csvContent =
+      "Subject Name,Subject Code,Department,Description\nPhysics,PHY101,Science,Basic Physics\nChemistry,CHE101,Science,Basic Chemistry\nMathematics,MATH101,Mathematics,Basic Math";
+    const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = 'subjects_template.csv';
+    a.download = "subjects_template.csv";
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -906,15 +985,15 @@ const MasterOrganizationSetup = () => {
   // Assignment filter handlers
   const handleApplyFilters = async () => {
     if (!selectedOrganization) return;
-    
+
     setAppliedFilters(assignmentFilters);
     await fetchAssignments(selectedOrganization, assignmentFilters);
   };
 
   const handleClearFilters = async () => {
     if (!selectedOrganization) return;
-    
-    const emptyFilters = { departmentId: '', classId: '' };
+
+    const emptyFilters = { departmentId: "", classId: "" };
     setAssignmentFilters(emptyFilters);
     setAppliedFilters(emptyFilters);
     await fetchAssignments(selectedOrganization, emptyFilters);
@@ -935,16 +1014,16 @@ const MasterOrganizationSetup = () => {
 
   const handleDeleteEntity = (type, item) => {
     switch (type) {
-      case 'department':
+      case "department":
         handleDeleteDepartment(item);
         break;
-      case 'class':
+      case "class":
         handleDeleteClass(item);
         break;
-      case 'section':
+      case "section":
         handleDeleteSection(item);
         break;
-      case 'subject':
+      case "subject":
         handleDeleteSubject(item);
         break;
       default:
@@ -958,15 +1037,25 @@ const MasterOrganizationSetup = () => {
   };
 
   // Base styles
-  const inputBaseClass = "w-full bg-slate-100 border-slate-200 rounded-md p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-200 disabled:cursor-not-allowed";
-  const btnBaseClass = "font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors transform active:scale-95";
+  const inputBaseClass =
+    "w-full bg-slate-100 border-slate-200 rounded-md p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-200 disabled:cursor-not-allowed";
+  const btnBaseClass =
+    "font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors transform active:scale-95";
   const btnTealClass = `${btnBaseClass} bg-teal-500 hover:bg-teal-600 text-white`;
   const btnIndigoClass = `${btnBaseClass} bg-indigo-500 hover:bg-indigo-600 text-white`;
   const btnRoseClass = `${btnBaseClass} bg-rose-500 hover:bg-rose-600 text-white`;
   const btnSlateClass = `${btnBaseClass} bg-slate-200 hover:bg-slate-300 text-slate-800`;
 
   // Check if any modal is open
-  const isAnyModalOpen = isDepartmentModalOpen || isClassModalOpen || isSectionModalOpen || isSubjectModalOpen || isAssignmentModalOpen || isViewModalOpen || isEditListModalOpen || isSectionsViewModalOpen;
+  const isAnyModalOpen =
+    isDepartmentModalOpen ||
+    isClassModalOpen ||
+    isSectionModalOpen ||
+    isSubjectModalOpen ||
+    isAssignmentModalOpen ||
+    isViewModalOpen ||
+    isEditListModalOpen ||
+    isSectionsViewModalOpen;
 
   // Get grouped assignments for display
   const groupedAssignments = getGroupedAssignments();
@@ -974,9 +1063,14 @@ const MasterOrganizationSetup = () => {
   return (
     <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
       <Toaster position="top-right" />
-      
+
       {/* Navigation Component - hidden when modal is open */}
-      {!isAnyModalOpen && <Navigation currentPage="organization-setup" onPageChange={handlePageChange} />}
+      {!isAnyModalOpen && (
+        <Navigation
+          currentPage="organization-setup"
+          onPageChange={handlePageChange}
+        />
+      )}
 
       {/* Main Content */}
       <div className={isAnyModalOpen ? "" : "lg:ml-72"}>
@@ -984,8 +1078,13 @@ const MasterOrganizationSetup = () => {
           {/* Header */}
           <header className="flex justify-between items-center flex-wrap gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Organization Setup</h1>
-              <p className="text-slate-500 text-sm">Select an organization first, then manage departments, classes, sections, subjects, and assignments</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
+                Organization Setup
+              </h1>
+              <p className="text-slate-500 text-sm">
+                Select an organization first, then manage departments, classes,
+                sections, subjects, and assignments
+              </p>
             </div>
           </header>
 
@@ -1050,7 +1149,7 @@ const MasterOrganizationSetup = () => {
       </div>
 
       {/* Modals */}
-      <DepartmentModal 
+      <DepartmentModal
         isOpen={isDepartmentModalOpen}
         editingDepartment={editingDepartment}
         departmentFormData={departmentFormData}
@@ -1062,7 +1161,7 @@ const MasterOrganizationSetup = () => {
         btnSlateClass={btnSlateClass}
       />
 
-      <ClassModal 
+      <ClassModal
         isOpen={isClassModalOpen}
         editingClass={editingClass}
         classFormData={classFormData}
@@ -1074,7 +1173,7 @@ const MasterOrganizationSetup = () => {
         btnSlateClass={btnSlateClass}
       />
 
-      <SectionModal 
+      <SectionModal
         isOpen={isSectionModalOpen}
         editingSection={editingSection}
         sectionFormData={sectionFormData}
@@ -1086,7 +1185,7 @@ const MasterOrganizationSetup = () => {
         btnSlateClass={btnSlateClass}
       />
 
-      <SubjectModal 
+      <SubjectModal
         isOpen={isSubjectModalOpen}
         editingSubject={editingSubject}
         subjectFormData={subjectFormData}
@@ -1156,21 +1255,21 @@ const MasterOrganizationSetup = () => {
         btnIndigoClass={btnIndigoClass}
       />
 
-      <DeleteConfirmationModal 
+      <DeleteConfirmationModal
         isOpen={showDeleteConfirm}
         itemToDelete={itemToDelete}
         deleteType={deleteType}
         onConfirm={() => {
-          if (deleteType === 'department') confirmDeleteDepartment();
-          if (deleteType === 'class') confirmDeleteClass();
-          if (deleteType === 'section') confirmDeleteSection();
-          if (deleteType === 'subject') confirmDeleteSubject();
-          if (deleteType === 'assignment') confirmDeleteAssignment();
+          if (deleteType === "department") confirmDeleteDepartment();
+          if (deleteType === "class") confirmDeleteClass();
+          if (deleteType === "section") confirmDeleteSection();
+          if (deleteType === "subject") confirmDeleteSubject();
+          if (deleteType === "assignment") confirmDeleteAssignment();
         }}
         onCancel={() => {
           setShowDeleteConfirm(false);
           setItemToDelete(null);
-          setDeleteType('');
+          setDeleteType("");
         }}
       />
     </div>

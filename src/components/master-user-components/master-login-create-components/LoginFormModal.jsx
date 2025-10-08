@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { useState, useEffect } from "react";
+import { getRequest } from "../../../api/apiRequests";
 
 const LoginFormModal = ({
   isOpen,
@@ -29,8 +29,6 @@ const LoginFormModal = ({
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isLoadingClasses, setIsLoadingClasses] = useState(false);
   const [isLoadingSections, setIsLoadingSections] = useState(false);
-
-  const API_BASE_URL = `${import.meta.env.VITE_SERVER_API_URL}/api`;
 
   const roles = [
     {
@@ -137,8 +135,8 @@ const LoginFormModal = ({
   const fetchDepartments = async (organizationId) => {
     try {
       setIsLoadingData(true);
-      const response = await axios.get(
-        `${API_BASE_URL}/organization-setup/departments/${organizationId}`
+      const response = await getRequest(
+        `/organization-setup/departments/${organizationId}`
       );
 
       if (response.data.success) {
@@ -158,8 +156,8 @@ const LoginFormModal = ({
   const fetchClasses = async (organizationId, departmentId) => {
     try {
       setIsLoadingClasses(true);
-      const response = await axios.get(
-        `${API_BASE_URL}/organization-setup/classes/${organizationId}/${departmentId}`
+      const response = await getRequest(
+        `/organization-setup/classes/${organizationId}/${departmentId}`
       );
 
       if (response.data.success) {
@@ -179,8 +177,8 @@ const LoginFormModal = ({
   const fetchSections = async (organizationId, departmentId, classId) => {
     try {
       setIsLoadingSections(true);
-      const response = await axios.get(
-        `${API_BASE_URL}/organization-setup/sections/${organizationId}/${departmentId}/${classId}`
+      const response = await getRequest(
+        `/organization-setup/sections/${organizationId}/${departmentId}/${classId}`
       );
 
       if (response.data.success) {
@@ -271,7 +269,10 @@ const LoginFormModal = ({
     }
 
     // Department validation based on role
-    if ((localFormData.role === "hod" || localFormData.role === "teacher") && !localFormData.departmentId) {
+    if (
+      (localFormData.role === "hod" || localFormData.role === "teacher") &&
+      !localFormData.departmentId
+    ) {
       newErrors.departmentId = "Department is required";
     }
 
@@ -309,7 +310,10 @@ const LoginFormModal = ({
       if (localFormData.role === "student") {
         // For student, use assignmentId instead of departmentId, classId, sectionId
         submissionData.assignmentId = localFormData.assignmentId;
-      } else if (localFormData.role === "hod" || localFormData.role === "teacher") {
+      } else if (
+        localFormData.role === "hod" ||
+        localFormData.role === "teacher"
+      ) {
         // For HOD and Teacher, use departmentId
         submissionData.departmentId = localFormData.departmentId;
       }
@@ -612,7 +616,9 @@ const LoginFormModal = ({
                 </label>
                 <select
                   className={`${inputBaseClass} ${
-                    errors.assignmentId ? "border-red-300 focus:ring-red-500" : ""
+                    errors.assignmentId
+                      ? "border-red-300 focus:ring-red-500"
+                      : ""
                   } ${
                     !localFormData.classId || isLoadingSections
                       ? "opacity-50 cursor-not-allowed"
@@ -664,7 +670,8 @@ const LoginFormModal = ({
                     <div>
                       <strong>Required:</strong> Name, Email, Mobile Number
                     </div>
-                    {(localFormData.role === "hod" || localFormData.role === "teacher") && (
+                    {(localFormData.role === "hod" ||
+                      localFormData.role === "teacher") && (
                       <div>
                         <strong>Also Required:</strong> Department
                       </div>
@@ -672,10 +679,12 @@ const LoginFormModal = ({
                     {localFormData.role === "student" && (
                       <>
                         <div>
-                          <strong>Also Required:</strong> Department, Class, Section
+                          <strong>Also Required:</strong> Department, Class,
+                          Section
                         </div>
                         <div>
-                          <strong>Note:</strong> Section selection provides the assignment ID
+                          <strong>Note:</strong> Section selection provides the
+                          assignment ID
                         </div>
                       </>
                     )}

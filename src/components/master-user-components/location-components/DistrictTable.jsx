@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from "react";
 import ConfirmModal from '../../common/ConfirmModal';
 const DistrictTable = ({ 
   districts, 

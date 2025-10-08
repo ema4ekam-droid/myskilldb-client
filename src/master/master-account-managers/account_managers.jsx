@@ -1,17 +1,16 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast, Toaster } from "react-hot-toast";
 import Navigation from "../../components/master-user-components/common/master-navigation/Navigation";
 import AccountManagersTable from "../../components/master-user-components/master-account-manager-components/AccountManagersTable";
 import AccountManagerModal from "../../components/master-user-components/master-account-manager-components/modals/AccountManagerModal";
 import ViewAccountManagerModal from "../../components/master-user-components/master-account-manager-components/modals/ViewAccountManagerModal";
-
+import {
+  deleteRequest,
+  getRequest,
+  postRequest,
+  putRequest,
+} from "../../api/apiRequests";
 function AccountManagers() {
-  const API_BASE_URL = useMemo(
-    () => `${import.meta.env.VITE_SERVER_API_URL}/api`,
-    []
-  );
-
-  // --- STATE MANAGEMENT ---
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [accountManagers, setAccountManagers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -48,26 +47,16 @@ function AccountManagers() {
       setIsLoading(true);
 
       // Always include role = account manager
-      const queryParams = new URLSearchParams({
+      const params = {
         role: "account manager",
         ...filterParams,
-      });
-      const response = await fetch(
-        `${API_BASE_URL}/users/filter?${queryParams.toString()}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+      };
+
+      const response = await getRequest(
+        `/users/filter?${new URLSearchParams(params).toString()}`
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch account managers");
-      }
-
-      const result = await response.json();
-      setAccountManagers(result.data || []);
+      setAccountManagers(response.data.data || []);
       setCurrentPage(1); // Reset to first page when data changes
     } catch (error) {
       handleApiError(error);
@@ -156,38 +145,19 @@ function AccountManagers() {
         role: "account manager",
         status: "active",
       };
+
       let response;
       if (editingAccountManager) {
         // Update existing account manager
-        response = await fetch(
-          `${API_BASE_URL}/users/${editingAccountManager._id}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(apiData),
-          }
+        response = await putRequest(
+          `/users/${editingAccountManager._id}`,
+          apiData
         );
-
-        if (!response.ok) {
-          throw new Error("Failed to update account manager");
-        }
 
         toast.success("Account manager updated successfully");
       } else {
         // Create new account manager
-        response = await fetch(`${API_BASE_URL}/users`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(apiData),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to create account manager");
-        }
+        response = await postRequest(`/users`, apiData);
 
         toast.success("Account manager created successfully");
       }
@@ -207,15 +177,7 @@ function AccountManagers() {
     ) {
       try {
         setIsLoading(true);
-
-        const response = await fetch(`${API_BASE_URL}/users/${managerId}`, {
-          method: "DELETE",
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to delete account manager");
-        }
-
+        await deleteRequest(`/users/${managerId}`);
         toast.success("Account manager deleted successfully");
         await fetchAccountManagers(filters);
       } catch (error) {
@@ -242,21 +204,9 @@ function AccountManagers() {
 
         // Delete each account manager individually since there's no bulk delete endpoint
         const deletePromises = selectedAccountManagerIds.map((id) =>
-          fetch(`${API_BASE_URL}/users/${id}`, {
-            method: "DELETE",
-          })
+          deleteRequest(`/users/${id}`)
         );
-
-        const responses = await Promise.all(deletePromises);
-
-        // Check if all deletions were successful
-        const failedDeletions = responses.filter((response) => !response.ok);
-
-        if (failedDeletions.length > 0) {
-          throw new Error(
-            `Failed to delete ${failedDeletions.length} account manager(s)`
-          );
-        }
+        await Promise.all(deletePromises);
 
         toast.success(
           `${selectedAccountManagerIds.length} account manager(s) deleted successfully`
@@ -273,7 +223,8 @@ function AccountManagers() {
 
   const handleApiError = (error) => {
     console.error("API Error:", error);
-    const message = error.message || "An error occurred";
+    const message =
+      error.response?.data?.message || error.message || "An error occurred";
     toast.error(message);
   };
 

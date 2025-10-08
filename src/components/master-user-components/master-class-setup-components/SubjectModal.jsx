@@ -1,5 +1,3 @@
-import React from 'react';
-
 const SubjectModal = ({ 
   isOpen, 
   editingSubject, 

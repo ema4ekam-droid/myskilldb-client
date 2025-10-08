@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import { useEffect, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
+import { getRequest } from "../../../../api/apiRequests";
 
 const OrganizationModal = ({
   isOpen,
@@ -15,22 +15,15 @@ const OrganizationModal = ({
   handleInputChange,
   handleOrganizationFormSubmit,
   isLoading,
-  API_BASE_URL
 }) => {
   if (!isOpen) return null;
-  
-  const apiBaseUrl = useMemo(
-    () => API_BASE_URL || `${import.meta.env.VITE_SERVER_API_URL}/api`,
-    [API_BASE_URL]
-  );
 
   const [syllabi, setSyllabi] = useState([]);
 
   const fetchSyllabi = async () => {
     try {
-      const response = await axios.get(
-        `${apiBaseUrl}/system-manager/Syllabus`
-      );
+      const response = await getRequest(`/system-manager/Syllabus`);
+
       if (response.data && response.data.success && response.data.data) {
         const parsedSyllabi = response.data.data.map((name, index) => ({
           id: index + 1,
