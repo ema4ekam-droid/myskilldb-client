@@ -1,18 +1,20 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Navigation from "../../components/master-user-components/common/master-navigation/Navigation";
 import CountryTable from "../../components/master-user-components/location-components/CountryTable";
 import StateTable from "../../components/master-user-components/location-components/StateTable";
 import DistrictTable from "../../components/master-user-components/location-components/DistrictTable";
 import SyllabusTable from "../../components/master-user-components/location-components/SyllabusTable";
 import StatsCards from "../../components/master-user-components/location-components/StatsCards";
-import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
+import {
+  deleteRequest,
+  getRequest,
+  patchRequest,
+  postRequest,
+  putRequest,
+} from "../../api/apiRequests";
 
 function LocationManager() {
-  const API_BASE_URL = useMemo(
-    () => `${import.meta.env.VITE_SERVER_API_URL}/api`,
-    []
-  );
 
   // Data arrays
   const [countries, setCountries] = useState([]);
@@ -36,7 +38,7 @@ function LocationManager() {
   const fetchCountries = async () => {
     setIsLoadingCountries(true);
     try {
-      const response = await axios.get(`${API_BASE_URL}/locations/countries`);
+      const response = await getRequest(`/locations/countries`);
       setCountries(response.data.data);
     } catch (error) {
       handleApiError("fetching countries", error);
@@ -48,7 +50,7 @@ function LocationManager() {
   const fetchStates = async () => {
     setIsLoadingStates(true);
     try {
-      const response = await axios.get(`${API_BASE_URL}/locations/states/all`);
+      const response = await getRequest(`/locations/states/all`);
       setStates(response.data.data);
     } catch (error) {
       handleApiError("fetching states", error);
@@ -60,9 +62,7 @@ function LocationManager() {
   const fetchDistricts = async () => {
     setIsLoadingDistricts(true);
     try {
-      const response = await axios.get(
-        `${API_BASE_URL}/locations/districts/country/all`
-      );
+      const response = await getRequest(`/locations/districts/country/all`);
       setDistricts(response.data.data);
     } catch (error) {
       handleApiError("fetching districts", error);
@@ -74,9 +74,8 @@ function LocationManager() {
   const fetchSyllabi = async () => {
     setIsLoadingSyllabi(true);
     try {
-      const response = await axios.get(
-        `${API_BASE_URL}/system-manager/Syllabus`
-      );
+      const response = await getRequest(`/system-manager/Syllabus`);
+
       if (response.data.success && response.data.data) {
         // Convert values array to syllabus objects
         const parsedSyllabi = response.data.data.map((name, index) => ({
@@ -107,10 +106,7 @@ function LocationManager() {
   // Countries
   const handleAddCountry = async (data) => {
     try {
-      const response = await axios.post(
-        `${API_BASE_URL}/locations/countries`,
-        data
-      );
+      await postRequest(`/locations/countries`, data);
       fetchCountries();
       toast.success("Country added successfully!");
     } catch (error) {
@@ -120,10 +116,8 @@ function LocationManager() {
 
   const handleEditCountry = async (id, data) => {
     try {
-      const response = await axios.put(
-        `${API_BASE_URL}/locations/countries/${id}`,
-        data
-      );
+      await putRequest(`/locations/countries/${id}`, data);
+
       fetchCountries();
       toast.success("Country updated successfully!");
     } catch (error) {
@@ -133,7 +127,7 @@ function LocationManager() {
 
   const handleDeleteCountry = async (id) => {
     try {
-      await axios.delete(`${API_BASE_URL}/locations/countries/${id}`);
+      await deleteRequest(`/locations/countries/${id}`);
       fetchCountries();
       toast.success("Country deleted successfully!");
     } catch (error) {
@@ -144,10 +138,7 @@ function LocationManager() {
   // States
   const handleAddState = async (data) => {
     try {
-      const response = await axios.post(
-        `${API_BASE_URL}/locations/states`,
-        data
-      );
+      await postRequest(`/locations/states`, data);
       fetchStates();
       toast.success("State added successfully!");
     } catch (error) {
@@ -157,10 +148,7 @@ function LocationManager() {
 
   const handleEditState = async (id, data) => {
     try {
-      const response = await axios.put(
-        `${API_BASE_URL}/locations/states/${id}`,
-        data
-      );
+      await putRequest(`/locations/states/${id}`, data);
       fetchStates();
       toast.success("State updated successfully!");
     } catch (error) {
@@ -170,7 +158,7 @@ function LocationManager() {
 
   const handleDeleteState = async (id) => {
     try {
-      await axios.delete(`${API_BASE_URL}/locations/states/${id}`);
+      await deleteRequest(`/locations/states/${id}`);
       fetchStates();
       toast.success("State deleted successfully!");
     } catch (error) {
@@ -181,10 +169,7 @@ function LocationManager() {
   // Districts
   const handleAddDistrict = async (data) => {
     try {
-      const response = await axios.post(
-        `${API_BASE_URL}/locations/districts`,
-        data
-      );
+      await postRequest(`/locations/districts`, data);
       fetchDistricts();
       toast.success("District added successfully!");
     } catch (error) {
@@ -194,10 +179,7 @@ function LocationManager() {
 
   const handleEditDistrict = async (id, data) => {
     try {
-      const response = await axios.put(
-        `${API_BASE_URL}/locations/districts/${id}`,
-        data
-      );
+      await putRequest(`/locations/districts/${id}`, data);
       fetchDistricts();
       toast.success("District updated successfully!");
     } catch (error) {
@@ -207,7 +189,7 @@ function LocationManager() {
 
   const handleDeleteDistrict = async (id) => {
     try {
-      await axios.delete(`${API_BASE_URL}/locations/districts/${id}`);
+      await deleteRequest(`/locations/districts/${id}`);
       fetchDistricts();
       toast.success("District deleted successfully!");
     } catch (error) {
@@ -218,11 +200,7 @@ function LocationManager() {
   // Syllabi (Using SystemSetting API)
   const handleAddSyllabus = async (data) => {
     try {
-      await axios.post(`${API_BASE_URL}/system-manager/Syllabus`, {
-        value: data.name,
-      });
-
-      // Refresh syllabi list
+      await postRequest(`/system-manager/Syllabus`, { value: data.name });
       await fetchSyllabi();
       toast.success("Syllabus added successfully!");
     } catch (error) {
@@ -240,9 +218,7 @@ function LocationManager() {
       }
 
       // Call patch endpoint to remove the syllabus
-      await axios.patch(`${API_BASE_URL}/system-manager/Syllabus`, {
-        value: syllabusToDelete.name,
-      });
+      await patchRequest(`/system-manager/Syllabus`, { value: syllabusToDelete.name });
 
       // Refresh syllabi list
       await fetchSyllabi();

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import Navigation from "../../components/master-user-components/common/master-navigation/Navigation";
@@ -6,14 +6,11 @@ import OrganizationTable from "../../components/master-user-components/master-lo
 import LoginFormModal from "../../components/master-user-components/master-login-create-components/LoginFormModal";
 import Pagination from "../../components/common/Pagination";
 import FilterOrganizations from "../../components/master-user-components/common/FilterOrganizations";
-
+import {
+  getRequest,
+  postRequest,
+} from "../../api/apiRequests";
 function OrganizationLoginManager() {
-  const API_BASE_URL = useMemo(
-    () => `${import.meta.env.VITE_SERVER_API_URL}/api`,
-    []
-  );
-
-  // --- STATE MANAGEMENT ---
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [organizations, setOrganizations] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -78,9 +75,8 @@ function OrganizationLoginManager() {
         }
       });
 
-      const response = await axios.get(
-        `${API_BASE_URL}/organization?${params}`
-      );
+      const response = await getRequest(`/organization?${params}`);
+
       if (response.data.success) {
         const responseData = response.data.data;
 
@@ -123,7 +119,8 @@ function OrganizationLoginManager() {
 
   const fetchCountries = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/locations/countries`);
+      const response = await getRequest(`/locations/countries`);
+
       if (response.data.success) {
         const countries = response.data.data.map((country) => ({
           name: country.name,
@@ -139,9 +136,8 @@ function OrganizationLoginManager() {
 
   const fetchStates = async (countryCode, forFilter = false) => {
     try {
-      const response = await axios.get(
-        `${API_BASE_URL}/locations/states/${countryCode}`
-      );
+      const response = await getRequest(`/locations/states/${countryCode}`);
+
       if (response.data.success) {
         const states = response.data.data.map((state) => ({
           name: state.name,
@@ -161,9 +157,10 @@ function OrganizationLoginManager() {
 
   const fetchDistricts = async (stateCode, forFilter = false) => {
     try {
-      const response = await axios.get(
-        `${API_BASE_URL}/locations/districts/state/${stateCode}`
+      const response = await getRequest(
+        `/locations/districts/state/${stateCode}`
       );
+
       if (response.data.success) {
         const districts = response.data.data.map((district) => ({
           name: district.name,
@@ -260,7 +257,6 @@ function OrganizationLoginManager() {
   const handleLoginFormSubmit = async (formData) => {
     try {
       setIsLoading(true);
-      console.log("Submitting form data:", formData);
       // Prepare user data for API
       const userData = {
         organizationId: formData.organizationId,
@@ -271,13 +267,8 @@ function OrganizationLoginManager() {
         ...(formData.departmentId && { departmentId: formData.departmentId }),
         ...(formData.assignmentId && { assignmentId: formData.assignmentId }),
       };
-      console.log("Prepared user data:", userData);
       // Make API call using axios
-      const response = await axios.post(`${API_BASE_URL}/users`, userData, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await postRequest(`/users`, userData);
 
       if (response.data.success) {
         toast.success(

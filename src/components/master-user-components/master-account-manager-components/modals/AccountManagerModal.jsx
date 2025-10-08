@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
+import { getRequest } from "../../../../api/apiRequests";
 
 const AccountManagerModal = ({
   isOpen,
@@ -10,10 +11,6 @@ const AccountManagerModal = ({
   btnPrimaryClass,
   btnSecondaryClass,
 }) => {
-  const API_BASE_URL = useMemo(
-    () => `${import.meta.env.VITE_SERVER_API_URL}/api`,
-    []
-  );
 
   const [formData, setFormData] = useState({
     name: "",
@@ -38,27 +35,32 @@ const AccountManagerModal = ({
   useEffect(() => {
     if (editingAccountManager) {
       console.log("Editing account manager:", editingAccountManager);
-      
+
       // Extract organization IDs properly - handle both object array and ID array
       let organizationIds = [];
-      if (editingAccountManager.organizationIds && Array.isArray(editingAccountManager.organizationIds)) {
+      if (
+        editingAccountManager.organizationIds &&
+        Array.isArray(editingAccountManager.organizationIds)
+      ) {
         // If organizationIds contains objects with _id property
-        organizationIds = editingAccountManager.organizationIds.map(org => 
-          typeof org === 'object' && org._id ? org._id : org
+        organizationIds = editingAccountManager.organizationIds.map((org) =>
+          typeof org === "object" && org._id ? org._id : org
         );
       } else if (editingAccountManager.organizationId) {
         // Fallback to single organizationId for backward compatibility
         organizationIds = [editingAccountManager.organizationId];
       }
-      
+
       setFormData({
         name: editingAccountManager.name || "",
         email: editingAccountManager.email || "",
-        mobile: editingAccountManager.mobile ? editingAccountManager.mobile.toString() : "",
+        mobile: editingAccountManager.mobile
+          ? editingAccountManager.mobile.toString()
+          : "",
         aadharCardNumber: editingAccountManager.aadharCardNumber || "",
         organizationIds: organizationIds,
       });
-      
+
       console.log("Extracted organization IDs:", organizationIds);
     } else {
       setFormData({
@@ -82,24 +84,11 @@ const AccountManagerModal = ({
   const fetchOrganizations = async (filterParams = {}) => {
     try {
       setIsLoadingOrganizations(true);
-      
-      const queryParams = new URLSearchParams(filterParams);
-      const response = await fetch(
-        `${API_BASE_URL}/organization?${queryParams.toString()}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch organizations");
-      }
+      const queryParams = new URLSearchParams(filterParams).toString();
+      const response = await getRequest(`/organization?${queryParams}`);
 
-      const result = await response.json();
-      setOrganizations(result.data || []);
+      setOrganizations(response.data.data || []);
     } catch (error) {
       console.error("Error fetching organizations:", error);
       setOrganizations([]);
@@ -130,27 +119,30 @@ const AccountManagerModal = ({
     const newErrors = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = "Name is required";
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = "Email is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = "Please enter a valid email address";
     }
 
     if (!formData.mobile.trim()) {
-      newErrors.mobile = 'Mobile number is required';
-    } else if (!/^\d{10}$/.test(formData.mobile.replace(/\D/g, ''))) {
-      newErrors.mobile = 'Mobile number must be 10 digits';
+      newErrors.mobile = "Mobile number is required";
+    } else if (!/^\d{10}$/.test(formData.mobile.replace(/\D/g, ""))) {
+      newErrors.mobile = "Mobile number must be 10 digits";
     }
 
-    if (formData.aadharCardNumber && !/^\d{12}$/.test(formData.aadharCardNumber.replace(/\D/g, ''))) {
-      newErrors.aadharCardNumber = 'Aadhar card number must be 12 digits';
+    if (
+      formData.aadharCardNumber &&
+      !/^\d{12}$/.test(formData.aadharCardNumber.replace(/\D/g, ""))
+    ) {
+      newErrors.aadharCardNumber = "Aadhar card number must be 12 digits";
     }
 
     if (formData.organizationIds.length === 0) {
-      newErrors.organizationIds = 'At least one organization must be selected';
+      newErrors.organizationIds = "At least one organization must be selected";
     }
 
     setErrors(newErrors);
@@ -166,10 +158,12 @@ const AccountManagerModal = ({
     console.log("Submitting form data:", formData);
     const formattedData = {
       ...formData,
-      mobile: formData.mobile.replace(/\D/g, ''), // Remove non-digits
-      aadharCardNumber: formData.aadharCardNumber ? formData.aadharCardNumber.replace(/\D/g, '') : '',
+      mobile: formData.mobile.replace(/\D/g, ""), // Remove non-digits
+      aadharCardNumber: formData.aadharCardNumber
+        ? formData.aadharCardNumber.replace(/\D/g, "")
+        : "",
       // For backward compatibility, also include the first organizationId as organizationId
-      organizationId: formData.organizationIds[0] || ''
+      organizationId: formData.organizationIds[0] || "",
     };
     console.log("Formatted data to submit:", formattedData);
     onSubmit(formattedData);
@@ -213,27 +207,33 @@ const AccountManagerModal = ({
   const handleToggleOrganization = (organizationId) => {
     const isSelected = formData.organizationIds.includes(organizationId);
     let newOrganizationIds;
-    
+
     if (isSelected) {
-      newOrganizationIds = formData.organizationIds.filter(id => id !== organizationId);
+      newOrganizationIds = formData.organizationIds.filter(
+        (id) => id !== organizationId
+      );
     } else {
       newOrganizationIds = [...formData.organizationIds, organizationId];
     }
-    
+
     handleInputChange("organizationIds", newOrganizationIds);
   };
 
   const getSelectedOrganizations = () => {
-    return organizations.filter(org => formData.organizationIds.includes(org._id));
+    return organizations.filter((org) =>
+      formData.organizationIds.includes(org._id)
+    );
   };
 
   const handleRemoveSelectedOrganization = (organizationId) => {
-    const newOrganizationIds = formData.organizationIds.filter(id => id !== organizationId);
+    const newOrganizationIds = formData.organizationIds.filter(
+      (id) => id !== organizationId
+    );
     handleInputChange("organizationIds", newOrganizationIds);
   };
 
   const handleSelectAll = () => {
-    const allOrgIds = organizations.map(org => org._id);
+    const allOrgIds = organizations.map((org) => org._id);
     handleInputChange("organizationIds", allOrgIds);
   };
 
@@ -375,40 +375,58 @@ const AccountManagerModal = ({
                   Organizations *
                 </label>
                 {errors.organizationIds && (
-                  <p className="mt-1 text-sm text-red-600">{errors.organizationIds}</p>
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.organizationIds}
+                  </p>
                 )}
 
                 {/* Organization Filters */}
                 <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4">
-                  <h3 className="text-sm font-medium text-slate-700 mb-3">Filter Organizations</h3>
+                  <h3 className="text-sm font-medium text-slate-700 mb-3">
+                    Filter Organizations
+                  </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
                     <input
                       type="text"
                       className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       placeholder="Filter by name..."
                       value={organizationFilters.name}
-                      onChange={(e) => handleOrganizationFilterChange("name", e.target.value)}
+                      onChange={(e) =>
+                        handleOrganizationFilterChange("name", e.target.value)
+                      }
                     />
                     <input
                       type="text"
                       className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       placeholder="Filter by country..."
                       value={organizationFilters.country}
-                      onChange={(e) => handleOrganizationFilterChange("country", e.target.value)}
+                      onChange={(e) =>
+                        handleOrganizationFilterChange(
+                          "country",
+                          e.target.value
+                        )
+                      }
                     />
                     <input
                       type="text"
                       className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       placeholder="Filter by state..."
                       value={organizationFilters.state}
-                      onChange={(e) => handleOrganizationFilterChange("state", e.target.value)}
+                      onChange={(e) =>
+                        handleOrganizationFilterChange("state", e.target.value)
+                      }
                     />
                     <input
                       type="text"
                       className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       placeholder="Filter by district..."
                       value={organizationFilters.district}
-                      onChange={(e) => handleOrganizationFilterChange("district", e.target.value)}
+                      onChange={(e) =>
+                        handleOrganizationFilterChange(
+                          "district",
+                          e.target.value
+                        )
+                      }
                     />
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -419,7 +437,9 @@ const AccountManagerModal = ({
                       disabled={isLoadingOrganizations}
                     >
                       <i className="fas fa-search"></i>
-                      {isLoadingOrganizations ? "Searching..." : "Search Organizations"}
+                      {isLoadingOrganizations
+                        ? "Searching..."
+                        : "Search Organizations"}
                     </button>
                     <button
                       type="button"
@@ -468,12 +488,16 @@ const AccountManagerModal = ({
                   ) : (
                     <div className="divide-y divide-slate-100">
                       {organizations.map((org) => {
-                        const isSelected = formData.organizationIds.includes(org._id);
+                        const isSelected = formData.organizationIds.includes(
+                          org._id
+                        );
                         return (
                           <div
                             key={org._id}
                             className={`p-4 hover:bg-slate-50 cursor-pointer transition-colors ${
-                              isSelected ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+                              isSelected
+                                ? "bg-blue-50 border-l-4 border-blue-500"
+                                : ""
                             }`}
                             onClick={() => handleToggleOrganization(org._id)}
                           >
@@ -482,20 +506,24 @@ const AccountManagerModal = ({
                               <div
                                 className={`w-5 h-5 border-2 rounded-sm flex items-center justify-center transition-all duration-200 ${
                                   isSelected
-                                    ? 'bg-blue-600 border-blue-600'
-                                    : 'border-slate-300 hover:border-blue-400'
+                                    ? "bg-blue-600 border-blue-600"
+                                    : "border-slate-300 hover:border-blue-400"
                                 }`}
                               >
                                 {isSelected && (
                                   <i className="fas fa-check text-white text-xs"></i>
                                 )}
                               </div>
-                              
+
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
-                                  <h4 className={`font-medium transition-colors ${
-                                    isSelected ? 'text-blue-900' : 'text-slate-900'
-                                  }`}>
+                                  <h4
+                                    className={`font-medium transition-colors ${
+                                      isSelected
+                                        ? "text-blue-900"
+                                        : "text-slate-900"
+                                    }`}
+                                  >
                                     {org.name}
                                   </h4>
                                   {isSelected && (
@@ -526,7 +554,8 @@ const AccountManagerModal = ({
                       <div className="flex items-center gap-2">
                         <i className="fas fa-check-circle text-blue-600"></i>
                         <span className="font-medium text-blue-900">
-                          Selected Organizations ({formData.organizationIds.length})
+                          Selected Organizations (
+                          {formData.organizationIds.length})
                         </span>
                       </div>
                       <button
@@ -537,7 +566,7 @@ const AccountManagerModal = ({
                         Clear All
                       </button>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto">
                       {getSelectedOrganizations().map((org) => (
                         <div

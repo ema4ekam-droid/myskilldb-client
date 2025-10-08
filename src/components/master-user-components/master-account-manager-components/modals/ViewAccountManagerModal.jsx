@@ -1,5 +1,3 @@
-import React from "react";
-
 const ViewAccountManagerModal = ({ isOpen, onClose, accountManager }) => {
   const handleClose = () => {
     onClose();

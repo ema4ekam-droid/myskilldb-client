@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import OrganizationModal from "../../components/master-user-components/master-dashboard-components/master-modal/OrganizationModal";
@@ -7,12 +7,15 @@ import ConfirmModal from "../../components/common/ConfirmModal";
 import FilterOrganizations from "../../components/master-user-components/common/FilterOrganizations";
 import OrganizationTable from "../../components/master-user-components/master-dashboard-components/OrganizationTable";
 import Pagination from "../../components/common/Pagination";
+import {
+  deleteRequest,
+  getRequest,
+  patchRequest,
+  postRequest,
+  putRequest,
+} from "../../api/apiRequests";
 
 function MasterDashboard() {
-  const API_BASE_URL = useMemo(
-    () => `${import.meta.env.VITE_SERVER_API_URL}/api`,
-    []
-  );
 
   // --- STATE MANAGEMENT ---
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -97,8 +100,8 @@ function MasterDashboard() {
   const fetchOrganizationsCount = async () => {
     try {
       const [pendingRes, notPendingRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/organization/counts?status=pending`),
-        axios.get(`${API_BASE_URL}/organization/counts?status=not-pending`),
+        getRequest(`/organization/counts?status=pending`),
+        getRequest(`/organization/counts?status=not-pending`),
       ]);
 
       if (pendingRes.data.success && notPendingRes.data.success) {
@@ -156,8 +159,8 @@ function MasterDashboard() {
 
       if (isPending) {
         // Fetch pending organizations with pagination
-        const pendingResponse = await axios.get(
-          `${API_BASE_URL}/organization?${buildParams({ status: "pending" })}`
+        const pendingResponse = await getRequest(
+          `/organization?${buildParams({ status: "pending" })}`
         );
 
         if (pendingResponse.data.success) {
@@ -168,10 +171,8 @@ function MasterDashboard() {
         }
       } else {
         // Fetch active (non-pending) organizations with pagination
-        const activeResponse = await axios.get(
-          `${API_BASE_URL}/organization?${buildParams({
-            status: "not-pending",
-          })}`
+        const activeResponse = await getRequest(
+          `/organization?${buildParams({ status: "not-pending" })}`
         );
 
         if (activeResponse.data.success) {
@@ -191,7 +192,8 @@ function MasterDashboard() {
   // Fixed location fetching functions
   const fetchCountries = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/locations/countries`);
+      const response = await getRequest(`/locations/countries`);
+
       if (response.data.success) {
         const countries = response.data.data;
         setLocations((prev) => ({
@@ -208,9 +210,8 @@ function MasterDashboard() {
     if (!countryCode) return;
 
     try {
-      const response = await axios.get(
-        `${API_BASE_URL}/locations/states/${countryCode}`
-      );
+      const response = await getRequest(`/locations/states/${countryCode}`);
+
       if (response.data.success) {
         const states = response.data.data;
         setLocations((prev) => ({
@@ -228,9 +229,10 @@ function MasterDashboard() {
     if (!stateCode) return;
 
     try {
-      const response = await axios.get(
-        `${API_BASE_URL}/locations/districts/state/${stateCode}`
+      const response = await getRequest(
+        `/locations/districts/state/${stateCode}`
       );
+
       if (response.data.success) {
         const districts = response.data.data;
         setLocations((prev) => ({
@@ -247,9 +249,8 @@ function MasterDashboard() {
     if (!countryCode) return;
 
     try {
-      const response = await axios.get(
-        `${API_BASE_URL}/locations/states/${countryCode}`
-      );
+      const response = await getRequest(`/locations/states/${countryCode}`);
+
       if (response.data.success) {
         const states = response.data.data;
         setLocations((prev) => ({
@@ -267,9 +268,10 @@ function MasterDashboard() {
     if (!stateCode) return;
 
     try {
-      const response = await axios.get(
-        `${API_BASE_URL}/locations/districts/state/${stateCode}`
+      const response = await getRequest(
+        `/locations/districts/state/${stateCode}`
       );
+
       if (response.data.success) {
         const districts = response.data.data;
         setLocations((prev) => ({
@@ -437,12 +439,12 @@ function MasterDashboard() {
 
       let response;
       if (organizationModalMode === "edit") {
-        response = await axios.put(
-          `${API_BASE_URL}/organization/${editingOrganization._id}`,
+        response = await putRequest(
+          `/organization/${editingOrganization._id}`,
           submitData
         );
       } else {
-        response = await axios.post(`${API_BASE_URL}/organization`, submitData);
+        response = await postRequest(`/organization`, submitData);
       }
 
       if (response.data.success) {
@@ -469,7 +471,8 @@ function MasterDashboard() {
 
   const openEditOrViewOrganization = async (orgId, mode) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/organization/${orgId}`);
+      const response = await getRequest(`/organization/${orgId}`);
+
       if (response.data.success) {
         const org = response.data.data;
         setEditingOrganization(org);
@@ -523,9 +526,7 @@ function MasterDashboard() {
   const handleDeleteOrganization = async (orgId) => {
     try {
       setIsLoading(true);
-      const response = await axios.delete(
-        `${API_BASE_URL}/organization/${orgId}`
-      );
+      const response = await deleteRequest(`/organization/${orgId}`);
 
       if (response.data.success) {
         toast.success(response.data.message);
@@ -544,10 +545,9 @@ function MasterDashboard() {
   const handleChangeStatus = async (orgId, action) => {
     try {
       setIsLoading(true);
-      const response = await axios.patch(
-        `${API_BASE_URL}/organization/${orgId}/status`,
-        { action }
-      );
+      const response = await patchRequest(`/organization/${orgId}/status`, {
+        action,
+      });
 
       if (response.data.success) {
         toast.success(response.data.message);
@@ -578,9 +578,10 @@ function MasterDashboard() {
             setIsLoading(true);
             await Promise.all(
               selectedOrganizationIds.map((id) =>
-                axios.delete(`${API_BASE_URL}/organization/${id}`)
+                deleteRequest(`/organization/${id}`)
               )
             );
+
             toast.success("Organizations deleted successfully");
             setSelectedOrganizationIds([]);
             // Refresh both tables after bulk deletion
@@ -706,7 +707,6 @@ function MasterDashboard() {
             </div>
           </section>
           {/* Reusable Filter Component */}
-          // Reusable Filter Component
           <FilterOrganizations
             filters={filters}
             onFilterChange={handleFilterChange}
@@ -838,7 +838,6 @@ function MasterDashboard() {
         handleInputChange={handleInputChange}
         handleOrganizationFormSubmit={handleOrganizationFormSubmit}
         isLoading={isLoading}
-        API_BASE_URL={API_BASE_URL}
       />
 
       {/* Confirmation Modal */}
