@@ -10,13 +10,12 @@ import {
   postRequest,
   putRequest,
 } from "../../api/apiRequests";
+
 function AccountManagers() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [accountManagers, setAccountManagers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedAccountManagerIds, setSelectedAccountManagerIds] = useState(
-    []
-  );
+  const [selectedAccountManagerIds, setSelectedAccountManagerIds] = useState([]);
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -24,9 +23,8 @@ function AccountManagers() {
   const [editingAccountManager, setEditingAccountManager] = useState(null);
   const [viewingAccountManager, setViewingAccountManager] = useState(null);
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(4);
+  // Loading states for individual user fetching
+  const [isLoadingUser, setIsLoadingUser] = useState(false);
 
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState("");
@@ -45,23 +43,33 @@ function AccountManagers() {
   const fetchAccountManagers = async (filterParams = {}) => {
     try {
       setIsLoading(true);
-
-      // Always include role = account manager
       const params = {
-        role: "account manager",
+        role: "acc_manager",
         ...filterParams,
       };
 
       const response = await getRequest(
-        `/users/filter?${new URLSearchParams(params).toString()}`
+        `/users?${new URLSearchParams(params).toString()}`
       );
-
       setAccountManagers(response.data.data || []);
-      setCurrentPage(1); // Reset to first page when data changes
     } catch (error) {
       handleApiError(error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // NEW: Fetch individual user details
+  const fetchUserDetails = async (userId) => {
+    try {
+      setIsLoadingUser(true);
+      const response = await getRequest(`/users/acc_manager/${userId}`);
+      return response.data.data;
+    } catch (error) {
+      handleApiError(error);
+      return null;
+    } finally {
+      setIsLoadingUser(false);
     }
   };
 
@@ -70,13 +78,8 @@ function AccountManagers() {
     console.log(`Navigating to: ${pageId}`);
   };
 
-  const handlePaginationChange = (page) => {
-    setCurrentPage(page);
-  };
-
   const handleSearch = (e) => {
     e.preventDefault();
-    setCurrentPage(1); // Reset to first page when searching
     fetchAccountManagers(filters);
   };
 
@@ -91,7 +94,6 @@ function AccountManagers() {
       mobile: "",
     });
     setSearchTerm("");
-    setCurrentPage(1);
     fetchAccountManagers({});
   };
 
@@ -111,8 +113,16 @@ function AccountManagers() {
     }
   };
 
-  const openModal = (accountManager = null) => {
-    setEditingAccountManager(accountManager);
+  // UPDATED: Open modal with user details fetch
+  const openModal = async (accountManager = null) => {
+    if (accountManager && accountManager._id) {
+      setIsLoading(true);
+      const userDetails = await fetchUserDetails(accountManager._id);
+      setEditingAccountManager(userDetails);
+      setIsLoading(false);
+    } else {
+      setEditingAccountManager(null);
+    }
     setIsModalOpen(true);
   };
 
@@ -121,8 +131,14 @@ function AccountManagers() {
     setIsModalOpen(false);
   };
 
-  const openViewModal = (accountManager) => {
-    setViewingAccountManager(accountManager);
+  // UPDATED: Open view modal with user details fetch
+  const openViewModal = async (accountManager) => {
+    if (accountManager && accountManager._id) {
+      setIsLoading(true);
+      const userDetails = await fetchUserDetails(accountManager._id);
+      setViewingAccountManager(userDetails);
+      setIsLoading(false);
+    }
     setIsViewModalOpen(true);
   };
 
@@ -135,30 +151,24 @@ function AccountManagers() {
     try {
       setIsLoading(true);
       console.log("Form data received for submission:", formData);
-      // Prepare the data for the API
+      
       const apiData = {
         name: formData.name,
         email: formData.email,
-        mobile: parseInt(formData.mobile), // Convert to number as per backend model
-        aadharCardNumber: formData.aadharCardNumber,
-        organizationIds: formData.organizationIds, // Include organization ID
-        role: "account manager",
-        status: "active",
+        mobile: parseInt(formData.mobile),
+        organizationIds: formData.organizationIds,
+        role: "acc_manager",
       };
 
       let response;
       if (editingAccountManager) {
-        // Update existing account manager
         response = await putRequest(
           `/users/${editingAccountManager._id}`,
           apiData
         );
-
         toast.success("Account manager updated successfully");
       } else {
-        // Create new account manager
         response = await postRequest(`/users`, apiData);
-
         toast.success("Account manager created successfully");
       }
 
@@ -172,46 +182,11 @@ function AccountManagers() {
   };
 
   const handleDeleteAccountManager = async (managerId) => {
-    if (
-      window.confirm("Are you sure you want to delete this account manager?")
-    ) {
+    if (window.confirm("Are you sure you want to delete this account manager?")) {
       try {
         setIsLoading(true);
         await deleteRequest(`/users/${managerId}`);
         toast.success("Account manager deleted successfully");
-        await fetchAccountManagers(filters);
-      } catch (error) {
-        handleApiError(error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    if (selectedAccountManagerIds.length === 0) {
-      toast.error("Please select account managers to delete");
-      return;
-    }
-
-    if (
-      window.confirm(
-        `Are you sure you want to delete ${selectedAccountManagerIds.length} account manager(s)?`
-      )
-    ) {
-      try {
-        setIsLoading(true);
-
-        // Delete each account manager individually since there's no bulk delete endpoint
-        const deletePromises = selectedAccountManagerIds.map((id) =>
-          deleteRequest(`/users/${id}`)
-        );
-        await Promise.all(deletePromises);
-
-        toast.success(
-          `${selectedAccountManagerIds.length} account manager(s) deleted successfully`
-        );
-        setSelectedAccountManagerIds([]);
         await fetchAccountManagers(filters);
       } catch (error) {
         handleApiError(error);
@@ -243,12 +218,6 @@ function AccountManagers() {
     window.addEventListener("click", onWindowClick);
     return () => window.removeEventListener("click", onWindowClick);
   }, [isUserMenuOpen]);
-
-  // Pagination calculations
-  const totalPages = Math.ceil(accountManagers.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedAccountManagers = accountManagers.slice(startIndex, endIndex);
 
   // --- STYLES ---
   const inputBaseClass =
@@ -295,17 +264,6 @@ function AccountManagers() {
                 <i className="fas fa-filter-slash"></i>
                 Clear Filters
               </button>
-
-              {selectedAccountManagerIds.length > 0 && (
-                <button
-                  onClick={handleBulkDelete}
-                  className={btnDangerClass}
-                  disabled={isLoading}
-                >
-                  <i className="fas fa-trash"></i>
-                  Delete Selected ({selectedAccountManagerIds.length})
-                </button>
-              )}
 
               <button onClick={() => openModal()} className={btnPrimaryClass}>
                 <i className="fas fa-plus"></i>
@@ -382,7 +340,7 @@ function AccountManagers() {
 
           {/* Account Managers Table */}
           <AccountManagersTable
-            accountManagers={paginatedAccountManagers}
+            accountManagers={accountManagers}
             isLoading={isLoading}
             selectedAccountManagerIds={selectedAccountManagerIds}
             allChecked={allChecked}
@@ -391,10 +349,6 @@ function AccountManagers() {
             onView={openViewModal}
             onEdit={openModal}
             onDelete={handleDeleteAccountManager}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePaginationChange}
-            itemsPerPage={itemsPerPage}
             btnPrimaryClass={btnPrimaryClass}
             btnSecondaryClass={btnSecondaryClass}
             btnDangerClass={btnDangerClass}
@@ -408,7 +362,7 @@ function AccountManagers() {
         onClose={closeModal}
         onSubmit={handleAccountManagerSubmit}
         editingAccountManager={editingAccountManager}
-        isLoading={isLoading}
+        isLoading={isLoading || isLoadingUser}
         inputBaseClass={inputBaseClass}
         btnPrimaryClass={btnPrimaryClass}
         btnSecondaryClass={btnSecondaryClass}
@@ -419,6 +373,7 @@ function AccountManagers() {
         isOpen={isViewModalOpen}
         onClose={closeViewModal}
         accountManager={viewingAccountManager}
+        isLoading={isLoading || isLoadingUser}
       />
     </div>
   );

@@ -1,12 +1,21 @@
-const ViewAccountManagerModal = ({ isOpen, onClose, accountManager }) => {
+import { useEffect, useState } from "react";
+
+const ViewAccountManagerModal = ({ isOpen, onClose, accountManager, isLoading }) => {
+  const [localLoading, setLocalLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && accountManager) {
+      setLocalLoading(true);
+      // Simulate loading for better UX
+      const timer = setTimeout(() => {
+        setLocalLoading(false);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, accountManager]);
+
   const handleClose = () => {
     onClose();
-  };
-
-  const formatAadharCard = (aadharNumber) => {
-    if (!aadharNumber) return "Not provided";
-    // Format as XXXX-XXXX-XXXX
-    return aadharNumber.replace(/(\d{4})(\d{4})(\d{4})/, "$1-$2-$3");
   };
 
   const formatDate = (dateString) => {
@@ -25,38 +34,8 @@ const ViewAccountManagerModal = ({ isOpen, onClose, accountManager }) => {
     return `+91-${mobile}`;
   };
 
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      active: { label: "Active", class: "bg-green-100 text-green-800" },
-      inactive: { label: "Inactive", class: "bg-red-100 text-red-800" },
-      pending: { label: "Pending", class: "bg-yellow-100 text-yellow-800" },
-    };
+  if (!isOpen) return null;
 
-    const config = statusConfig[status] || statusConfig.inactive;
-
-    return (
-      <span
-        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${config.class}`}
-      >
-        <div
-          className={`w-2 h-2 rounded-full mr-2 ${
-            status === "active"
-              ? "bg-green-500"
-              : status === "inactive"
-              ? "bg-red-500"
-              : "bg-yellow-500"
-          }`}
-        ></div>
-        {config.label}
-      </span>
-    );
-  };
-
-  if (!isOpen || !accountManager) return null;
-  console.log(
-    "Rendering ViewAccountManagerModal with accountManager:",
-    accountManager
-  );
   return (
     <div
       className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4"
@@ -70,7 +49,7 @@ const ViewAccountManagerModal = ({ isOpen, onClose, accountManager }) => {
         <div className="flex items-center justify-between p-6 border-b border-slate-200 bg-slate-50">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
-              {accountManager.image ? (
+              {accountManager?.image ? (
                 <img
                   src={accountManager.image}
                   alt={accountManager.name}
@@ -82,161 +61,100 @@ const ViewAccountManagerModal = ({ isOpen, onClose, accountManager }) => {
             </div>
             <div>
               <h2 className="text-xl font-bold text-slate-900">
-                {accountManager.name}
+                {isLoading || localLoading ? "Loading..." : accountManager?.name || "N/A"}
               </h2>
               <p className="text-sm text-slate-500 capitalize">
-                {accountManager.role}
+                {accountManager?.role || "N/A"}
               </p>
             </div>
           </div>
           <button
             onClick={handleClose}
             className="p-2 hover:bg-slate-200 rounded-lg transition-colors"
+            disabled={isLoading}
           >
             <i className="fas fa-times text-slate-500"></i>
           </button>
         </div>
 
+        {/* Loading State */}
+        {(isLoading || localLoading) && (
+          <div className="p-8 text-center">
+            <i className="fas fa-spinner fa-spin text-2xl text-indigo-600 mb-4"></i>
+            <p className="text-slate-600">Loading account manager details...</p>
+          </div>
+        )}
+
         {/* Content */}
-        <div className="p-6 space-y-6">
-          {/* Personal Information */}
-          <div className="bg-slate-50 rounded-lg p-4">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <i className="fas fa-user-circle text-indigo-600"></i>
-              Personal Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Full Name
-                </label>
-                <p className="text-slate-900 font-medium">
-                  {accountManager.name}
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Status
-                </label>
-                <div className="mt-1">
-                  {getStatusBadge(accountManager.status)}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Email Address
-                </label>
-                <p className="text-slate-900 flex items-center gap-2">
-                  <i className="fas fa-envelope text-slate-400"></i>
-                  {accountManager.email}
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Mobile Number
-                </label>
-                <p className="text-slate-900 flex items-center gap-2">
-                  <i className="fas fa-phone text-slate-400"></i>
-                  {formatMobile(accountManager.mobile)}
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Verification Status
-                </label>
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    accountManager.isVerified
-                      ? "bg-green-100 text-green-800"
-                      : "bg-yellow-100 text-yellow-800"
-                  }`}
-                >
-                  {accountManager.isVerified ? (
-                    <>
-                      <i className="fas fa-check-circle mr-1"></i>
-                      Verified
-                    </>
-                  ) : (
-                    <>
-                      <i className="fas fa-clock mr-1"></i>
-                      Pending Verification
-                    </>
-                  )}
-                </span>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Account Status
-                </label>
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    !accountManager.isBlock
-                      ? "bg-green-100 text-green-800"
-                      : "bg-red-100 text-red-800"
-                  }`}
-                >
-                  {!accountManager.isBlock ? (
-                    <>
-                      <i className="fas fa-check mr-1"></i>
-                      Active
-                    </>
-                  ) : (
-                    <>
-                      <i className="fas fa-ban mr-1"></i>
-                      Blocked
-                    </>
-                  )}
-                </span>
-              </div>
-
-              {accountManager.aadharCardNumber && (
-                <div className="md:col-span-2">
+        {!isLoading && !localLoading && accountManager && (
+          <div className="p-6 space-y-6">
+            {/* Personal Information */}
+            <div className="bg-slate-50 rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                <i className="fas fa-user-circle text-indigo-600"></i>
+                Personal Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Aadhar Card Number
+                    Full Name
                   </label>
-                  <p className="text-slate-900 flex items-center gap-2">
-                    <i className="fas fa-id-card text-slate-400"></i>
-                    <span className="font-mono bg-slate-100 px-2 py-1 rounded">
-                      {formatAadharCard(accountManager.aadharCardNumber)}
-                    </span>
+                  <p className="text-slate-900 font-medium">
+                    {accountManager.name}
                   </p>
                 </div>
-              )}
-            </div>
-          </div>
 
-          {/* Activity Information */}
-          <div className="bg-slate-50 rounded-lg p-4">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <i className="fas fa-clock text-indigo-600"></i>
-              Activity Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Account Created
-                </label>
-                <p className="text-slate-900 flex items-center gap-2">
-                  <i className="fas fa-calendar-plus text-slate-400"></i>
-                  {formatDate(accountManager.createdAt)}
-                </p>
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Email Address
+                  </label>
+                  <p className="text-slate-900 flex items-center gap-2">
+                    <i className="fas fa-envelope text-slate-400"></i>
+                    {accountManager.email}
+                  </p>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Last Updated
-                </label>
-                <p className="text-slate-900 flex items-center gap-2">
-                  <i className="fas fa-calendar-edit text-slate-400"></i>
-                  {formatDate(accountManager.updatedAt)}
-                </p>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Mobile Number
+                  </label>
+                  <p className="text-slate-900 flex items-center gap-2">
+                    <i className="fas fa-phone text-slate-400"></i>
+                    {formatMobile(accountManager.mobile)}
+                  </p>
+                </div>
               </div>
             </div>
+
+            {/* Activity Information */}
+            <div className="bg-slate-50 rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                <i className="fas fa-clock text-indigo-600"></i>
+                Activity Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Account Created
+                  </label>
+                  <p className="text-slate-900 flex items-center gap-2">
+                    <i className="fas fa-calendar-plus text-slate-400"></i>
+                    {formatDate(accountManager.createdAt)}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Last Updated
+                  </label>
+                  <p className="text-slate-900 flex items-center gap-2">
+                    <i className="fas fa-calendar-edit text-slate-400"></i>
+                    {formatDate(accountManager.updatedAt)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Organizations Information */}
             {accountManager.organizationIds &&
               accountManager.organizationIds.length > 0 && (
@@ -338,13 +256,14 @@ const ViewAccountManagerModal = ({ isOpen, onClose, accountManager }) => {
                 </div>
               )}
           </div>
-        </div>
+        )}
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-200 bg-slate-50">
           <button
             onClick={handleClose}
             className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+            disabled={isLoading}
           >
             <i className="fas fa-times"></i>
             Close
