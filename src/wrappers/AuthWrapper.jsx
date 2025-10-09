@@ -14,7 +14,7 @@ const AuthWrapper = () => {
     const fetchUser = async () => {
       try {
         setLoading(true); // start loading on every route change
-        const response = await axios.get("http://localhost:5000/api/me", {
+        const response = await axios.get(`${import.meta.env.VITE_SERVER_API_URL}/api/me`, {
           withCredentials: true,
         });
 
