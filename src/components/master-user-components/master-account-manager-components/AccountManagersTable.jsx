@@ -8,15 +8,6 @@ const AccountManagersTable = ({
   btnSecondaryClass,
   btnDangerClass
 }) => {
-  const formatDate = (dateString) => {
-    if (!dateString) return 'Never';
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
   const formatMobile = (mobile) => {
     if (!mobile) return 'Not provided';
     return `+91-${mobile}`;
@@ -43,7 +34,6 @@ const AccountManagersTable = ({
               <th className="p-4 text-left font-semibold text-slate-700">Name</th>
               <th className="p-4 text-left font-semibold text-slate-700">Email</th>
               <th className="p-4 text-left font-semibold text-slate-700">Mobile</th>
-              <th className="p-4 text-left font-semibold text-slate-700">Created</th>
               <th className="p-4 text-center font-semibold text-slate-700">Actions</th>
             </tr>
           </thead>
@@ -85,12 +75,6 @@ const AccountManagersTable = ({
                 </td>
                 
                 <td className="p-4">
-                  <div className="text-sm text-slate-600">
-                    {formatDate(accountManager.createdAt)}
-                  </div>
-                </td>
-                
-                <td className="p-4">
                   <div className="flex items-center justify-center gap-2">
                     <button
                       onClick={() => onView(accountManager)}
@@ -120,7 +104,7 @@ const AccountManagersTable = ({
               </tr>
             )) : (
               <tr>
-                <td colSpan="5" className="text-center p-8 text-slate-500">
+                <td colSpan="4" className="text-center p-8 text-slate-500">
                   {isLoading ? (
                     <div className="flex items-center justify-center gap-2">
                       <i className="fas fa-spinner fa-spin"></i>

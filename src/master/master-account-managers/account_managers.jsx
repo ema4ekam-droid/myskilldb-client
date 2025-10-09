@@ -10,19 +10,21 @@ import {
   postRequest,
   putRequest,
 } from "../../api/apiRequests";
+
 function AccountManagers() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [accountManagers, setAccountManagers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedAccountManagerIds, setSelectedAccountManagerIds] = useState(
-    []
-  );
+  const [selectedAccountManagerIds, setSelectedAccountManagerIds] = useState([]);
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [editingAccountManager, setEditingAccountManager] = useState(null);
   const [viewingAccountManager, setViewingAccountManager] = useState(null);
+
+  // Loading states for individual user fetching
+  const [isLoadingUser, setIsLoadingUser] = useState(false);
 
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState("");
@@ -41,8 +43,6 @@ function AccountManagers() {
   const fetchAccountManagers = async (filterParams = {}) => {
     try {
       setIsLoading(true);
-
-      // Always include role = account manager
       const params = {
         role: "acc_manager",
         ...filterParams,
@@ -51,12 +51,25 @@ function AccountManagers() {
       const response = await getRequest(
         `/users?${new URLSearchParams(params).toString()}`
       );
-
       setAccountManagers(response.data.data || []);
     } catch (error) {
       handleApiError(error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // NEW: Fetch individual user details
+  const fetchUserDetails = async (userId) => {
+    try {
+      setIsLoadingUser(true);
+      const response = await getRequest(`/users/acc_manager/${userId}`);
+      return response.data.data;
+    } catch (error) {
+      handleApiError(error);
+      return null;
+    } finally {
+      setIsLoadingUser(false);
     }
   };
 
@@ -100,8 +113,16 @@ function AccountManagers() {
     }
   };
 
-  const openModal = (accountManager = null) => {
-    setEditingAccountManager(accountManager);
+  // UPDATED: Open modal with user details fetch
+  const openModal = async (accountManager = null) => {
+    if (accountManager && accountManager._id) {
+      setIsLoading(true);
+      const userDetails = await fetchUserDetails(accountManager._id);
+      setEditingAccountManager(userDetails);
+      setIsLoading(false);
+    } else {
+      setEditingAccountManager(null);
+    }
     setIsModalOpen(true);
   };
 
@@ -110,8 +131,14 @@ function AccountManagers() {
     setIsModalOpen(false);
   };
 
-  const openViewModal = (accountManager) => {
-    setViewingAccountManager(accountManager);
+  // UPDATED: Open view modal with user details fetch
+  const openViewModal = async (accountManager) => {
+    if (accountManager && accountManager._id) {
+      setIsLoading(true);
+      const userDetails = await fetchUserDetails(accountManager._id);
+      setViewingAccountManager(userDetails);
+      setIsLoading(false);
+    }
     setIsViewModalOpen(true);
   };
 
@@ -124,28 +151,24 @@ function AccountManagers() {
     try {
       setIsLoading(true);
       console.log("Form data received for submission:", formData);
-      // Prepare the data for the API
+      
       const apiData = {
         name: formData.name,
         email: formData.email,
-        mobile: parseInt(formData.mobile), // Convert to number as per backend model
-        organizationIds: formData.organizationIds, // Include organization ID
+        mobile: parseInt(formData.mobile),
+        organizationIds: formData.organizationIds,
         role: "acc_manager",
       };
 
       let response;
       if (editingAccountManager) {
-        // Update existing account manager
         response = await putRequest(
           `/users/${editingAccountManager._id}`,
           apiData
         );
-
         toast.success("Account manager updated successfully");
       } else {
-        // Create new account manager
         response = await postRequest(`/users`, apiData);
-
         toast.success("Account manager created successfully");
       }
 
@@ -159,9 +182,7 @@ function AccountManagers() {
   };
 
   const handleDeleteAccountManager = async (managerId) => {
-    if (
-      window.confirm("Are you sure you want to delete this account manager?")
-    ) {
+    if (window.confirm("Are you sure you want to delete this account manager?")) {
       try {
         setIsLoading(true);
         await deleteRequest(`/users/${managerId}`);
@@ -341,7 +362,7 @@ function AccountManagers() {
         onClose={closeModal}
         onSubmit={handleAccountManagerSubmit}
         editingAccountManager={editingAccountManager}
-        isLoading={isLoading}
+        isLoading={isLoading || isLoadingUser}
         inputBaseClass={inputBaseClass}
         btnPrimaryClass={btnPrimaryClass}
         btnSecondaryClass={btnSecondaryClass}
@@ -352,6 +373,7 @@ function AccountManagers() {
         isOpen={isViewModalOpen}
         onClose={closeViewModal}
         accountManager={viewingAccountManager}
+        isLoading={isLoading || isLoadingUser}
       />
     </div>
   );
