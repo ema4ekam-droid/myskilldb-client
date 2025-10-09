@@ -109,12 +109,13 @@ const AdminClassManage = () => {
     try {
       setLoadingEntities(prev => ({ ...prev, departments: true }));
       
-      // Dummy data for departments
+      // Dummy data for departments (School Levels)
       const dummyDepartments = [
-        { _id: 'dept-1', name: 'Science', description: 'Science and Technology Department' },
-        { _id: 'dept-2', name: 'Mathematics', description: 'Mathematics Department' },
-        { _id: 'dept-3', name: 'Languages', description: 'Languages and Literature Department' },
-        { _id: 'dept-4', name: 'Social Studies', description: 'Social Studies Department' }
+        { _id: 'dept-1', name: 'Nursery', description: 'Nursery Level' },
+        { _id: 'dept-2', name: 'Lower Primary', description: 'Lower Primary Level (Grades 1-5)' },
+        { _id: 'dept-3', name: 'Upper Primary', description: 'Upper Primary Level (Grades 6-7)' },
+        { _id: 'dept-4', name: 'High School', description: 'High School Level (Grades 8-10)' },
+        { _id: 'dept-5', name: 'Higher Secondary', description: 'Higher Secondary Level (Grades 11-12)' }
       ];
       
       // Simulate API delay
@@ -137,13 +138,31 @@ const AdminClassManage = () => {
       
       // Dummy data for classes
       const dummyClasses = [
-        { _id: 'class-1', name: 'Grade 6', description: 'Sixth Grade Class' },
-        { _id: 'class-2', name: 'Grade 7', description: 'Seventh Grade Class' },
-        { _id: 'class-3', name: 'Grade 8', description: 'Eighth Grade Class' },
-        { _id: 'class-4', name: 'Grade 9', description: 'Ninth Grade Class' },
-        { _id: 'class-5', name: 'Grade 10', description: 'Tenth Grade Class' },
-        { _id: 'class-6', name: 'Grade 11', description: 'Eleventh Grade Class' },
-        { _id: 'class-7', name: 'Grade 12', description: 'Twelfth Grade Class' }
+        // Nursery
+        { _id: 'class-1', name: 'LKG', description: 'Lower Kindergarten', departmentId: 'dept-1' },
+        { _id: 'class-2', name: 'UKG', description: 'Upper Kindergarten', departmentId: 'dept-1' },
+        // Lower Primary
+        { _id: 'class-3', name: 'Grade 1', description: 'First Grade', departmentId: 'dept-2' },
+        { _id: 'class-4', name: 'Grade 2', description: 'Second Grade', departmentId: 'dept-2' },
+        { _id: 'class-5', name: 'Grade 3', description: 'Third Grade', departmentId: 'dept-2' },
+        { _id: 'class-6', name: 'Grade 4', description: 'Fourth Grade', departmentId: 'dept-2' },
+        { _id: 'class-7', name: 'Grade 5', description: 'Fifth Grade', departmentId: 'dept-2' },
+        // Upper Primary
+        { _id: 'class-8', name: 'Grade 6', description: 'Sixth Grade', departmentId: 'dept-3' },
+        { _id: 'class-9', name: 'Grade 7', description: 'Seventh Grade', departmentId: 'dept-3' },
+        // High School
+        { _id: 'class-10', name: 'Grade 8', description: 'Eighth Grade', departmentId: 'dept-4' },
+        { _id: 'class-11', name: 'Grade 9', description: 'Ninth Grade', departmentId: 'dept-4' },
+        { _id: 'class-12', name: 'Grade 10', description: 'Tenth Grade', departmentId: 'dept-4' },
+        // Higher Secondary
+        { _id: 'class-13', name: 'Grade 11 Bio Math', description: 'Biology with Mathematics Stream', departmentId: 'dept-5' },
+        { _id: 'class-14', name: 'Grade 11 Bio Language', description: 'Biology with Language Stream', departmentId: 'dept-5' },
+        { _id: 'class-15', name: 'Grade 11 Computer Maths', description: 'Computer Science with Mathematics Stream', departmentId: 'dept-5' },
+        { _id: 'class-16', name: 'Grade 11 Commerce', description: 'Commerce Stream', departmentId: 'dept-5' },
+        { _id: 'class-17', name: 'Grade 12 Bio Math', description: 'Biology with Mathematics Stream', departmentId: 'dept-5' },
+        { _id: 'class-18', name: 'Grade 12 Bio Language', description: 'Biology with Language Stream', departmentId: 'dept-5' },
+        { _id: 'class-19', name: 'Grade 12 Computer Maths', description: 'Computer Science with Mathematics Stream', departmentId: 'dept-5' },
+        { _id: 'class-20', name: 'Grade 12 Commerce', description: 'Commerce Stream', departmentId: 'dept-5' }
       ];
       
       // Simulate API delay
@@ -164,18 +183,10 @@ const AdminClassManage = () => {
     try {
       setLoadingEntities(prev => ({ ...prev, sections: true }));
       
-      // Dummy data for sections
+      // Dummy data for sections (All classes have Section A and B)
       const dummySections = [
         { _id: 'section-1', name: 'Section A', description: 'Section A' },
-        { _id: 'section-2', name: 'Section B', description: 'Section B' },
-        { _id: 'section-3', name: 'Section C', description: 'Section C' },
-        { _id: 'section-4', name: 'Section D', description: 'Section D' },
-        { _id: 'section-5', name: 'Section E', description: 'Section E' },
-        { _id: 'section-6', name: 'Section F', description: 'Section F' },
-        { _id: 'section-7', name: 'Section G', description: 'Section G' },
-        { _id: 'section-8', name: 'Section H', description: 'Section H' },
-        { _id: 'section-9', name: 'Section I', description: 'Section I' },
-        { _id: 'section-10', name: 'Section J', description: 'Section J' }
+        { _id: 'section-2', name: 'Section B', description: 'Section B' }
       ];
       
       // Simulate API delay
@@ -198,15 +209,38 @@ const AdminClassManage = () => {
       
       // Dummy data for subjects
       const dummySubjects = [
-        { _id: 'subject-1', name: 'Physics', code: 'PHY', departmentId: 'dept-1', description: 'Physics Subject', credits: '4', type: 'core' },
-        { _id: 'subject-2', name: 'Chemistry', code: 'CHEM', departmentId: 'dept-1', description: 'Chemistry Subject', credits: '4', type: 'core' },
-        { _id: 'subject-3', name: 'Biology', code: 'BIO', departmentId: 'dept-1', description: 'Biology Subject', credits: '4', type: 'core' },
-        { _id: 'subject-4', name: 'Mathematics', code: 'MATH', departmentId: 'dept-2', description: 'Mathematics Subject', credits: '5', type: 'core' },
-        { _id: 'subject-5', name: 'Statistics', code: 'STAT', departmentId: 'dept-2', description: 'Statistics Subject', credits: '3', type: 'elective' },
+        // Lower Primary subjects (Grades 1-5)
+        { _id: 'subject-1', name: 'English', code: 'ENG', departmentId: 'dept-2', description: 'English Language', credits: '4', type: 'core' },
+        { _id: 'subject-2', name: 'Malayalam', code: 'MAL', departmentId: 'dept-2', description: 'Malayalam Language', credits: '4', type: 'core' },
+        { _id: 'subject-3', name: 'Mathematics', code: 'MATH', departmentId: 'dept-2', description: 'Mathematics', credits: '5', type: 'core' },
+        { _id: 'subject-4', name: 'Science', code: 'SCI', departmentId: 'dept-2', description: 'General Science', credits: '4', type: 'core' },
+        { _id: 'subject-5', name: 'Social Science', code: 'SOC', departmentId: 'dept-2', description: 'Social Studies', credits: '3', type: 'core' },
+        
+        // Upper Primary subjects (Grades 6-7)
         { _id: 'subject-6', name: 'English', code: 'ENG', departmentId: 'dept-3', description: 'English Language', credits: '4', type: 'core' },
-        { _id: 'subject-7', name: 'Literature', code: 'LIT', departmentId: 'dept-3', description: 'English Literature', credits: '3', type: 'elective' },
-        { _id: 'subject-8', name: 'History', code: 'HIST', departmentId: 'dept-4', description: 'World History', credits: '3', type: 'core' },
-        { _id: 'subject-9', name: 'Geography', code: 'GEO', departmentId: 'dept-4', description: 'Geography Subject', credits: '3', type: 'core' }
+        { _id: 'subject-7', name: 'Malayalam', code: 'MAL', departmentId: 'dept-3', description: 'Malayalam Language', credits: '4', type: 'core' },
+        { _id: 'subject-8', name: 'Mathematics', code: 'MATH', departmentId: 'dept-3', description: 'Mathematics', credits: '5', type: 'core' },
+        { _id: 'subject-9', name: 'Science', code: 'SCI', departmentId: 'dept-3', description: 'General Science', credits: '4', type: 'core' },
+        { _id: 'subject-10', name: 'Social Science', code: 'SOC', departmentId: 'dept-3', description: 'Social Studies', credits: '3', type: 'core' },
+        
+        // High School subjects (Grades 8-10)
+        { _id: 'subject-11', name: 'English', code: 'ENG', departmentId: 'dept-4', description: 'English Language', credits: '4', type: 'core' },
+        { _id: 'subject-12', name: 'Malayalam', code: 'MAL', departmentId: 'dept-4', description: 'Malayalam Language', credits: '4', type: 'core' },
+        { _id: 'subject-13', name: 'Mathematics', code: 'MATH', departmentId: 'dept-4', description: 'Mathematics', credits: '5', type: 'core' },
+        { _id: 'subject-14', name: 'Science', code: 'SCI', departmentId: 'dept-4', description: 'General Science', credits: '4', type: 'core' },
+        { _id: 'subject-15', name: 'Social Science', code: 'SOC', departmentId: 'dept-4', description: 'Social Studies', credits: '3', type: 'core' },
+        
+        // Higher Secondary subjects (Grades 11-12)
+        { _id: 'subject-16', name: 'Physics', code: 'PHY', departmentId: 'dept-5', description: 'Physics', credits: '5', type: 'core' },
+        { _id: 'subject-17', name: 'Chemistry', code: 'CHEM', departmentId: 'dept-5', description: 'Chemistry', credits: '5', type: 'core' },
+        { _id: 'subject-18', name: 'Biology', code: 'BIO', departmentId: 'dept-5', description: 'Biology', credits: '5', type: 'core' },
+        { _id: 'subject-19', name: 'Mathematics', code: 'MATH', departmentId: 'dept-5', description: 'Mathematics', credits: '5', type: 'core' },
+        { _id: 'subject-20', name: 'English', code: 'ENG', departmentId: 'dept-5', description: 'English Language', credits: '4', type: 'core' },
+        { _id: 'subject-21', name: 'Malayalam', code: 'MAL', departmentId: 'dept-5', description: 'Malayalam Language', credits: '4', type: 'core' },
+        { _id: 'subject-22', name: 'Computer Science', code: 'CS', departmentId: 'dept-5', description: 'Computer Science', credits: '5', type: 'core' },
+        { _id: 'subject-23', name: 'Accountancy', code: 'ACC', departmentId: 'dept-5', description: 'Accountancy', credits: '5', type: 'core' },
+        { _id: 'subject-24', name: 'Business Studies', code: 'BS', departmentId: 'dept-5', description: 'Business Studies', credits: '5', type: 'core' },
+        { _id: 'subject-25', name: 'Economics', code: 'ECON', departmentId: 'dept-5', description: 'Economics', credits: '4', type: 'core' }
       ];
       
       // Simulate API delay
@@ -229,37 +263,31 @@ const AdminClassManage = () => {
       
       // Dummy data for section-class assignments
       const dummyAssignments = [
-        // Science Department - Grade 6
-        { _id: 'assign-1', departmentId: 'dept-1', classId: 'class-1', sectionIds: ['section-1', 'section-2'], sectionName: 'Section A' },
-        { _id: 'assign-2', departmentId: 'dept-1', classId: 'class-1', sectionIds: ['section-2'], sectionName: 'Section B' },
+        // Lower Primary
+        { _id: 'assign-1', departmentId: 'dept-2', classId: 'class-3', sectionIds: ['section-1'], sectionName: 'Section A' },
+        { _id: 'assign-2', departmentId: 'dept-2', classId: 'class-3', sectionIds: ['section-2'], sectionName: 'Section B' },
+        { _id: 'assign-3', departmentId: 'dept-2', classId: 'class-7', sectionIds: ['section-1'], sectionName: 'Section A' },
+        { _id: 'assign-4', departmentId: 'dept-2', classId: 'class-7', sectionIds: ['section-2'], sectionName: 'Section B' },
         
-        // Science Department - Grade 7
-        { _id: 'assign-3', departmentId: 'dept-1', classId: 'class-2', sectionIds: ['section-1', 'section-3'], sectionName: 'Section A' },
-        { _id: 'assign-4', departmentId: 'dept-1', classId: 'class-2', sectionIds: ['section-4'], sectionName: 'Section D' },
-        { _id: 'assign-5', departmentId: 'dept-1', classId: 'class-2', sectionIds: ['section-5'], sectionName: 'Section E' },
+        // Upper Primary - Grade 6
+        { _id: 'assign-5', departmentId: 'dept-3', classId: 'class-8', sectionIds: ['section-1'], sectionName: 'Section A' },
+        { _id: 'assign-6', departmentId: 'dept-3', classId: 'class-8', sectionIds: ['section-2'], sectionName: 'Section B' },
         
-        // Mathematics Department - Grade 8
-        { _id: 'assign-6', departmentId: 'dept-2', classId: 'class-3', sectionIds: ['section-1'], sectionName: 'Section A' },
-        { _id: 'assign-7', departmentId: 'dept-2', classId: 'class-3', sectionIds: ['section-2', 'section-3'], sectionName: 'Section B' },
-        { _id: 'assign-8', departmentId: 'dept-2', classId: 'class-3', sectionIds: ['section-6'], sectionName: 'Section F' },
+        // Upper Primary - Grade 7
+        { _id: 'assign-7', departmentId: 'dept-3', classId: 'class-9', sectionIds: ['section-1'], sectionName: 'Section A' },
+        { _id: 'assign-8', departmentId: 'dept-3', classId: 'class-9', sectionIds: ['section-2'], sectionName: 'Section B' },
         
-        // Mathematics Department - Grade 9
-        { _id: 'assign-9', departmentId: 'dept-2', classId: 'class-4', sectionIds: ['section-1', 'section-2'], sectionName: 'Section A' },
-        { _id: 'assign-10', departmentId: 'dept-2', classId: 'class-4', sectionIds: ['section-3', 'section-4', 'section-5'], sectionName: 'Section C' },
+        // High School - Grade 10
+        { _id: 'assign-9', departmentId: 'dept-4', classId: 'class-12', sectionIds: ['section-1'], sectionName: 'Section A' },
+        { _id: 'assign-10', departmentId: 'dept-4', classId: 'class-12', sectionIds: ['section-2'], sectionName: 'Section B' },
         
-        // Languages Department - Grade 10
-        { _id: 'assign-11', departmentId: 'dept-3', classId: 'class-5', sectionIds: ['section-1'], sectionName: 'Section A' },
-        { _id: 'assign-12', departmentId: 'dept-3', classId: 'class-5', sectionIds: ['section-2'], sectionName: 'Section B' },
-        { _id: 'assign-13', departmentId: 'dept-3', classId: 'class-5', sectionIds: ['section-7', 'section-8'], sectionName: 'Section G' },
+        // Higher Secondary - Grade 11 Bio Math
+        { _id: 'assign-11', departmentId: 'dept-5', classId: 'class-13', sectionIds: ['section-1'], sectionName: 'Section A' },
+        { _id: 'assign-12', departmentId: 'dept-5', classId: 'class-13', sectionIds: ['section-2'], sectionName: 'Section B' },
         
-        // Social Studies Department - Grade 11
-        { _id: 'assign-14', departmentId: 'dept-4', classId: 'class-6', sectionIds: ['section-1', 'section-2', 'section-3'], sectionName: 'Section A' },
-        { _id: 'assign-15', departmentId: 'dept-4', classId: 'class-6', sectionIds: ['section-4'], sectionName: 'Section D' },
-        
-        // Social Studies Department - Grade 12
-        { _id: 'assign-16', departmentId: 'dept-4', classId: 'class-7', sectionIds: ['section-1'], sectionName: 'Section A' },
-        { _id: 'assign-17', departmentId: 'dept-4', classId: 'class-7', sectionIds: ['section-5', 'section-6', 'section-7', 'section-8'], sectionName: 'Section E' },
-        { _id: 'assign-18', departmentId: 'dept-4', classId: 'class-7', sectionIds: ['section-9', 'section-10'], sectionName: 'Section I' }
+        // Higher Secondary - Grade 12 Bio Math
+        { _id: 'assign-13', departmentId: 'dept-5', classId: 'class-17', sectionIds: ['section-1'], sectionName: 'Section A' },
+        { _id: 'assign-14', departmentId: 'dept-5', classId: 'class-17', sectionIds: ['section-2'], sectionName: 'Section B' }
       ];
       
       // Simulate API delay
@@ -436,12 +464,52 @@ const AdminClassManage = () => {
     setShowDeleteConfirm(true);
   };
 
+  // --- FILTER HANDLERS ---
+  
+  const handleFilterChange = (filterType, value) => {
+    setAssignmentFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }));
+  };
+
+  const applyFilters = () => {
+    setAppliedFilters({ ...assignmentFilters });
+  };
+
+  const clearFilters = () => {
+    setAssignmentFilters({ departmentId: '', classId: '' });
+    setAppliedFilters({ departmentId: '', classId: '' });
+  };
+
+  // --- NAVIGATION HANDLERS ---
+  
+  const navigateToSubjectAssign = (departmentId, classId) => {
+    // Store the selected department and class in localStorage for the subject assign page
+    localStorage.setItem('preselectedDepartment', departmentId);
+    localStorage.setItem('preselectedClass', classId);
+    
+    // Navigate to the subject assign page
+    window.location.href = '/admin/classrooms/subjects';
+  };
+
   // --- HELPER FUNCTIONS ---
   
   const getGroupedAssignments = () => {
     const grouped = {};
     
-    sectionClassAssignments.forEach(assignment => {
+    // Filter assignments based on applied filters
+    const filteredAssignments = sectionClassAssignments.filter(assignment => {
+      if (appliedFilters.departmentId && assignment.departmentId !== appliedFilters.departmentId) {
+        return false;
+      }
+      if (appliedFilters.classId && assignment.classId !== appliedFilters.classId) {
+        return false;
+      }
+      return true;
+    });
+    
+    filteredAssignments.forEach(assignment => {
       const { departmentId, classId } = assignment;
       
       if (!grouped[departmentId]) {
@@ -544,50 +612,130 @@ const AdminClassManage = () => {
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-4">Quick Actions</h2>
-            <div className="flex flex-wrap gap-3">
+          {/* Step-by-Step Workflow Guide */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                <i className="fas fa-route text-white"></i>
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Classroom Setup Workflow</h2>
+                <p className="text-sm text-slate-600">Follow these 2 simple steps to set up your classrooms</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-100 border-2 border-green-500">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold bg-green-500 text-white">
+                  1
+                </div>
+                <div className="text-left">
+                  <span className="text-sm font-bold text-green-900 block">Create Entities</span>
+                  <span className="text-xs text-green-700">Departments, Classes, Sections & Subjects</span>
+                </div>
+              </div>
+              
+              <i className="fas fa-arrow-right text-slate-400 text-xl"></i>
+              
+              <div className="flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-100 border-2 border-blue-300">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold bg-blue-500 text-white">
+                  2
+                </div>
+                <div className="text-left">
+                  <span className="text-sm font-bold text-blue-900 block">Assign & Define</span>
+                  <span className="text-xs text-blue-700">Map Sections to Classes, then Assign Subjects</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Step 1: Create Entities */}
+          <div className="bg-white rounded-xl shadow-sm border-2 border-green-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-green-500 to-emerald-500 px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">1</span>
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white">Step 1: Create Base Entities</h2>
+                  <p className="text-white text-opacity-90 text-sm">Create departments, classes, sections, and subjects</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <button
                 onClick={() => openModal('department')}
-                className={btnTealClass}
-              >
-                <i className="fas fa-plus"></i>
-                Add Department
+                  className="relative flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 rounded-lg transition-all hover:shadow-md group"
+                >
+                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                    <i className="fas fa-plus text-white text-sm"></i>
+                  </div>
+                  <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <i className="fas fa-building text-white text-xl"></i>
+                  </div>
+                  <div className="text-left flex-1">
+                    <p className="font-semibold text-slate-900">Department</p>
+                    <p className="text-xs text-slate-600">{departments.length} created</p>
+                  </div>
               </button>
+
               <button
                 onClick={() => openModal('class')}
-                className={btnIndigoClass}
-              >
-                <i className="fas fa-plus"></i>
-                Add Class
+                  className="relative flex items-center gap-3 p-4 bg-green-50 hover:bg-green-100 border-2 border-green-200 rounded-lg transition-all hover:shadow-md group"
+                >
+                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                    <i className="fas fa-plus text-white text-sm"></i>
+                  </div>
+                  <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <i className="fas fa-graduation-cap text-white text-xl"></i>
+                  </div>
+                  <div className="text-left flex-1">
+                    <p className="font-semibold text-slate-900">Class</p>
+                    <p className="text-xs text-slate-600">{classes.length} created</p>
+                  </div>
               </button>
+
               <button
                 onClick={() => openModal('section')}
-                className={btnTealClass}
-              >
-                <i className="fas fa-plus"></i>
-                Add Section
+                  className="relative flex items-center gap-3 p-4 bg-purple-50 hover:bg-purple-100 border-2 border-purple-200 rounded-lg transition-all hover:shadow-md group"
+                >
+                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                    <i className="fas fa-plus text-white text-sm"></i>
+                  </div>
+                  <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <i className="fas fa-layer-group text-white text-xl"></i>
+                  </div>
+                  <div className="text-left flex-1">
+                    <p className="font-semibold text-slate-900">Section</p>
+                    <p className="text-xs text-slate-600">{sections.length} created</p>
+                  </div>
               </button>
+
               <button
                 onClick={() => openModal('subject')}
-                className={btnIndigoClass}
-              >
-                <i className="fas fa-plus"></i>
-                Add Subject
-              </button>
-              <button
-                onClick={() => openModal('assignment')}
-                className={btnTealClass}
-              >
-                <i className="fas fa-link"></i>
-                Assign Sections
+                  className="relative flex items-center gap-3 p-4 bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 rounded-lg transition-all hover:shadow-md group"
+                >
+                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                    <i className="fas fa-plus text-white text-sm"></i>
+                  </div>
+                  <div className="w-12 h-12 bg-amber-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <i className="fas fa-book text-white text-xl"></i>
+                  </div>
+                  <div className="text-left flex-1">
+                    <p className="font-semibold text-slate-900">Subject</p>
+                    <p className="text-xs text-slate-600">{subjects.length} created</p>
+                  </div>
               </button>
             </div>
             
             {/* Quick Edit Options */}
             <div className="mt-6 pt-6 border-t border-slate-200">
-              <h3 className="text-md font-semibold text-slate-900 mb-3">Quick Edit</h3>
+                <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                  <i className="fas fa-edit text-slate-500"></i>
+                  Quick Edit Existing Entities
+                </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-slate-600 mb-1">Edit Department</label>
@@ -599,7 +747,7 @@ const AdminClassManage = () => {
                         e.target.value = '';
                       }
                     }}
-                    className="w-full text-sm p-2 border border-slate-200 rounded-md"
+                      className="w-full text-sm p-2 border border-slate-200 rounded-md bg-white"
                   >
                     <option value="">Select Department</option>
                     {departments.map(dept => (
@@ -618,7 +766,7 @@ const AdminClassManage = () => {
                         e.target.value = '';
                       }
                     }}
-                    className="w-full text-sm p-2 border border-slate-200 rounded-md"
+                      className="w-full text-sm p-2 border border-slate-200 rounded-md bg-white"
                   >
                     <option value="">Select Class</option>
                     {classes.map(cls => (
@@ -637,7 +785,7 @@ const AdminClassManage = () => {
                         e.target.value = '';
                       }
                     }}
-                    className="w-full text-sm p-2 border border-slate-200 rounded-md"
+                      className="w-full text-sm p-2 border border-slate-200 rounded-md bg-white"
                   >
                     <option value="">Select Section</option>
                     {sections.map(section => (
@@ -656,25 +804,106 @@ const AdminClassManage = () => {
                         e.target.value = '';
                       }
                     }}
-                    className="w-full text-sm p-2 border border-slate-200 rounded-md"
+                      className="w-full text-sm p-2 border border-slate-200 rounded-md bg-white"
                   >
                     <option value="">Select Subject</option>
                     {subjects.map(subject => (
                       <option key={subject._id} value={subject._id}>{subject.name}</option>
                     ))}
                   </select>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Assignments View */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-            <div className="p-6 border-b border-slate-200">
+          {/* Step 2: Assign Sections to Classes & Step 3: Assign Subjects */}
+          <div className="bg-white rounded-xl shadow-sm border-2 border-blue-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-500 to-indigo-500 px-6 py-4">
               <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                    <span className="text-white font-bold text-lg">2</span>
+                  </div>
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900">Class-Section Assignments</h2>
-                  <p className="text-slate-500 text-sm">View and manage section assignments to classes</p>
+                    <h2 className="text-lg font-bold text-white">Step 2: Assign Sections & Define Subjects</h2>
+                    <p className="text-white text-opacity-90 text-sm">Map sections to classes, then assign subjects to each section</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => openModal('assignment')}
+                  className="bg-white hover:bg-blue-50 text-blue-600 font-bold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-3"
+                >
+                  <i className="fas fa-link text-lg"></i>
+                  <span>Assign Sections</span>
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-blue-900 flex items-center gap-2">
+                  <i className="fas fa-info-circle"></i>
+                  <strong>Workflow:</strong> First assign sections to classes, then click "Assign Subjects" on each class to define which subjects are taught.
+                </p>
+              </div>
+              
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-semibold text-slate-900">Current Section Assignments</h3>
+                  <p className="text-slate-500 text-sm">View sections assigned to classes and proceed to assign subjects</p>
+                </div>
+              </div>
+              
+              {/* Filter Controls */}
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <div className="flex flex-wrap gap-4 items-end">
+                  <div className="flex-1 min-w-48">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Filter by Department
+                    </label>
+                    <select
+                      value={assignmentFilters.departmentId}
+                      onChange={(e) => handleFilterChange('departmentId', e.target.value)}
+                      className={inputBaseClass}
+                    >
+                      <option value="">All Departments</option>
+                      {departments.map(dept => (
+                        <option key={dept._id} value={dept._id}>{dept.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="flex-1 min-w-48">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Filter by Class
+                    </label>
+                    <select
+                      value={assignmentFilters.classId}
+                      onChange={(e) => handleFilterChange('classId', e.target.value)}
+                      className={inputBaseClass}
+                    >
+                      <option value="">All Classes</option>
+                      {classes.map(cls => (
+                        <option key={cls._id} value={cls._id}>{cls.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <button
+                      onClick={applyFilters}
+                      className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-md text-sm font-medium transition-colors"
+                    >
+                      Apply Filters
+                    </button>
+                    <button
+                      onClick={clearFilters}
+                      className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-md text-sm font-medium transition-colors"
+                    >
+                      Clear
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -729,24 +958,15 @@ const AdminClassManage = () => {
                                   const sectionsCount = assignments.length;
 
                                   return (
-                                    <div key={classId} className="p-4">
+                                    <div key={classId} className="p-4 bg-gradient-to-r from-white to-slate-50">
                                       <div className="flex items-center justify-between mb-3">
                                         <div className="flex items-center gap-3">
-                                          <i className="fas fa-graduation-cap text-green-600"></i>
-                                          <h4 className="font-medium text-slate-900">{classItem?.name}</h4>
+                                          <i className="fas fa-graduation-cap text-green-600 text-lg"></i>
+                                          <h4 className="font-semibold text-slate-900">{classItem?.name}</h4>
                                           <span className="text-sm text-slate-500">
                                             ({sectionsCount} section{sectionsCount !== 1 ? 's' : ''})
                                           </span>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                          <button
-                                            onClick={() => handleViewSections(departmentId, classId)}
-                                            className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md text-sm font-medium transition-colors flex items-center gap-2"
-                                            title="View Sections"
-                                          >
-                                            <i className="fas fa-eye"></i>
-                                            View Sections
-                                          </button>
                                           <button
                                             onClick={() => handleDeleteAssignment(assignments[0])}
                                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -754,25 +974,54 @@ const AdminClassManage = () => {
                                           >
                                             <i className="fas fa-trash"></i>
                                           </button>
-                                        </div>
                                       </div>
 
-                                      {/* Quick preview of sections */}
+                                      {/* Sections Preview with Action Buttons */}
                                       <div className="pl-8">
-                                        <div className="flex flex-wrap gap-2">
-                                          {assignments.slice(0, 3).map((assignment, index) => (
+                                        <div className="flex flex-wrap gap-2 mb-3">
+                                          {assignments.slice(0, 5).map((assignment, index) => (
                                             <span
                                               key={assignment._id}
-                                              className="px-2 py-1 bg-slate-100 text-slate-700 rounded text-sm"
+                                              className="px-3 py-1 bg-purple-100 text-purple-700 rounded-md text-sm font-medium border border-purple-200"
                                             >
+                                              <i className="fas fa-layer-group mr-1 text-xs"></i>
                                               {assignment.sectionName}
                                             </span>
                                           ))}
-                                          {assignments.length > 3 && (
-                                            <span className="px-2 py-1 bg-slate-200 text-slate-600 rounded text-sm">
-                                              +{assignments.length - 3} more
+                                          {assignments.length > 5 && (
+                                            <span className="px-3 py-1 bg-slate-200 text-slate-700 rounded-md text-sm font-medium">
+                                              +{assignments.length - 5} more
                                             </span>
                                           )}
+                                        </div>
+                                        
+                                        {/* Action Buttons Row */}
+                                        <div className="bg-white border-2 border-blue-200 rounded-lg p-3 mt-3">
+                                          <div className="flex items-center justify-between">
+                                            <p className="text-sm text-slate-600 flex items-center gap-2">
+                                              <i className="fas fa-info-circle text-blue-500"></i>
+                                              <span><strong>Next:</strong> View sections details or assign subjects to this class</span>
+                                            </p>
+                                            <div className="flex items-center gap-2">
+                                              <button
+                                                onClick={() => handleViewSections(departmentId, classId)}
+                                                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 border border-slate-200"
+                                                title="View all sections assigned to this class"
+                                              >
+                                                <i className="fas fa-eye"></i>
+                                                View Sections
+                                              </button>
+                                              <button
+                                                onClick={() => navigateToSubjectAssign(departmentId, classId)}
+                                                className="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white rounded-lg text-sm font-bold transition-all shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2"
+                                                title="Assign subjects to sections in this class"
+                                              >
+                                                <i className="fas fa-book"></i>
+                                                Assign Subjects
+                                                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                                              </button>
+                                            </div>
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
