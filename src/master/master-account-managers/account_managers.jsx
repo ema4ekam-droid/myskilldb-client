@@ -24,10 +24,6 @@ function AccountManagers() {
   const [editingAccountManager, setEditingAccountManager] = useState(null);
   const [viewingAccountManager, setViewingAccountManager] = useState(null);
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(4);
-
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({
@@ -48,16 +44,15 @@ function AccountManagers() {
 
       // Always include role = account manager
       const params = {
-        role: "account manager",
+        role: "acc_manager",
         ...filterParams,
       };
 
       const response = await getRequest(
-        `/users/filter?${new URLSearchParams(params).toString()}`
+        `/users?${new URLSearchParams(params).toString()}`
       );
 
       setAccountManagers(response.data.data || []);
-      setCurrentPage(1); // Reset to first page when data changes
     } catch (error) {
       handleApiError(error);
     } finally {
@@ -70,13 +65,8 @@ function AccountManagers() {
     console.log(`Navigating to: ${pageId}`);
   };
 
-  const handlePaginationChange = (page) => {
-    setCurrentPage(page);
-  };
-
   const handleSearch = (e) => {
     e.preventDefault();
-    setCurrentPage(1); // Reset to first page when searching
     fetchAccountManagers(filters);
   };
 
@@ -91,7 +81,6 @@ function AccountManagers() {
       mobile: "",
     });
     setSearchTerm("");
-    setCurrentPage(1);
     fetchAccountManagers({});
   };
 
@@ -140,10 +129,8 @@ function AccountManagers() {
         name: formData.name,
         email: formData.email,
         mobile: parseInt(formData.mobile), // Convert to number as per backend model
-        aadharCardNumber: formData.aadharCardNumber,
         organizationIds: formData.organizationIds, // Include organization ID
-        role: "account manager",
-        status: "active",
+        role: "acc_manager",
       };
 
       let response;
@@ -188,39 +175,6 @@ function AccountManagers() {
     }
   };
 
-  const handleBulkDelete = async () => {
-    if (selectedAccountManagerIds.length === 0) {
-      toast.error("Please select account managers to delete");
-      return;
-    }
-
-    if (
-      window.confirm(
-        `Are you sure you want to delete ${selectedAccountManagerIds.length} account manager(s)?`
-      )
-    ) {
-      try {
-        setIsLoading(true);
-
-        // Delete each account manager individually since there's no bulk delete endpoint
-        const deletePromises = selectedAccountManagerIds.map((id) =>
-          deleteRequest(`/users/${id}`)
-        );
-        await Promise.all(deletePromises);
-
-        toast.success(
-          `${selectedAccountManagerIds.length} account manager(s) deleted successfully`
-        );
-        setSelectedAccountManagerIds([]);
-        await fetchAccountManagers(filters);
-      } catch (error) {
-        handleApiError(error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  };
-
   const handleApiError = (error) => {
     console.error("API Error:", error);
     const message =
@@ -243,12 +197,6 @@ function AccountManagers() {
     window.addEventListener("click", onWindowClick);
     return () => window.removeEventListener("click", onWindowClick);
   }, [isUserMenuOpen]);
-
-  // Pagination calculations
-  const totalPages = Math.ceil(accountManagers.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedAccountManagers = accountManagers.slice(startIndex, endIndex);
 
   // --- STYLES ---
   const inputBaseClass =
@@ -295,17 +243,6 @@ function AccountManagers() {
                 <i className="fas fa-filter-slash"></i>
                 Clear Filters
               </button>
-
-              {selectedAccountManagerIds.length > 0 && (
-                <button
-                  onClick={handleBulkDelete}
-                  className={btnDangerClass}
-                  disabled={isLoading}
-                >
-                  <i className="fas fa-trash"></i>
-                  Delete Selected ({selectedAccountManagerIds.length})
-                </button>
-              )}
 
               <button onClick={() => openModal()} className={btnPrimaryClass}>
                 <i className="fas fa-plus"></i>
@@ -382,7 +319,7 @@ function AccountManagers() {
 
           {/* Account Managers Table */}
           <AccountManagersTable
-            accountManagers={paginatedAccountManagers}
+            accountManagers={accountManagers}
             isLoading={isLoading}
             selectedAccountManagerIds={selectedAccountManagerIds}
             allChecked={allChecked}
@@ -391,10 +328,6 @@ function AccountManagers() {
             onView={openViewModal}
             onEdit={openModal}
             onDelete={handleDeleteAccountManager}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePaginationChange}
-            itemsPerPage={itemsPerPage}
             btnPrimaryClass={btnPrimaryClass}
             btnSecondaryClass={btnSecondaryClass}
             btnDangerClass={btnDangerClass}

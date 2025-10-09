@@ -16,7 +16,6 @@ const AccountManagerModal = ({
     name: "",
     email: "",
     mobile: "",
-    aadharCardNumber: "",
     organizationIds: [], // Changed to array for multiple selection
   });
   const [errors, setErrors] = useState({});
@@ -57,7 +56,6 @@ const AccountManagerModal = ({
         mobile: editingAccountManager.mobile
           ? editingAccountManager.mobile.toString()
           : "",
-        aadharCardNumber: editingAccountManager.aadharCardNumber || "",
         organizationIds: organizationIds,
       });
 
@@ -67,7 +65,6 @@ const AccountManagerModal = ({
         name: "",
         email: "",
         mobile: "",
-        aadharCardNumber: "",
         organizationIds: [],
       });
     }
@@ -102,7 +99,6 @@ const AccountManagerModal = ({
       name: "",
       email: "",
       mobile: "",
-      aadharCardNumber: "",
       organizationIds: [],
     });
     setErrors({});
@@ -134,13 +130,6 @@ const AccountManagerModal = ({
       newErrors.mobile = "Mobile number must be 10 digits";
     }
 
-    if (
-      formData.aadharCardNumber &&
-      !/^\d{12}$/.test(formData.aadharCardNumber.replace(/\D/g, ""))
-    ) {
-      newErrors.aadharCardNumber = "Aadhar card number must be 12 digits";
-    }
-
     if (formData.organizationIds.length === 0) {
       newErrors.organizationIds = "At least one organization must be selected";
     }
@@ -159,9 +148,6 @@ const AccountManagerModal = ({
     const formattedData = {
       ...formData,
       mobile: formData.mobile.replace(/\D/g, ""), // Remove non-digits
-      aadharCardNumber: formData.aadharCardNumber
-        ? formData.aadharCardNumber.replace(/\D/g, "")
-        : "",
       // For backward compatibility, also include the first organizationId as organizationId
       organizationId: formData.organizationIds[0] || "",
     };
@@ -174,11 +160,6 @@ const AccountManagerModal = ({
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
     }
-  };
-
-  const handleAadharChange = (value) => {
-    const digitsOnly = value.replace(/\D/g, "").slice(0, 12);
-    handleInputChange("aadharCardNumber", digitsOnly);
   };
 
   const handleMobileChange = (value) => {
@@ -337,33 +318,6 @@ const AccountManagerModal = ({
                 )}
                 <p className="mt-1 text-xs text-slate-500">
                   Enter 10 digits without country code
-                </p>
-              </div>
-
-              {/* Aadhar Card Number */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Aadhar Card Number
-                </label>
-                <input
-                  type="text"
-                  className={`${inputBaseClass} ${
-                    errors.aadharCardNumber
-                      ? "border-red-300 focus:ring-red-500"
-                      : ""
-                  }`}
-                  placeholder="Enter 12-digit Aadhar number (optional)"
-                  value={formData.aadharCardNumber}
-                  onChange={(e) => handleAadharChange(e.target.value)}
-                  maxLength={12}
-                />
-                {errors.aadharCardNumber && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.aadharCardNumber}
-                  </p>
-                )}
-                <p className="mt-1 text-xs text-slate-500">
-                  Enter 12 digits without spaces or dashes (optional)
                 </p>
               </div>
             </div>

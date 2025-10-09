@@ -3,12 +3,6 @@ const ViewAccountManagerModal = ({ isOpen, onClose, accountManager }) => {
     onClose();
   };
 
-  const formatAadharCard = (aadharNumber) => {
-    if (!aadharNumber) return "Not provided";
-    // Format as XXXX-XXXX-XXXX
-    return aadharNumber.replace(/(\d{4})(\d{4})(\d{4})/, "$1-$2-$3");
-  };
-
   const formatDate = (dateString) => {
     if (!dateString) return "Never";
     return new Date(dateString).toLocaleDateString("en-IN", {
@@ -23,33 +17,6 @@ const ViewAccountManagerModal = ({ isOpen, onClose, accountManager }) => {
   const formatMobile = (mobile) => {
     if (!mobile) return "Not provided";
     return `+91-${mobile}`;
-  };
-
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      active: { label: "Active", class: "bg-green-100 text-green-800" },
-      inactive: { label: "Inactive", class: "bg-red-100 text-red-800" },
-      pending: { label: "Pending", class: "bg-yellow-100 text-yellow-800" },
-    };
-
-    const config = statusConfig[status] || statusConfig.inactive;
-
-    return (
-      <span
-        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${config.class}`}
-      >
-        <div
-          className={`w-2 h-2 rounded-full mr-2 ${
-            status === "active"
-              ? "bg-green-500"
-              : status === "inactive"
-              ? "bg-red-500"
-              : "bg-yellow-500"
-          }`}
-        ></div>
-        {config.label}
-      </span>
-    );
   };
 
   if (!isOpen || !accountManager) return null;
@@ -117,15 +84,6 @@ const ViewAccountManagerModal = ({ isOpen, onClose, accountManager }) => {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Status
-                </label>
-                <div className="mt-1">
-                  {getStatusBadge(accountManager.status)}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
                   Email Address
                 </label>
                 <p className="text-slate-900 flex items-center gap-2">
@@ -143,70 +101,6 @@ const ViewAccountManagerModal = ({ isOpen, onClose, accountManager }) => {
                   {formatMobile(accountManager.mobile)}
                 </p>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Verification Status
-                </label>
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    accountManager.isVerified
-                      ? "bg-green-100 text-green-800"
-                      : "bg-yellow-100 text-yellow-800"
-                  }`}
-                >
-                  {accountManager.isVerified ? (
-                    <>
-                      <i className="fas fa-check-circle mr-1"></i>
-                      Verified
-                    </>
-                  ) : (
-                    <>
-                      <i className="fas fa-clock mr-1"></i>
-                      Pending Verification
-                    </>
-                  )}
-                </span>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Account Status
-                </label>
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    !accountManager.isBlock
-                      ? "bg-green-100 text-green-800"
-                      : "bg-red-100 text-red-800"
-                  }`}
-                >
-                  {!accountManager.isBlock ? (
-                    <>
-                      <i className="fas fa-check mr-1"></i>
-                      Active
-                    </>
-                  ) : (
-                    <>
-                      <i className="fas fa-ban mr-1"></i>
-                      Blocked
-                    </>
-                  )}
-                </span>
-              </div>
-
-              {accountManager.aadharCardNumber && (
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Aadhar Card Number
-                  </label>
-                  <p className="text-slate-900 flex items-center gap-2">
-                    <i className="fas fa-id-card text-slate-400"></i>
-                    <span className="font-mono bg-slate-100 px-2 py-1 rounded">
-                      {formatAadharCard(accountManager.aadharCardNumber)}
-                    </span>
-                  </p>
-                </div>
-              )}
             </div>
           </div>
 
