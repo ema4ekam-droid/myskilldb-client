@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { setUser } from "../redux/userSlice";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
+import { postRequest } from "../api/apiRequests";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -38,11 +39,7 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_SERVER_API_URL}/api/auth/login`,
-        { email, password },
-        { withCredentials: true }
-      );
+      const response = await postRequest("auth/login", { email, password });
 
       // Axios already parses JSON for you
       const data = response.data;
