@@ -17,17 +17,6 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
       color: "blue",
     },
     {
-      id: 'classrooms',
-      label: 'Classroom Setup',
-      icon: 'fas fa-school',
-      color: 'green',
-      subItems: [
-        { id: 'view-classrooms', label: 'Class Setup', icon: 'fas fa-list' },
-        { id: 'define-subjects', label: 'Subject Setup', icon: 'fas fa-book' },
-        { id: 'teacher-assignments', label: 'Teacher Assignments', icon: 'fas fa-user-tie' }
-      ]
-    },
-    {
       id: 'skills-academics',
       label: 'Skills & Academics',
       icon: 'fas fa-graduation-cap',
@@ -69,6 +58,17 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
       label: "Student Profiles",
       icon: "fas fa-users",
       color: "teal",
+    },
+    {
+      id: 'classrooms',
+      label: 'Classroom Setup',
+      icon: 'fas fa-school',
+      color: 'green',
+      subItems: [
+        { id: 'view-classrooms', label: 'Class Setup', icon: 'fas fa-list' },
+        { id: 'define-subjects', label: 'Subject Setup', icon: 'fas fa-book' },
+        { id: 'teacher-assignments', label: 'Teacher Assignments', icon: 'fas fa-user-tie' }
+      ]
     },
     {
       id: 'access-management',

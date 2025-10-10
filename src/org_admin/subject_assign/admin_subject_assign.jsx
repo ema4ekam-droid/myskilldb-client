@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import OrgMenuNavigation from '../../components/org-admin-components/org-admin-menu_components/OrgMenuNavigation';
-import LoaderOverlay from '../../components/loader/LoaderOverlay';
 import { TeacherAssignmentModal } from '../../components/org-admin-components/teacher-management-components';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
+import LoaderOverlay from '../../components/loader/LoaderOverlay';
 
 const AdminSubjectAssign = () => {
   const API_BASE_URL = useMemo(() => `${import.meta.env.VITE_SERVER_API_URL}/api`, []);
@@ -537,12 +537,12 @@ const AdminSubjectAssign = () => {
   return (
     <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
       <Toaster position="top-right" />
+      <LoaderOverlay isVisible={isLoading} title="MySkillDB" subtitle="Loading your data, please wait…" />
       
       {/* Navigation Component */}
       {!isAssignmentModalOpen && !isTeacherAssignModalOpen && <OrgMenuNavigation currentPage="define-subjects" onPageChange={handlePageChange} />}
 
       {/* Main Content */}
-      <LoaderOverlay isVisible={isLoading || loadingEntities?.teachers} title="MySkillDB" subtitle="Loading your data, please wait…" />
       <div className={(isAssignmentModalOpen || isTeacherAssignModalOpen) ? "" : "lg:ml-72"}>
         <main className="flex-1 p-4 md:p-8 space-y-8">
           {/* Header */}
