@@ -1,67 +1,73 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Icon from './Icon';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import Icon from "./Icon";
+import { logoutRequest } from "../../../../api/apiRequests";
 
-const Navigation = ({ currentPage = 'dashboard', onPageChange }) => {
+const Navigation = ({ currentPage = "dashboard", onPageChange }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   const menuItems = [
     {
-      id: 'dashboard',
-      label: 'Master Dashboard',
-      icon: 'fas fa-chart-pie',
-      path: '/master-dashboard',
-      color: 'indigo'
+      id: "dashboard",
+      label: "Master Dashboard",
+      icon: "fas fa-chart-pie",
+      path: "/master-dashboard",
+      color: "indigo",
     },
     {
-      id: 'location-manager',
-      label: 'Location Manager',
-      icon: 'fas fa-globe-americas',
-      path: '/location-manager',
-      color: 'indigo'
+      id: "location-manager",
+      label: "Location Manager",
+      icon: "fas fa-globe-americas",
+      path: "/location-manager",
+      color: "indigo",
     },
     {
-      id: 'organization-setup',
-      label: 'Organization Class Setup',
-      icon: 'fas fa-graduation-cap',
-      path: '/organization-setup',
-      color: 'emerald'
+      id: "organization-setup",
+      label: "Organization Class Setup",
+      icon: "fas fa-graduation-cap",
+      path: "/organization-setup",
+      color: "emerald",
     },
     {
-      id: 'organization-logins',
-      label: 'Organization Logins',
-      icon: 'fas fa-user-lock',
-      path: '/organization-logins',
-      color: 'teal'
+      id: "organization-logins",
+      label: "Organization Logins",
+      icon: "fas fa-user-lock",
+      path: "/organization-logins",
+      color: "teal",
     },
     {
-      id: 'account-managers',
-      label: 'Account Managers',
-      icon: 'fas fa-user-tie',
-      path: '/account-managers',
-      color: 'purple'
+      id: "account-managers",
+      label: "Account Managers",
+      icon: "fas fa-user-tie",
+      path: "/account-managers",
+      color: "purple",
     },
   ];
 
   const handleMenuClick = (itemId) => {
     // Navigate to the appropriate route
     const routes = {
-      'dashboard': '/master/dashboard',
-      'location-manager': '/master/location-manager',
-      'organization-setup': '/master/organization-setup',
-      'organization-logins': '/master/organization-logins',
-      'account-managers': '/master/account-managers',
+      dashboard: "/master/dashboard",
+      "location-manager": "/master/location-manager",
+      "organization-setup": "/master/organization-setup",
+      "organization-logins": "/master/organization-logins",
+      "account-managers": "/master/account-managers",
     };
-    
+
     if (routes[itemId]) {
       navigate(routes[itemId]);
     }
-    
+
     if (onPageChange) {
       onPageChange(itemId);
     }
     setIsMobileMenuOpen(false);
+  };
+
+  const handleLogout = async () => {
+    await logoutRequest("/auth/logout");
+    navigate(`/login`);
   };
 
   return (
@@ -72,25 +78,36 @@ const Navigation = ({ currentPage = 'dashboard', onPageChange }) => {
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         aria-label="Toggle Navigation Menu"
       >
-        <i className={`fas ${isMobileMenuOpen ? 'fa-times' : 'fa-bars'} text-xl`}></i>
-        <div style={{ display: 'none' }}>
-          <Icon name={isMobileMenuOpen ? 'fa-times' : 'fa-bars'} className="text-xl" />
+        <i
+          className={`fas ${isMobileMenuOpen ? "fa-times" : "fa-bars"} text-xl`}
+        ></i>
+        <div style={{ display: "none" }}>
+          <Icon
+            name={isMobileMenuOpen ? "fa-times" : "fa-bars"}
+            className="text-xl"
+          />
         </div>
       </button>
 
       {/* Mobile Menu Overlay - Higher z-index */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="lg:hidden fixed inset-0 bg-black bg-opacity-60 z-[90] backdrop-blur-sm"
           onClick={() => setIsMobileMenuOpen(false)}
         ></div>
       )}
 
       {/* Navigation Sidebar - Higher z-index and better positioning */}
-      <aside className={`
+      <aside
+        className={`
         fixed inset-y-0 left-0 z-[95] w-72 bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out shadow-2xl
-        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
+        ${
+          isMobileMenuOpen
+            ? "translate-x-0"
+            : "-translate-x-full lg:translate-x-0"
+        }
+      `}
+      >
         {/* Logo Section */}
         <div className="p-6 border-b border-slate-200">
           <div className="flex items-center justify-between">
@@ -105,7 +122,7 @@ const Navigation = ({ currentPage = 'dashboard', onPageChange }) => {
               aria-label="Close Menu"
             >
               <i className="fas fa-times text-slate-500"></i>
-              <div style={{ display: 'none' }}>
+              <div style={{ display: "none" }}>
                 <Icon name="fa-times" className="text-slate-500" />
               </div>
             </button>
@@ -122,20 +139,26 @@ const Navigation = ({ currentPage = 'dashboard', onPageChange }) => {
                 onClick={() => handleMenuClick(item.id)}
                 className={`
                   w-full flex items-center gap-4 px-4 py-4 rounded-xl text-left transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]
-                  ${isActive 
-                    ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500 shadow-md' 
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:shadow-sm'
+                  ${
+                    isActive
+                      ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500 shadow-md"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:shadow-sm"
                   }
                 `}
               >
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 ${
-                  isActive 
-                    ? `bg-gradient-to-br from-${item.color}-500 to-${item.color}-600 text-white shadow-lg` 
-                    : `bg-slate-100 text-slate-500 hover:bg-${item.color}-50 hover:text-${item.color}-500`
-                }`}>
+                <div
+                  className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                    isActive
+                      ? `bg-gradient-to-br from-${item.color}-500 to-${item.color}-600 text-white shadow-lg`
+                      : `bg-slate-100 text-slate-500 hover:bg-${item.color}-50 hover:text-${item.color}-500`
+                  }`}
+                >
                   {/* Font Awesome icon with fallback */}
-                  <i className={`${item.icon} text-lg`} style={{ display: 'block' }}></i>
-                  <div style={{ display: 'none' }}>
+                  <i
+                    className={`${item.icon} text-lg`}
+                    style={{ display: "block" }}
+                  ></i>
+                  <div style={{ display: "none" }}>
                     <Icon name={item.icon} className="text-lg" />
                   </div>
                 </div>
@@ -143,16 +166,25 @@ const Navigation = ({ currentPage = 'dashboard', onPageChange }) => {
                   <span className="font-semibold text-base">{item.label}</span>
                 </div>
                 {isActive && (
-                  <div className={`w-3 h-3 rounded-full animate-pulse ${
-                    item.color === 'blue' ? 'bg-blue-500' :
-                    item.color === 'green' ? 'bg-green-500' :
-                    item.color === 'purple' ? 'bg-purple-500' :
-                    item.color === 'teal' ? 'bg-teal-500' :
-                    item.color === 'orange' ? 'bg-orange-500' :
-                    item.color === 'gray' ? 'bg-gray-500' :
-                    item.color === 'emerald' ? 'bg-emerald-500' :
-                    'bg-indigo-500'
-                  }`}></div>
+                  <div
+                    className={`w-3 h-3 rounded-full animate-pulse ${
+                      item.color === "blue"
+                        ? "bg-blue-500"
+                        : item.color === "green"
+                        ? "bg-green-500"
+                        : item.color === "purple"
+                        ? "bg-purple-500"
+                        : item.color === "teal"
+                        ? "bg-teal-500"
+                        : item.color === "orange"
+                        ? "bg-orange-500"
+                        : item.color === "gray"
+                        ? "bg-gray-500"
+                        : item.color === "emerald"
+                        ? "bg-emerald-500"
+                        : "bg-indigo-500"
+                    }`}
+                  ></div>
                 )}
               </button>
             );
@@ -162,14 +194,25 @@ const Navigation = ({ currentPage = 'dashboard', onPageChange }) => {
         {/* User Section */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-200 bg-slate-50">
           <div className="flex items-center gap-3">
-            <img 
-              src="https://api.dicebear.com/8.x/initials/svg?seed=Master+Admin" 
-              alt="Admin Profile" 
+            <img
+              src="https://api.dicebear.com/8.x/initials/svg?seed=Master+Admin"
+              alt="Admin Profile"
               className="w-10 h-10 rounded-full border-2 border-slate-200"
             />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-900 truncate">Master Admin</p>
-              <p className="text-xs text-slate-500">System Administrator</p>
+            <div className="flex items-center justify-between flex-1 min-w-0">
+              <div>
+                <p className="text-sm font-medium text-slate-900 truncate">
+                  Master Admin
+                </p>
+                <p className="text-xs text-slate-500">System Administrator</p>
+              </div>
+
+              <button
+                onClick={handleLogout}
+                className="p-1 rounded hover:bg-slate-200 transition"
+              >
+                <i className="fas fa-sign-out-alt text-slate-500 text-sm"></i>
+              </button>
             </div>
           </div>
         </div>
