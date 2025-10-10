@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import LoaderOverlay from '../../components/loader/LoaderOverlay';
 import OrgMenuNavigation from '../../components/org-admin-components/org-admin-menu_components/OrgMenuNavigation';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
@@ -293,9 +294,22 @@ const AdminAccessManage = () => {
     console.log(`Navigating to: ${pageId}`);
   };
 
+  // Global loading flag for fancy loader overlay
+  const isAnyLoading = useMemo(() => {
+    return (
+      isLoading ||
+      loadingEntities.departments ||
+      loadingEntities.classes ||
+      loadingEntities.sections ||
+      loadingEntities.users
+    );
+  }, [isLoading, loadingEntities]);
+
   return (
     <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
       <Toaster position="top-right" />
+      {/* Global Loader Overlay */}
+      <LoaderOverlay isVisible={isAnyLoading} title="MySkillDB" subtitle="Loading your data, please wait…" />
       
       {/* Navigation Component - hidden when modal is open */}
       {!isLoginFormOpen && <OrgMenuNavigation currentPage="access-management" onPageChange={handlePageChange} />}
