@@ -546,7 +546,7 @@ const AdminSubjectAssign = () => {
           {/* Header */}
           <header className="flex justify-between items-center flex-wrap gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Define Subjects</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Subject Setup</h1>
               <p className="text-slate-500 text-sm">Assign subjects to sections within departments and classes</p>
             </div>
           </header>
@@ -827,16 +827,35 @@ const AdminSubjectAssign = () => {
                 ) : filteredAndSearchedSubjects.length === 0 ? (
                 <div className="text-center py-8 text-slate-500">
                   <i className="fas fa-book text-4xl mb-4 text-slate-300"></i>
-                    <p className="font-medium mb-2">
-                      {subjectSearchTerm ? 'No subjects match your search' : 'No subjects found for the selected department'}
-                    </p>
-                    <p className="text-sm">
-                      {subjectSearchTerm ? 'Try a different search term' : 'Try selecting a different department or add subjects to this department'}
-                    </p>
+                  <p className="font-medium mb-2">
+                    {subjectSearchTerm ? 'No subjects match your search' : 'No subjects found for the selected department'}
+                  </p>
+                  <p className="text-sm">
+                    {subjectSearchTerm ? 'Try a different search term' : 'Try selecting a different department or add subjects to this department'}
+                  </p>
+                  {!subjectSearchTerm && (
+                    <div className="mt-4">
+                      <button
+                        onClick={() => {
+                          try {
+                            if (selectedDepartment) {
+                              localStorage.setItem('preselectedDepartment', selectedDepartment);
+                            }
+                            localStorage.setItem('openSubjectModal', '1');
+                          } catch {}
+                          window.location.href = '/admin/classrooms/view';
+                        }}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium border border-slate-200"
+                      >
+                        <span className="text-gray-500 text-lg">+</span>
+                        <span>Add subjects to this department</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
-                  <>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-6 max-h-96 overflow-y-auto p-2">
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-6 max-h-96 overflow-y-auto p-2">
                       {filteredAndSearchedSubjects.map(subject => {
                         const isSelected = selectedSubjects.includes(subject._id);
                         

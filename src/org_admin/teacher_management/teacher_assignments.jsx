@@ -59,6 +59,14 @@ const TeacherAssignments = () => {
   // Current organization ID (would come from context/auth in real app)
   const [currentOrganizationId, setCurrentOrganizationId] = useState('org-123');
 
+  // Unassigned teachers accordion state
+  const [expandedUnassigned, setExpandedUnassigned] = useState(false);
+
+  useEffect(() => {
+    // Auto-expand unassigned accordion when a department is selected
+    setExpandedUnassigned(Boolean(selectedDepartment));
+  }, [selectedDepartment]);
+
   // --- API CALLS ---
 
   const fetchTeachers = async () => {
@@ -76,7 +84,13 @@ const TeacherAssignments = () => {
         { _id: 'teacher-7', name: 'Dr. Kavita Sharma', email: 'kavita.sharma@school.edu', departmentId: 'dept-5' },
         { _id: 'teacher-8', name: 'Mr. Arun Krishnan', email: 'arun.krishnan@school.edu', departmentId: 'dept-5' },
         { _id: 'teacher-9', name: 'Ms. Divya Thomas', email: 'divya.thomas@school.edu', departmentId: 'dept-5' },
-        { _id: 'teacher-10', name: 'Dr. Vinod Menon', email: 'vinod.menon@school.edu', departmentId: 'dept-5' }
+        { _id: 'teacher-10', name: 'Dr. Vinod Menon', email: 'vinod.menon@school.edu', departmentId: 'dept-5' },
+        // Additional unassigned teachers for testing
+        { _id: 'teacher-11', name: 'Ms. Sunita Patel', email: 'sunita.patel@school.edu', departmentId: 'dept-2' },
+        { _id: 'teacher-12', name: 'Mr. Vikram Singh', email: 'vikram.singh@school.edu', departmentId: 'dept-2' },
+        { _id: 'teacher-13', name: 'Dr. Meera Nair', email: 'meera.nair@school.edu', departmentId: 'dept-3' },
+        { _id: 'teacher-14', name: 'Prof. Suresh Kumar', email: 'suresh.kumar@school.edu', departmentId: 'dept-4' },
+        { _id: 'teacher-15', name: 'Ms. Radha Iyer', email: 'radha.iyer@school.edu', departmentId: 'dept-4' }
       ];
       
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -489,6 +503,31 @@ const TeacherAssignments = () => {
     return teachers;
   }, [teachers, selectedDepartment, selectedClass, selectedSection, teacherAssignments]);
 
+  // Unassigned teachers within selected department
+  const unassignedTeachers = useMemo(() => {
+    if (!selectedDepartment) return [];
+    const assignedTeacherIdsInDept = teacherAssignments
+      .filter(a => a.departmentId === selectedDepartment)
+      .map(a => a.teacherId);
+    return teachers
+      .filter(t => t.departmentId === selectedDepartment && !assignedTeacherIdsInDept.includes(t._id))
+      .filter(t => {
+        if (!teacherSearchTerm) return true;
+        const term = teacherSearchTerm.toLowerCase();
+        return t.name.toLowerCase().includes(term) || t.email.toLowerCase().includes(term);
+      });
+  }, [teachers, teacherAssignments, selectedDepartment, teacherSearchTerm]);
+
+  // Department teacher counts
+  const deptTeacherStats = useMemo(() => {
+    if (!selectedDepartment) return { total: 0, assigned: 0, unassigned: 0 };
+    const total = teachers.filter(t => t.departmentId === selectedDepartment).length;
+    const assigned = teacherAssignments.filter(a => a.departmentId === selectedDepartment).map(a => a.teacherId)
+      .filter((id, idx, arr) => arr.indexOf(id) === idx).length;
+    const unassigned = Math.max(total - assigned, 0);
+    return { total, assigned, unassigned };
+  }, [teachers, teacherAssignments, selectedDepartment]);
+
   const filteredSubjects = useMemo(() => {
     if (!selectedDepartment) return subjects;
     
@@ -814,14 +853,89 @@ const TeacherAssignments = () => {
                 className="bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white font-bold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-3 text-base"
                 title="Create new teacher assignment"
               >
-                <div className="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-plus text-lg"></i>
-                </div>
+                <span className="text-gray-300 text-lg">+</span>
                 <span>Create Assignment</span>
                 <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
               </button>
             </div>
           </div>
+
+          {/* Unassigned Teachers - Auto expanded when department is selected */}
+          {selectedDepartment && (
+            <div className="mt-6 bg-white rounded-xl shadow-sm border-2 border-amber-200 overflow-hidden">
+              <button
+                onClick={() => setExpandedUnassigned(prev => !prev)}
+                className="w-full px-6 py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                      <i className="fas fa-user-times text-white"></i>
+                    </div>
+                    <div className="text-left">
+                      <h3 className="text-white font-bold">Unassigned Teachers in {departments.find(d => d._id === selectedDepartment)?.name}</h3>
+                      <p className="text-amber-100 text-xs">Click a teacher to create an assignment</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-white text-sm font-semibold">Total: {deptTeacherStats.total}</div>
+                    <div className="text-amber-100 text-xs">Assigned: {deptTeacherStats.assigned} • Unassigned: {deptTeacherStats.unassigned}</div>
+                  </div>
+                </div>
+              </button>
+
+              {expandedUnassigned && (
+                <div className="p-4">
+                  {deptTeacherStats.total === 0 ? (
+                    <div className="text-center py-6 text-slate-500">
+                      <p className="mb-3">No teacher users found in this department.</p>
+                      <button
+                        onClick={() => { window.location.href = '/admin/access/manage'; }}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium border border-slate-200"
+                      >
+                        <i className="fas fa-user-plus"></i>
+                        Create Teacher Users
+                      </button>
+                    </div>
+                  ) : unassignedTeachers.length === 0 ? (
+                    <div className="text-center py-6 text-slate-500">
+                      <i className="fas fa-check-circle text-green-500 mr-2"></i>
+                      All teachers in this department are assigned.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {unassignedTeachers.map(t => (
+                        <button
+                          key={t._id}
+                          onClick={() => {
+                            setSelectedTeacher(t._id);
+                            setAssignmentFormData(prev => ({
+                              ...prev,
+                              teacherId: t._id,
+                              departmentId: selectedDepartment,
+                              classId: '',
+                              sectionId: '',
+                              subjectIds: [],
+                              isClassTeacher: false
+                            }));
+                            setIsAssignmentModalOpen(true);
+                          }}
+                          className="flex items-center justify-between p-4 border border-amber-200 rounded-lg hover:bg-amber-50 transition-colors text-left"
+                          title="Assign this teacher"
+                        >
+                          <div className="min-w-0">
+                            <p className="font-semibold text-slate-900 truncate">{t.name}</p>
+                            <p className="text-xs text-slate-500 truncate">{t.email}</p>
+                          </div>
+                          <i className="fas fa-plus text-amber-600"></i>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Teacher Assignments Display */}
           <AssignmentDisplay
