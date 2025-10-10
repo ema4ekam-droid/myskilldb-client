@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import OrgMenuNavigation from '../../components/org-admin-components/org-admin-menu_components/OrgMenuNavigation';
+import LoaderOverlay from '../../components/loader/LoaderOverlay';
 import {
   DepartmentModal,
   ClassModal,
@@ -585,6 +586,7 @@ const AdminClassManage = () => {
 
   return (
     <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
+      <LoaderOverlay isVisible={isAnyModalOpen || isLoading} title="MySkillDB" subtitle="Loading your data, please wait…" />
       <Toaster position="top-right" />
       
       {/* Navigation Component - hidden when modal is open */}

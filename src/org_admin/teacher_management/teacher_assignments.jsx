@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import OrgMenuNavigation from '../../components/org-admin-components/org-admin-menu_components/OrgMenuNavigation';
+import LoaderOverlay from '../../components/loader/LoaderOverlay';
 import {
   TeacherSelector,
   SubjectAssignment,
@@ -58,6 +59,10 @@ const TeacherAssignments = () => {
 
   // Current organization ID (would come from context/auth in real app)
   const [currentOrganizationId, setCurrentOrganizationId] = useState('org-123');
+
+  const isAnyLoading = useMemo(() => {
+    return isLoading || loadingEntities.teachers || loadingEntities.departments || loadingEntities.classes || loadingEntities.sections || loadingEntities.subjects || loadingEntities.assignments;
+  }, [isLoading, loadingEntities]);
 
   // Unassigned teachers accordion state
   const [expandedUnassigned, setExpandedUnassigned] = useState(false);
@@ -639,6 +644,7 @@ const TeacherAssignments = () => {
 
   return (
     <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
+      <LoaderOverlay isVisible={isAnyLoading} title="MySkillDB" subtitle="Loading your data, please wait…" />
       <Toaster position="top-right" />
       
       {/* Navigation Component */}
