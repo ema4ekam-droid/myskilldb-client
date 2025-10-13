@@ -12,6 +12,21 @@ const SubjectModal = ({
 }) => {
   if (!isOpen) return null;
 
+  const isDepartmentSelected = Boolean(subjectFormData.departmentId);
+
+  const handleSubmit = (e) => {
+    // If no department selected, prevent submit and focus the department select
+    if (!isDepartmentSelected) {
+      e.preventDefault();
+      try {
+        const select = document.getElementById('subject-department-select');
+        if (select) select.focus();
+      } catch {}
+      return;
+    }
+    onSubmit(e);
+  };
+
   return (
     <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-md border border-slate-200">
@@ -20,7 +35,26 @@ const SubjectModal = ({
             {editingSubject ? 'Edit Subject' : 'Add Subject'}
           </h3>
         </div>
-        <form onSubmit={onSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2 ${isDepartmentSelected ? 'text-slate-700' : 'text-red-700'}">Department *</label>
+            <select
+              id="subject-department-select"
+              className={`${inputBaseClass} ${isDepartmentSelected ? 'border-green-300' : 'border-red-400 bg-red-50'}`}
+              value={subjectFormData.departmentId}
+              onChange={(e) => setSubjectFormData(prev => ({ ...prev, departmentId: e.target.value }))}
+              required
+            >
+              <option value="">Select Department</option>
+              {departments.map((dept) => (
+                <option key={dept._id} value={dept._id}>{dept.name}</option>
+              ))}
+            </select>
+            {!isDepartmentSelected && (
+              <p className="text-xs text-red-600 mt-1">Please select a department to continue.</p>
+            )}
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Subject Name *</label>
             <input
@@ -29,6 +63,7 @@ const SubjectModal = ({
               value={subjectFormData.name}
               onChange={(e) => setSubjectFormData(prev => ({ ...prev, name: e.target.value }))}
               required
+              disabled={!isDepartmentSelected}
             />
           </div>
           <div>
@@ -39,20 +74,8 @@ const SubjectModal = ({
               value={subjectFormData.code}
               onChange={(e) => setSubjectFormData(prev => ({ ...prev, code: e.target.value }))}
               required
+              disabled={!isDepartmentSelected}
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Department</label>
-            <select
-              className={inputBaseClass}
-              value={subjectFormData.departmentId}
-              onChange={(e) => setSubjectFormData(prev => ({ ...prev, departmentId: e.target.value }))}
-            >
-              <option value="">No Department</option>
-              {departments.map((dept) => (
-                <option key={dept._id} value={dept._id}>{dept.name}</option>
-              ))}
-            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
@@ -61,10 +84,11 @@ const SubjectModal = ({
               rows="3"
               value={subjectFormData.description}
               onChange={(e) => setSubjectFormData(prev => ({ ...prev, description: e.target.value }))}
+              disabled={!isDepartmentSelected}
             />
           </div>
           <div className="flex gap-3">
-            <button type="submit" className={btnTealClass}>
+            <button type="submit" className={`${btnTealClass} ${!isDepartmentSelected ? 'opacity-60 cursor-not-allowed' : ''}`} disabled={!isDepartmentSelected}>
               {editingSubject ? 'Update' : 'Add'} Subject
             </button>
             <button 

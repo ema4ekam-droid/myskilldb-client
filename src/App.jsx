@@ -8,6 +8,7 @@ import OrgDashboard from './org_admin/org_admin-dashboard/org-dashboard.jsx';
 import AdminClassManage from './org_admin/class_management/admin_class_manage.jsx';
 import AdminSubjectAssign from './org_admin/subject_assign/admin_subject_assign.jsx';
 import TeacherAssignments from './org_admin/teacher_management/teacher_assignments.jsx';
+import AdminAccessManage from './org_admin/access_management/admin_access_manage.jsx';
 import TopicManagement from './org_admin/skills_academics/topic_management.jsx';
 import MasterOrganizationSetup from './master/master-organization-setup/master-organization-setup.jsx';
 import OrganizationLoginManager from './master/master-login-create/organization_login_manager.jsx';
@@ -39,6 +40,7 @@ function App() {
           <Route path="/admin/classrooms/view" element={<AdminClassManage />} />
           <Route path="/admin/classrooms/subjects" element={<AdminSubjectAssign />} />
           <Route path="/admin/classrooms/teacher-assignments" element={<TeacherAssignments />} />
+          <Route path="/admin/access/manage" element={<AdminAccessManage />} />
           <Route path="/admin/skills/topics" element={<TopicManagement />} />
         </Route>
       </Routes>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import LoaderOverlay from '../../components/loader/LoaderOverlay';
 import OrgMenuNavigation from '../../components/org-admin-components/org-admin-menu_components/OrgMenuNavigation';
 import {
   DepartmentModal,
@@ -44,6 +45,9 @@ const AdminClassManage = () => {
   const [isEditListModalOpen, setIsEditListModalOpen] = useState(false);
   const [editListType, setEditListType] = useState(''); // 'department', 'class', 'section', 'subject'
   const [editListItems, setEditListItems] = useState([]);
+
+  // Accordion state for department sections
+  const [expandedDepartments, setExpandedDepartments] = useState({});
 
   // Form data states
   const [departmentFormData, setDepartmentFormData] = useState({ name: '', description: '' });
@@ -482,6 +486,14 @@ const AdminClassManage = () => {
     setAppliedFilters({ departmentId: '', classId: '' });
   };
 
+  // Toggle department accordion
+  const toggleDepartment = (departmentId) => {
+    setExpandedDepartments(prev => ({
+      ...prev,
+      [departmentId]: !prev[departmentId]
+    }));
+  };
+
   // --- NAVIGATION HANDLERS ---
   
   const navigateToSubjectAssign = (departmentId, classId) => {
@@ -536,6 +548,27 @@ const AdminClassManage = () => {
   useEffect(() => {
     // Fetch data when component mounts
     fetchAllData();
+
+    // Check if we need to auto-open Subject modal (coming from Subject Setup)
+    try {
+      const openSubject = localStorage.getItem('openSubjectModal');
+      const preDept = localStorage.getItem('preselectedDepartment');
+      if (openSubject === '1') {
+        // Clear the flag immediately to avoid re-opening on refresh
+        localStorage.removeItem('openSubjectModal');
+
+        // If department id provided, prefill into subject form
+        if (preDept) {
+          setSubjectFormData(prev => ({
+            ...prev,
+            departmentId: preDept
+          }));
+        }
+
+        // Open the Subject modal
+        openModal('subject');
+      }
+    } catch {}
   }, [currentOrganizationId]);
 
   // --- STYLES ---
@@ -554,6 +587,7 @@ const AdminClassManage = () => {
   return (
     <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
       <Toaster position="top-right" />
+      <LoaderOverlay isVisible={isLoading || loadingEntities.departments || loadingEntities.classes || loadingEntities.sections || loadingEntities.subjects || loadingEntities.assignments} title="MySkillDB" subtitle="Loading your data, please wait…" />
       
       {/* Navigation Component - hidden when modal is open */}
       {!isAnyModalOpen && <OrgMenuNavigation currentPage="view-classrooms" onPageChange={handlePageChange} />}
@@ -937,20 +971,27 @@ const AdminClassManage = () => {
 
                           return (
                             <div key={departmentId} className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-                              {/* Department Header */}
-                              <div className="bg-blue-50 px-4 py-3 border-b border-slate-200">
+                              {/* Department Header - Clickable */}
+                              <button
+                                onClick={() => toggleDepartment(departmentId)}
+                                className="w-full bg-blue-50 hover:bg-blue-100 px-4 py-3 border-b border-slate-200 transition-colors"
+                              >
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-3">
                                     <i className="fas fa-building text-blue-600"></i>
                                     <h3 className="font-semibold text-blue-900">{department?.name}</h3>
                                   </div>
+                                  <div className="flex items-center gap-3">
                                   <div className="text-sm text-blue-700">
                                     {classIds.length} class{classIds.length !== 1 ? 'es' : ''}
                                   </div>
+                                    <i className={`fas fa-chevron-${expandedDepartments[departmentId] ? 'up' : 'down'} text-blue-600 transition-transform`}></i>
                                 </div>
                               </div>
+                              </button>
 
-                              {/* Classes under this department */}
+                              {/* Classes under this department - Collapsible */}
+                              {expandedDepartments[departmentId] && (
                               <div className="divide-y divide-slate-200">
                                 {classIds.map(classId => {
                                   const classItem = classes.find(c => c._id === classId);
@@ -1009,7 +1050,7 @@ const AdminClassManage = () => {
                                                 title="View all sections assigned to this class"
                                               >
                                                 <i className="fas fa-eye"></i>
-                                                View Sections
+                                                View/Edit Sections
                                               </button>
                                               <button
                                                 onClick={() => navigateToSubjectAssign(departmentId, classId)}
@@ -1027,7 +1068,8 @@ const AdminClassManage = () => {
                                     </div>
                                   );
                                 })}
-                              </div>
+                                </div>
+                              )}
                             </div>
                           );
                         })}
@@ -1048,7 +1090,7 @@ const AdminClassManage = () => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">View Sections</h2>
+                  <h2 className="text-xl font-bold text-slate-900">View/Edit Sections</h2>
                   <p className="text-slate-500 text-sm">
                     Sections assigned to <span className="font-medium text-slate-700">{viewingClass?.name}</span>
                     under <span className="font-medium text-slate-700">{viewingDepartment?.name}</span> department
