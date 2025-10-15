@@ -15,6 +15,7 @@ const AdminSubjectAssign = () => {
   const [subjects, setSubjects] = useState([]);
   const [subjectAssignments, setSubjectAssignments] = useState([]);
   const [teachers, setTeachers] = useState([]);
+  const [subjectTeacherAssignments, setSubjectTeacherAssignments] = useState([]);
 
   // Filter states
   const [selectedDepartment, setSelectedDepartment] = useState('');
@@ -35,9 +36,14 @@ const AdminSubjectAssign = () => {
   // Search and filter for subjects
   const [subjectSearchTerm, setSubjectSearchTerm] = useState('');
   
-  // Collapsible state for Step 4 sections
+  // Collapsible state for teacher setup section - All departments open, all classes closed by default
   const [collapsedDepartments, setCollapsedDepartments] = useState({});
-  const [collapsedClasses, setCollapsedClasses] = useState({});
+  const [collapsedClasses, setCollapsedClasses] = useState({
+    'class-1': true, 'class-2': true, 'class-3': true, 'class-4': true, 'class-5': true,
+    'class-6': true, 'class-7': true, 'class-8': true, 'class-9': true, 'class-10': true,
+    'class-11': true, 'class-12': true, 'class-13': true, 'class-14': true, 'class-15': true,
+    'class-16': true, 'class-17': true, 'class-18': true, 'class-19': true, 'class-20': true
+  });
   
   // Teacher assignment modal state
   const [isTeacherAssignModalOpen, setIsTeacherAssignModalOpen] = useState(false);
@@ -48,11 +54,40 @@ const AdminSubjectAssign = () => {
     subjectId: ''
   });
 
+  // Delete confirmation modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [assignmentToDelete, setAssignmentToDelete] = useState(null);
+  const [deleteAnswer, setDeleteAnswer] = useState('');
+  const [deleteQuestion, setDeleteQuestion] = useState({ num1: 0, num2: 0, answer: 0 });
+
+  // Accordion state for setup section - closed by default
+  const [isSetupAccordionOpen, setIsSetupAccordionOpen] = useState(false);
+
   // Loading states
   const [isLoading, setIsLoading] = useState(false);
 
   // Current organization ID (would come from context/auth in real app)
   const [currentOrganizationId, setCurrentOrganizationId] = useState('org-123');
+
+  // Quick action modals (local popups)
+  const [isAddSubjectModalOpen, setIsAddSubjectModalOpen] = useState(false);
+  const [subjectFormData, setSubjectFormData] = useState({
+    name: '',
+    code: '',
+    departmentId: '',
+    description: '',
+    credits: '',
+    type: 'core'
+  });
+
+  const [isCreateTeacherModalOpen, setIsCreateTeacherModalOpen] = useState(false);
+  const [teacherFormData, setTeacherFormData] = useState({
+    name: '',
+    email: '',
+    mobile: '',
+    departmentId: '',
+    password: ''
+  });
 
   // --- API CALLS ---
   
@@ -395,7 +430,32 @@ const AdminSubjectAssign = () => {
     }
   };
 
-  const handleDeleteAssignment = async (assignmentId) => {
+  const generateDeleteQuestion = () => {
+    const num1 = Math.floor(Math.random() * 9) + 1; // 1-9
+    const num2 = Math.floor(Math.random() * 9) + 1; // 1-9
+    setDeleteQuestion({ num1, num2, answer: num1 * num2 });
+    setDeleteAnswer('');
+  };
+
+  const openDeleteConfirmation = (assignmentId) => {
+    setAssignmentToDelete(assignmentId);
+    generateDeleteQuestion();
+    setIsDeleteModalOpen(true);
+  };
+
+  const closeDeleteConfirmation = () => {
+    setIsDeleteModalOpen(false);
+    setAssignmentToDelete(null);
+    setDeleteAnswer('');
+  };
+
+  const confirmDelete = async () => {
+    if (parseInt(deleteAnswer) !== deleteQuestion.answer) {
+      toast.error('Incorrect answer. Please try again.');
+      generateDeleteQuestion();
+      return;
+    }
+
     try {
       setIsLoading(true);
       
@@ -403,15 +463,21 @@ const AdminSubjectAssign = () => {
       await new Promise(resolve => setTimeout(resolve, 500));
       
       setSubjectAssignments(prev => 
-        prev.filter(assignment => assignment._id !== assignmentId)
+        prev.filter(assignment => assignment._id !== assignmentToDelete)
       );
       
       toast.success('Assignment deleted successfully!');
+      closeDeleteConfirmation();
     } catch (error) {
       toast.error('Failed to delete assignment');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleDeleteAssignment = async (assignmentId) => {
+    // This function is now replaced by openDeleteConfirmation
+    openDeleteConfirmation(assignmentId);
   };
 
   const toggleDepartmentCollapse = (deptId) => {
@@ -534,16 +600,40 @@ const AdminSubjectAssign = () => {
     console.log(`Navigating to: ${pageId}`);
   };
 
+  // --- QUICK ACTIONS ---
+  const openAddSubjectModal = () => {
+    setSubjectFormData({
+      name: '',
+      code: '',
+      departmentId: selectedDepartment || '',
+      description: '',
+      credits: '',
+      type: 'core'
+    });
+    setIsAddSubjectModalOpen(true);
+  };
+
+  const openCreateTeacherModal = () => {
+    setTeacherFormData({
+      name: '',
+      email: '',
+      mobile: '',
+      departmentId: selectedDepartment || '',
+      password: ''
+    });
+    setIsCreateTeacherModalOpen(true);
+  };
+
   return (
-    <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
+    <div className="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
       <Toaster position="top-right" />
       <LoaderOverlay isVisible={isLoading} title="MySkillDB" subtitle="Loading your data, please wait…" />
       
       {/* Navigation Component */}
-      {!isAssignmentModalOpen && !isTeacherAssignModalOpen && <OrgMenuNavigation currentPage="define-subjects" onPageChange={handlePageChange} />}
+      {!isAssignmentModalOpen && !isTeacherAssignModalOpen && !isAddSubjectModalOpen && !isCreateTeacherModalOpen && <OrgMenuNavigation currentPage="define-subjects" onPageChange={handlePageChange} />}
 
       {/* Main Content */}
-      <div className={(isAssignmentModalOpen || isTeacherAssignModalOpen) ? "" : "lg:ml-72"}>
+      <div className={(isAssignmentModalOpen || isTeacherAssignModalOpen || isAddSubjectModalOpen || isCreateTeacherModalOpen) ? "flex-1 flex flex-col" : "lg:ml-72 flex-1 flex flex-col"}>
         <main className="flex-1 p-4 md:p-8 space-y-8">
           {/* Header */}
           <header className="flex justify-between items-center flex-wrap gap-4">
@@ -553,123 +643,269 @@ const AdminSubjectAssign = () => {
             </div>
           </header>
 
-          {/* Step-by-Step Guide Card */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                <i className="fas fa-route text-white"></i>
+          {/* Quick Actions - Create Subject / Create Teacher */}
+          <div className="grid grid-cols-2 gap-3 md:gap-4">
+            <button
+              onClick={openAddSubjectModal}
+              className="relative flex items-center gap-3 p-4 md:p-5 bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 rounded-lg transition-all hover:shadow-md group"
+            >
+              <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 w-7 h-7 md:w-8 md:h-8 bg-amber-500 rounded-full hidden sm:flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                <i className="fas fa-plus text-white text-xs md:text-sm"></i>
               </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Assignment Flow Guide</h2>
-                <p className="text-sm text-slate-600">Follow these steps to assign subjects</p>
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-amber-500 rounded-lg hidden sm:flex items-center justify-center group-hover:scale-110 transition-transform">
+                <i className="fas fa-book text-white text-lg md:text-xl"></i>
               </div>
-            </div>
-            
-            <div className="flex items-center justify-center gap-4 flex-wrap">
-              <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${selectedDepartment ? 'bg-green-100 border-2 border-green-500' : 'bg-red-100 border-2 border-red-300'}`}>
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${selectedDepartment ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-                  1
-                </div>
-                <span className={`text-sm font-medium ${selectedDepartment ? 'text-green-900' : 'text-red-900'}`}>
-                  Department & Class
-                </span>
-                {selectedDepartment && selectedClass && <i className="fas fa-check text-green-600"></i>}
+              <div className="text-left">
+                <p className="font-semibold text-slate-900 text-sm md:text-base">Create New Subject</p>
+                <p className="text-xs text-slate-600">Add a subject before assigning</p>
               </div>
-              
-              <i className="fas fa-arrow-right text-slate-400"></i>
-              
-              <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${sectionsToAssign.length > 0 ? 'bg-green-100 border-2 border-green-500' : selectedClass ? 'bg-blue-100 border-2 border-blue-300' : 'bg-slate-100 border-2 border-slate-300'}`}>
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${sectionsToAssign.length > 0 ? 'bg-green-500 text-white' : selectedClass ? 'bg-blue-500 text-white' : 'bg-slate-400 text-white'}`}>
-                  2
-                </div>
-                <span className={`text-sm font-medium ${sectionsToAssign.length > 0 ? 'text-green-900' : selectedClass ? 'text-blue-900' : 'text-slate-500'}`}>
-                  Select Sections ({sectionsToAssign.length})
-                </span>
-                {sectionsToAssign.length > 0 && <i className="fas fa-check text-green-600"></i>}
+            </button>
+
+            <button
+              onClick={openCreateTeacherModal}
+              className="relative flex items-center gap-3 p-4 md:p-5 bg-indigo-50 hover:bg-indigo-100 border-2 border-indigo-200 rounded-lg transition-all hover:shadow-md group"
+            >
+              <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 w-7 h-7 md:w-8 md:h-8 bg-indigo-500 rounded-full hidden sm:flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                <i className="fas fa-plus text-white text-xs md:text-sm"></i>
               </div>
-              
-              <i className="fas fa-arrow-right text-slate-400"></i>
-              
-              <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${sectionsToAssign.length > 0 ? 'bg-blue-100 border-2 border-blue-300' : 'bg-slate-100 border-2 border-slate-300'}`}>
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${sectionsToAssign.length > 0 ? 'bg-blue-500 text-white' : 'bg-slate-400 text-white'}`}>
-                  3
-                </div>
-                <span className={`text-sm font-medium ${sectionsToAssign.length > 0 ? 'text-blue-900' : 'text-slate-500'}`}>
-                  Assign Subjects
-                </span>
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-indigo-500 rounded-lg hidden sm:flex items-center justify-center group-hover:scale-110 transition-transform">
+                <i className="fas fa-chalkboard-teacher text-white text-lg md:text-xl"></i>
               </div>
-              
-              <i className="fas fa-arrow-right text-slate-400"></i>
-              
-              <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${selectedDepartment && selectedClass ? 'bg-purple-100 border-2 border-purple-300' : 'bg-slate-100 border-2 border-slate-300'}`}>
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${selectedDepartment && selectedClass ? 'bg-purple-500 text-white' : 'bg-slate-400 text-white'}`}>
-                  4
-                </div>
-                <span className={`text-sm font-medium ${selectedDepartment && selectedClass ? 'text-purple-900' : 'text-slate-500'}`}>
-                  Review Assignments
-                </span>
+              <div className="text-left">
+                <p className="font-semibold text-slate-900 text-sm md:text-base">Create New Teacher</p>
+                <p className="text-xs text-slate-600">Set up a teacher account</p>
               </div>
-            </div>
+            </button>
           </div>
 
-          {/* Filters with Visual Guidance */}
-          <div className={`bg-white rounded-xl shadow-sm p-6 ${!selectedDepartment || !selectedClass ? 'border-2 border-red-300' : 'border border-slate-100'}`}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-slate-900">Step 1 & 2: Select Department and Class</h2>
-                {!selectedDepartment || !selectedClass ? (
-                  <span className="text-sm text-red-600 font-medium flex items-center gap-1">
-                    <i className="fas fa-exclamation-circle"></i>
-                    Required
-                  </span>
-                ) : null}
+          {/* Add Subject Modal */}
+          {isAddSubjectModalOpen && (
+            <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto border border-slate-200">
+                <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-slate-900">Create New Subject</h3>
+                  <button onClick={() => setIsAddSubjectModalOpen(false)} className="p-2 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-700">
+                    <i className="fas fa-times"></i>
+                  </button>
+                </div>
+                <div className="p-6 space-y-4">
+              <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Department *</label>
+                <select
+                      value={subjectFormData.departmentId}
+                      onChange={(e) => setSubjectFormData(prev => ({ ...prev, departmentId: e.target.value }))}
+                  className={inputBaseClass}
+                >
+                      <option value="">Select Department</option>
+                  {departments.map(dept => (
+                    <option key={dept._id} value={dept._id}>{dept.name}</option>
+                  ))}
+                </select>
               </div>
-              {selectedDepartment && selectedClass && (
-                <span className="text-sm text-green-600 font-medium flex items-center gap-1">
-                  <i className="fas fa-check-circle"></i>
-                  Ready to select sections
-                </span>
-              )}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className={`p-4 rounded-lg border-2 ${!selectedDepartment ? 'border-red-300 bg-red-50' : 'border-green-300 bg-green-50'}`}>
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${selectedDepartment ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'}`}>
-                    1
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Subject Name *</label>
+                    <input
+                      type="text"
+                      value={subjectFormData.name}
+                      onChange={(e) => setSubjectFormData(prev => ({ ...prev, name: e.target.value }))}
+                      className={inputBaseClass}
+                      placeholder="e.g., Computer Science"
+                    />
                   </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">Code</label>
+                      <input
+                        type="text"
+                        value={subjectFormData.code}
+                        onChange={(e) => setSubjectFormData(prev => ({ ...prev, code: e.target.value }))}
+                        className={inputBaseClass}
+                        placeholder="e.g., CS"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">Credits</label>
+                      <input
+                        type="text"
+                        value={subjectFormData.credits}
+                        onChange={(e) => setSubjectFormData(prev => ({ ...prev, credits: e.target.value }))}
+                        className={inputBaseClass}
+                        placeholder="e.g., 5"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
+                    <textarea
+                      value={subjectFormData.description}
+                      onChange={(e) => setSubjectFormData(prev => ({ ...prev, description: e.target.value }))}
+                      className={inputBaseClass}
+                      rows={3}
+                    />
+                  </div>
+                </div>
+                <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
+                  <button onClick={() => setIsAddSubjectModalOpen(false)} className={btnSlateClass}>Cancel</button>
+                  <button
+                    onClick={() => {
+                      if (!subjectFormData.departmentId || !subjectFormData.name) {
+                        toast.error('Please fill required fields');
+                        return;
+                      }
+                      const newSubject = {
+                        _id: `subject-${Date.now()}`,
+                        ...subjectFormData,
+                        organizationId: currentOrganizationId
+                      };
+                      setSubjects(prev => [...prev, newSubject]);
+                      toast.success('Subject created');
+                      setIsAddSubjectModalOpen(false);
+                    }}
+                    className={btnIndigoClass}
+                  >
+                    <i className="fas fa-save"></i>
+                    Save Subject
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Create Teacher Modal */}
+          {isCreateTeacherModalOpen && (
+            <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto border border-slate-200">
+                <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-slate-900">Create New Teacher</h3>
+                  <button onClick={() => setIsCreateTeacherModalOpen(false)} className="p-2 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-700">
+                    <i className="fas fa-times"></i>
+                  </button>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Full Name *</label>
+                    <input
+                      type="text"
+                      value={teacherFormData.name}
+                      onChange={(e) => setTeacherFormData(prev => ({ ...prev, name: e.target.value }))}
+                      className={inputBaseClass}
+                      placeholder="e.g., John Doe"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Email *</label>
+                    <input
+                      type="email"
+                      value={teacherFormData.email}
+                      onChange={(e) => setTeacherFormData(prev => ({ ...prev, email: e.target.value }))}
+                      className={inputBaseClass}
+                      placeholder="e.g., john@school.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Mobile Number *</label>
+                    <input
+                      type="tel"
+                      value={teacherFormData.mobile}
+                      onChange={(e) => setTeacherFormData(prev => ({ ...prev, mobile: e.target.value }))}
+                      className={inputBaseClass}
+                      placeholder="e.g., +1234567890"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Department *</label>
+                    <select
+                      value={teacherFormData.departmentId}
+                      onChange={(e) => setTeacherFormData(prev => ({ ...prev, departmentId: e.target.value }))}
+                      className={inputBaseClass}
+                    >
+                      <option value="">Select Department</option>
+                      {departments.map(dept => (
+                        <option key={dept._id} value={dept._id}>{dept.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Temporary Password *</label>
+                    <input
+                      type="text"
+                      value={teacherFormData.password}
+                      onChange={(e) => setTeacherFormData(prev => ({ ...prev, password: e.target.value }))}
+                      className={inputBaseClass}
+                      placeholder="Enter temporary password"
+                    />
+                  </div>
+                </div>
+                <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
+                  <button onClick={() => setIsCreateTeacherModalOpen(false)} className={btnSlateClass}>Cancel</button>
+                  <button
+                    onClick={() => {
+                      if (!teacherFormData.name || !teacherFormData.email || !teacherFormData.mobile || !teacherFormData.departmentId || !teacherFormData.password) {
+                        toast.error('Please fill all required fields');
+                        return;
+                      }
+                      const newTeacher = {
+                        _id: `teacher-${Date.now()}`,
+                        ...teacherFormData,
+                        organizationId: currentOrganizationId
+                      };
+                      setTeachers(prev => [...prev, newTeacher]);
+                      toast.success('Teacher created successfully');
+                      setIsCreateTeacherModalOpen(false);
+                    }}
+                    className={btnIndigoClass}
+                  >
+                    <i className="fas fa-save"></i>
+                    Save Teacher
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Accordion: Setup new subject inside a class */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            {/* Accordion Header */}
+            <button
+              onClick={() => setIsSetupAccordionOpen(!isSetupAccordionOpen)}
+              className="w-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 px-4 md:px-6 py-4 flex items-center justify-between transition-colors"
+            >
+              <h2 className="text-lg md:text-xl font-bold text-white">Setup new subject inside a class</h2>
+              <i className={`fas fa-chevron-${isSetupAccordionOpen ? 'up' : 'down'} text-white text-lg`}></i>
+            </button>
+
+            {/* Accordion Content */}
+            {isSetupAccordionOpen && (
+              <div className="p-4 md:p-6 space-y-6">
+                {/* Filters: Department and Class */}
+                <div className="bg-slate-50 rounded-lg p-4 md:p-6 border border-slate-200">
+                  <h2 className="text-lg font-bold text-slate-900 mb-4">Choose Department and Class</h2>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
                   Department *
-                  {!selectedDepartment && <span className="text-xs text-blue-600 font-medium">← Start here</span>}
                 </label>
                 <select
                   value={selectedDepartment}
                   onChange={(e) => handleDepartmentChange(e.target.value)}
-                  className={`${inputBaseClass} ${selectedDepartment ? 'border-green-300' : 'border-blue-300'}`}
+                  className={inputBaseClass}
                 >
                   <option value="">Select Department</option>
                   {departments.map(dept => (
                     <option key={dept._id} value={dept._id}>{dept.name}</option>
                   ))}
                 </select>
-                {selectedDepartment && (
-                  <div className="flex items-center gap-1 mt-2 text-green-600 text-xs">
-                    <i className="fas fa-check"></i>
-                    <span>Department selected</span>
-                  </div>
-                )}
               </div>
 
-              <div className={`p-4 rounded-lg border-2 ${!selectedClass ? selectedDepartment ? 'border-red-300 bg-red-50' : 'border-slate-300 bg-slate-50' : 'border-green-300 bg-green-50'}`}>
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${selectedClass ? 'bg-green-500 text-white' : selectedDepartment ? 'bg-blue-500 text-white' : 'bg-slate-400 text-white'}`}>
-                    2
-                  </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
                   Class *
-                  {selectedDepartment && !selectedClass && <span className="text-xs text-blue-600 font-medium">← Next step</span>}
                 </label>
                 <select
                   value={selectedClass}
                   onChange={(e) => handleClassChange(e.target.value)}
-                  className={`${inputBaseClass} ${selectedClass ? 'border-green-300' : selectedDepartment ? 'border-blue-300' : 'border-slate-300'}`}
+                  className={inputBaseClass}
                   disabled={!selectedDepartment}
                 >
                   <option value="">Select Class</option>
@@ -677,36 +913,14 @@ const AdminSubjectAssign = () => {
                     <option key={cls._id} value={cls._id}>{cls.name}</option>
                   ))}
                 </select>
-                {selectedClass && (
-                  <div className="flex items-center gap-1 mt-2 text-green-600 text-xs">
-                    <i className="fas fa-check"></i>
-                    <span>Class selected</span>
               </div>
-                )}
-              </div>
-            </div>
-              </div>
-
-          {/* Section Selection */}
-          {selectedDepartment && selectedClass && (
-            <div className="bg-white rounded-xl shadow-sm border-2 border-blue-300 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                    <span className="text-white font-bold">2</span>
-                  </div>
-              <div>
-                    <h2 className="text-lg font-bold text-slate-900">Step 2: Select Sections</h2>
-                    <p className="text-sm text-slate-600">Choose sections in {classes.find(c => c._id === selectedClass)?.name} to which you want to assign subjects</p>
                   </div>
                 </div>
-                {sectionsToAssign.length > 0 && (
-                  <span className="text-sm text-green-600 font-medium flex items-center gap-1">
-                    <i className="fas fa-check-circle"></i>
-                    {sectionsToAssign.length} section{sectionsToAssign.length !== 1 ? 's' : ''} selected
-                  </span>
-                )}
-              </div>
+
+                {/* Select Sections */}
+                {selectedDepartment && selectedClass && (
+                  <div className="bg-slate-50 rounded-lg p-4 md:p-6 border border-slate-200">
+                    <h2 className="text-lg font-bold text-slate-900 mb-4">Select Sections</h2>
               
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
                 {sections.map(section => {
@@ -743,44 +957,18 @@ const AdminSubjectAssign = () => {
                     </button>
                   );
                 })}
-          </div>
-
-              {sectionsToAssign.length > 0 && (
-                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-900 font-medium">
-                    <i className="fas fa-info-circle mr-2"></i>
-                    Now scroll down to "Available Subjects" and click on any subject to assign it to the selected {sectionsToAssign.length} section{sectionsToAssign.length !== 1 ? 's' : ''}.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Subject Selection - Step 3 */}
-          {sectionsToAssign.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm border-2 border-blue-300 overflow-hidden">
-              <div className="p-6 border-b border-slate-200 bg-blue-50">
-                <div className="flex items-center justify-between flex-wrap gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                      <span className="text-white font-bold">3</span>
-                    </div>
-                <div>
-                      <h2 className="text-lg font-bold text-slate-900">Step 3: Select Subjects to Assign</h2>
-                      <p className="text-slate-600 text-sm">
-                        Choose subjects from {departments.find(d => d._id === selectedDepartment)?.name} department to assign to {sectionsToAssign.length} section{sectionsToAssign.length !== 1 ? 's' : ''}
-                      </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-blue-700">
-                      {selectedSubjects.length} subject{selectedSubjects.length !== 1 ? 's' : ''} selected
-                    </span>
-                </div>
-              </div>
-            </div>
+                )}
 
-            <div className="p-6">
+                {/* Assign Subjects */}
+                {sectionsToAssign.length > 0 && (
+                  <div className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
+                    <div className="p-4 md:p-6 border-b border-slate-200 bg-white">
+                      <h2 className="text-lg font-bold text-slate-900">Assign Subjects</h2>
+                    </div>
+
+            <div className="p-4 md:p-6">
                 {/* Search and Actions */}
                 <div className="flex items-center gap-4 mb-4 flex-wrap">
                   <div className="flex-1 min-w-64">
@@ -838,15 +1026,7 @@ const AdminSubjectAssign = () => {
                   {!subjectSearchTerm && (
                     <div className="mt-4">
                       <button
-                        onClick={() => {
-                          try {
-                            if (selectedDepartment) {
-                              localStorage.setItem('preselectedDepartment', selectedDepartment);
-                            }
-                            localStorage.setItem('openSubjectModal', '1');
-                          } catch {}
-                          window.location.href = '/admin/classrooms/view';
-                        }}
+                        onClick={openAddSubjectModal}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium border border-slate-200"
                       >
                         <span className="text-gray-500 text-lg">+</span>
@@ -857,7 +1037,7 @@ const AdminSubjectAssign = () => {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-6 max-h-96 overflow-y-auto p-2">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 mb-6 max-h-96 overflow-y-auto p-2">
                       {filteredAndSearchedSubjects.map(subject => {
                         const isSelected = selectedSubjects.includes(subject._id);
                         
@@ -865,23 +1045,23 @@ const AdminSubjectAssign = () => {
                           <button
                             key={subject._id}
                             onClick={() => toggleSubjectSelection(subject._id)}
-                            className={`p-4 rounded-lg border-2 transition-all text-left ${
+                            className={`p-2 md:p-3 rounded-lg border-2 transition-all text-left ${
                               isSelected 
                                 ? 'border-green-500 bg-green-50 shadow-md' 
                                 : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50 hover:shadow-sm'
                             }`}
                           >
-                            <div className="flex items-start gap-3">
-                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                            <div className="flex items-start gap-2 md:gap-3">
+                              <div className={`hidden md:flex w-8 h-8 rounded-lg items-center justify-center flex-shrink-0 ${
                                 isSelected ? 'bg-green-500' : 'bg-slate-100'
                               }`}>
-                                <i className={`fas fa-book ${isSelected ? 'text-white' : 'text-slate-600'}`}></i>
+                                <i className={`fas fa-book text-sm ${isSelected ? 'text-white' : 'text-slate-600'}`}></i>
                           </div>
                               <div className="flex-1 min-w-0">
-                                <h3 className={`font-semibold text-sm mb-1 ${isSelected ? 'text-green-900' : 'text-slate-900'}`}>
+                                <h3 className={`font-semibold text-xs md:text-sm mb-1 ${isSelected ? 'text-green-900' : 'text-slate-900'} truncate`}>
                                   {subject.name}
                                 </h3>
-                                <p className={`text-xs mb-2 ${isSelected ? 'text-green-700' : 'text-slate-500'}`}>
+                                <p className={`text-xs mb-1 md:mb-2 ${isSelected ? 'text-green-700' : 'text-slate-500'} truncate`}>
                             {subject.code}
                                 </p>
                                 {isSelected && (
@@ -899,67 +1079,46 @@ const AdminSubjectAssign = () => {
                         
                     {/* Assignment Action */}
                     {selectedSubjects.length > 0 && (
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-4">
-                        <div className="flex items-center justify-between flex-wrap gap-4">
-                          <div>
-                            <p className="font-medium text-slate-900 mb-1">
-                              Ready to assign {selectedSubjects.length} subject{selectedSubjects.length !== 1 ? 's' : ''}
-                            </p>
-                            <p className="text-sm text-slate-600">
-                              To {sectionsToAssign.length} section{sectionsToAssign.length !== 1 ? 's' : ''}: {sectionsToAssign.map(id => sections.find(s => s._id === id)?.name).join(', ')}
-                            </p>
-                          </div>
+                      <div className="flex justify-end">
                         <button
                             onClick={handleBatchAssignment}
-                            className="bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white font-bold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-3"
+                            className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold px-6 py-2.5 rounded-lg transition-colors flex items-center gap-2"
                         >
-                            <i className="fas fa-check-circle text-lg"></i>
-                            <span>Assign {selectedSubjects.length} Subject{selectedSubjects.length !== 1 ? 's' : ''}</span>
+                            <i className="fas fa-save"></i>
+                            <span>Save</span>
                         </button>
                       </div>
-                </div>
                     )}
                   </>
               )}
-            </div>
-          </div>
-          )}
-
-          {/* Current Assignments - Step 4 */}
-          {selectedDepartment && selectedClass && (
-            <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl overflow-hidden">
-              <div className="p-6 border-b border-purple-200 bg-white bg-opacity-50">
-              <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
-                      <span className="text-white font-bold">4</span>
                     </div>
-                <div>
-                      <h2 className="text-lg font-bold text-slate-900">Step 4: Review and Assign Teachers for Subjects</h2>
-                      <p className="text-slate-600 text-sm">
-                        Review subjects assigned to {classes.find(c => c._id === selectedClass)?.name} in {departments.find(d => d._id === selectedDepartment)?.name} and assign teachers
-                      </p>
-                </div>
                   </div>
-                  <span className="text-sm font-medium text-purple-700">
-                    {filteredAssignments.length} assignment{filteredAssignments.length !== 1 ? 's' : ''}
-                  </span>
+                )}
               </div>
+            )}
+          </div>
+
+          {/* Setup teachers for a classroom */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="p-4 md:p-6 border-b border-slate-200">
+              <h2 className="text-lg font-bold text-slate-900 mb-2">Setup/View teachers in a classroom</h2>
+              <p className="text-slate-600 text-sm">Review and assign teachers for subjects</p>
             </div>
 
-            <div className="p-6">
-                {filteredAssignments.length === 0 ? (
+            <div className="p-4 md:p-6">
+                {subjectAssignments.length === 0 ? (
                 <div className="text-center py-8 text-slate-500">
                   <i className="fas fa-book text-4xl mb-4 text-slate-300"></i>
                     <p className="font-medium mb-2">No assignments found</p>
-                    <p className="text-sm">Assign subjects to sections using Step 3 above.</p>
+                    <p className="text-sm">Create subject assignments using the accordion above.</p>
                 </div>
               ) : (
                   <div className="space-y-6">
                     {/* Group assignments by department, then class, then section */}
                     {(() => {
-                      // Group by department
-                      const groupedByDept = filteredAssignments.reduce((acc, assignment) => {
+                      // Group by department - show all assignments, not just filtered
+                      const displayAssignments = selectedDepartment ? filteredAssignments : subjectAssignments;
+                      const groupedByDept = displayAssignments.reduce((acc, assignment) => {
                         if (!acc[assignment.departmentId]) {
                           acc[assignment.departmentId] = {};
                         }
@@ -985,22 +1144,15 @@ const AdminSubjectAssign = () => {
                     
                     return (
                           <div key={deptId} className="border-2 border-purple-200 rounded-xl overflow-hidden bg-white">
-                            {/* Department Header - Collapsible for Higher Secondary */}
+                            {/* Department Header - Always Collapsible */}
                             <button
-                              onClick={() => isHigherSecondary && toggleDepartmentCollapse(deptId)}
-                              className={`w-full bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4 ${isHigherSecondary ? 'cursor-pointer hover:from-blue-600 hover:to-blue-700' : 'cursor-default'}`}
+                              onClick={() => toggleDepartmentCollapse(deptId)}
+                              className="w-full bg-gradient-to-r from-blue-500 to-blue-600 px-4 md:px-6 py-3 md:py-4 cursor-pointer hover:from-blue-600 hover:to-blue-700"
                             >
                               <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-                                    <i className="fas fa-building text-white text-lg"></i>
+                                <h3 className="text-base md:text-xl font-bold text-white">{department?.name}</h3>
+                                <i className={`fas fa-chevron-${isDeptCollapsed ? 'down' : 'up'} text-white text-sm md:text-lg`}></i>
                             </div>
-                                  <h3 className="text-xl font-bold text-white">{department?.name}</h3>
-                                </div>
-                                {isHigherSecondary && (
-                                  <i className={`fas fa-chevron-${isDeptCollapsed ? 'down' : 'up'} text-white text-lg`}></i>
-                                )}
-                              </div>
                             </button>
 
                             {/* Classes */}
@@ -1013,27 +1165,20 @@ const AdminSubjectAssign = () => {
                                   
                                   return (
                                     <div key={classId} className="bg-white">
-                                      {/* Class Header - Collapsible for Grade 11 */}
+                                      {/* Class Header - Always Collapsible */}
                                       <button
-                                        onClick={() => isGrade11 && toggleClassCollapse(classId)}
-                                        className={`w-full bg-gradient-to-r from-green-500 to-emerald-500 px-6 py-3 ${isGrade11 ? 'cursor-pointer hover:from-green-600 hover:to-emerald-600' : 'cursor-default'}`}
+                                        onClick={() => toggleClassCollapse(classId)}
+                                        className="w-full bg-gradient-to-r from-green-500 to-emerald-500 px-4 md:px-6 py-2 md:py-3 cursor-pointer hover:from-green-600 hover:to-emerald-600"
                                       >
                                         <div className="flex items-center justify-between">
-                                          <div className="flex items-center gap-2">
-                                            <div className="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-                                              <i className="fas fa-graduation-cap text-white"></i>
+                                          <span className="text-sm md:text-lg font-semibold text-white">{classItem?.name}</span>
+                                          <i className={`fas fa-chevron-${isClassCollapsed ? 'down' : 'up'} text-white text-sm`}></i>
                             </div>
-                                            <span className="text-lg font-semibold text-white">{classItem?.name}</span>
-                                          </div>
-                                          {isGrade11 && (
-                                            <i className={`fas fa-chevron-${isClassCollapsed ? 'down' : 'up'} text-white`}></i>
-                                          )}
-                                        </div>
                                       </button>
                             
                                       {/* Sections */}
                                       {!isClassCollapsed && (
-                                        <div className="p-4">
+                                        <div className="p-2 md:p-4">
                                           {Object.entries(classSections).map(([sectionId, sectionAssignments]) => {
                                             const section = sections.find(s => s._id === sectionId);
                                             const uniqueSubjects = [...new Set(sectionAssignments.map(a => a.subjectId))];
@@ -1041,51 +1186,68 @@ const AdminSubjectAssign = () => {
                                             return (
                                               <div key={sectionId} className="mb-4 last:mb-0 border border-slate-200 rounded-lg overflow-hidden">
                                                 {/* Section Header */}
-                                                <div className="bg-purple-50 px-4 py-3 border-b border-slate-200">
-                                                  <div className="flex items-center justify-between flex-wrap gap-2">
-                                                    <div className="flex items-center gap-2">
-                                                      <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
-                                                        <i className="fas fa-layer-group text-white text-sm"></i>
-                                                      </div>
-                                                      <span className="font-semibold text-slate-900">{section?.name}</span>
-                                                      <span className="text-xs text-slate-500">
-                                                        ({uniqueSubjects.length} subject{uniqueSubjects.length !== 1 ? 's' : ''})
-                                </span>
+                                                <div className="bg-purple-50 px-3 md:px-4 py-2 md:py-3 border-b border-slate-200">
+                                                  <div className="flex items-center gap-2">
+                                                    <div className="w-6 h-6 md:w-8 md:h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+                                                      <i className="fas fa-layer-group text-white text-xs md:text-sm"></i>
                                                     </div>
-                                                    <div className="text-xs text-slate-600 bg-white px-3 py-1 rounded-full">
-                                                      <i className="fas fa-info-circle mr-1"></i>
-                                                      Click <i className="fas fa-chalkboard-teacher mx-1"></i> to assign a teacher to each subject
-                                                    </div>
-                            </div>
-                          </div>
+                                                    <span className="font-semibold text-slate-900">{section?.name}</span>
+                                                    <span className="text-xs text-slate-500">
+                                                      ({uniqueSubjects.length} subject{uniqueSubjects.length !== 1 ? 's' : ''})
+                                                    </span>
+                                                  </div>
+                                                </div>
                           
                                                 {/* Subjects in this section */}
-                                                <div className="p-4 bg-white">
+                                                <div className="p-2 md:p-4 bg-white">
                                                   <div className="flex flex-wrap gap-2">
                                                     {uniqueSubjects.map(subjectId => {
                                                       const subject = subjects.find(s => s._id === subjectId);
                                                       const assignment = sectionAssignments.find(a => a.subjectId === subjectId);
+                                                      const teacherAssignment = subjectTeacherAssignments.find(
+                                                        ta => ta.subjectId === subjectId && ta.sectionId === sectionId
+                                                      );
+                                                      const assignedTeacher = teacherAssignment ? teachers.find(t => t._id === teacherAssignment.teacherId) : null;
                                                       
                                                       return (
-                                                        <div key={subjectId} className="flex items-center gap-2 px-3 py-2 bg-indigo-50 border border-indigo-200 rounded-lg">
-                                                          <i className="fas fa-book text-indigo-600 text-sm"></i>
-                                                          <span className="text-sm font-medium text-indigo-900">{subject?.name}</span>
-                                                          <span className="text-xs text-indigo-600">({subject?.code})</span>
-                                                          <div className="flex gap-1 ml-2">
+                                                        <div key={subjectId} className="flex items-center justify-between gap-2 px-3 py-2 bg-indigo-50 border border-indigo-200 rounded-lg">
+                                                          <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-1">
+                                                              <span className="text-sm font-medium text-indigo-900 truncate">{subject?.name}</span>
+                                                              <span className="text-xs text-indigo-600 flex-shrink-0">({subject?.code})</span>
+                                                            </div>
+                                                            {assignedTeacher ? (
+                                                              <div className="text-xs mt-1 flex items-center gap-1 text-green-600">
+                                                                <i className="fas fa-user-tie"></i>
+                                                                <span className="truncate">{assignedTeacher.name}</span>
+                                                              </div>
+                                                            ) : (
+                                                              <button
+                                                                onClick={() => openTeacherAssignModal(deptId, classId, sectionId, subjectId)}
+                                                                className="mt-1 text-xs text-orange-600 hover:text-orange-700 font-medium flex items-center gap-1"
+                                                              >
+                                                                <i className="fas fa-plus"></i>
+                                                                Add Teacher
+                                                              </button>
+                                                            )}
+                                                          </div>
+                                                          <div className="flex gap-1 flex-shrink-0">
+                                                            {assignedTeacher && (
+                                                              <button
+                                                                onClick={() => openTeacherAssignModal(deptId, classId, sectionId, subjectId)}
+                                                                className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                                                                title="Edit Teacher Assignment"
+                                                              >
+                                                                <i className="fas fa-edit text-xs"></i>
+                                                              </button>
+                                                            )}
                                                             <button
-                                                              onClick={() => openTeacherAssignModal(deptId, classId, sectionId, subjectId)}
-                                                              className="p-1 text-orange-600 hover:bg-orange-100 rounded transition-colors"
-                                                              title="Assign a teacher to teach this subject"
+                                                              onClick={() => handleDeleteAssignment(assignment._id)}
+                                                              className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
+                                                              title="Delete Assignment"
                                                             >
-                                                              <i className="fas fa-chalkboard-teacher text-xs"></i>
-                                                            </button>
-                          <button
-                            onClick={() => handleDeleteAssignment(assignment._id)}
-                                                              className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
-                            title="Delete Assignment"
-                          >
                                                               <i className="fas fa-trash text-xs"></i>
-                          </button>
+                                                            </button>
                                                           </div>
                                                         </div>
                                                       );
@@ -1110,9 +1272,15 @@ const AdminSubjectAssign = () => {
               )}
             </div>
           </div>
-          )}
 
         </main>
+        
+        {/* Footer */}
+        <footer className="bg-white border-t border-slate-200 py-4 px-4 md:px-8 mt-auto">
+          <div className="text-center">
+            <p className="text-slate-500 text-sm">© 2024 MySkillDB. All rights reserved.</p>
+          </div>
+        </footer>
       </div>
 
       {/* Assignment Modal */}
@@ -1204,28 +1372,101 @@ const AdminSubjectAssign = () => {
             try {
               setIsLoading(true);
               
-              // Simulate API call to create teacher assignment
+              // Find the existing assignment being edited
+              const existingAssignment = subjectTeacherAssignments.find(
+                ta => ta.subjectId === teacherAssignmentData.subjectId && 
+                      ta.sectionId === teacherAssignmentData.sectionId
+              );
+              
+              // Simulate API call
               await new Promise(resolve => setTimeout(resolve, 1000));
               
-              toast.success('Teacher assigned successfully!');
-              closeTeacherAssignModal();
+              if (existingAssignment) {
+                // EDITING MODE: Update all assignments for this teacher in this section
+                setSubjectTeacherAssignments(prev => {
+                  // Step 1: Remove all assignments for this teacher in this section
+                  let filtered = prev.filter(assignment => 
+                    !(assignment.teacherId === existingAssignment.teacherId && 
+                      assignment.sectionId === formData.sectionId)
+                  );
+                  
+                  // Step 2: Remove any subjects from other teachers that are being reassigned to this teacher
+                  filtered = filtered.filter(assignment => 
+                    !(formData.subjectIds.includes(assignment.subjectId) && 
+                      assignment.sectionId === formData.sectionId)
+                  );
+                  
+                  // Step 3: Add new assignments with the updated subject list
+                  const newAssignments = formData.subjectIds.map(subjectId => ({
+                    _id: `ta-${Date.now()}-${subjectId}-${Math.random()}`,
+                    teacherId: formData.teacherId,
+                    subjectId: subjectId,
+                    sectionId: formData.sectionId,
+                    classId: formData.classId,
+                    departmentId: formData.departmentId,
+                    isClassTeacher: formData.isClassTeacher
+                  }));
+                  
+                  return [...filtered, ...newAssignments];
+                });
+                
+                toast.success('Teacher assignment updated successfully!');
+              } else {
+                // CREATE MODE: Save new teacher assignments
+                const newAssignments = formData.subjectIds.map(subjectId => ({
+                  _id: `ta-${Date.now()}-${subjectId}-${Math.random()}`,
+                  teacherId: formData.teacherId,
+                  subjectId: subjectId,
+                  sectionId: formData.sectionId,
+                  classId: formData.classId,
+                  departmentId: formData.departmentId,
+                  isClassTeacher: formData.isClassTeacher
+                }));
+                
+                setSubjectTeacherAssignments(prev => {
+                  // Remove any existing assignments for these subjects in this section
+                  const filtered = prev.filter(assignment => 
+                    !(formData.subjectIds.includes(assignment.subjectId) && 
+                      assignment.sectionId === formData.sectionId)
+                  );
+                  return [...filtered, ...newAssignments];
+                });
+                
+                toast.success('Teacher assigned successfully!');
+              }
               
-              // Optionally refresh data
-              // await fetchAllData();
+              closeTeacherAssignModal();
             } catch (error) {
               toast.error('Failed to assign teacher');
             } finally {
               setIsLoading(false);
             }
           }}
-          formData={{
-            teacherId: '',
-            departmentId: teacherAssignmentData.departmentId,
-            classId: teacherAssignmentData.classId,
-            sectionId: teacherAssignmentData.sectionId,
-            subjectIds: [teacherAssignmentData.subjectId],
-            isClassTeacher: false
-          }}
+          formData={(() => {
+            const existingAssignment = subjectTeacherAssignments.find(
+              ta => ta.subjectId === teacherAssignmentData.subjectId && 
+                    ta.sectionId === teacherAssignmentData.sectionId
+            );
+            
+            // When editing, get all subjects assigned to this teacher in this section
+            const teacherSubjectsInSection = existingAssignment 
+              ? subjectTeacherAssignments
+                  .filter(ta => 
+                    ta.teacherId === existingAssignment.teacherId &&
+                    ta.sectionId === teacherAssignmentData.sectionId
+                  )
+                  .map(ta => ta.subjectId)
+              : [teacherAssignmentData.subjectId];
+            
+            return {
+              teacherId: existingAssignment?.teacherId || '',
+              departmentId: teacherAssignmentData.departmentId,
+              classId: teacherAssignmentData.classId,
+              sectionId: teacherAssignmentData.sectionId,
+              subjectIds: teacherSubjectsInSection,
+              isClassTeacher: existingAssignment?.isClassTeacher || false
+            };
+          })()}
           setFormData={() => {}}
           teachers={teachers}
           departments={departments}
@@ -1233,13 +1474,92 @@ const AdminSubjectAssign = () => {
           sections={sections}
           subjects={subjects}
           subjectAssignments={subjectAssignments}
-          teacherAssignments={[]}
-          editingAssignment={null}
+          teacherAssignments={subjectTeacherAssignments}
+          editingAssignment={(() => {
+            const existingAssignment = subjectTeacherAssignments.find(
+              ta => ta.subjectId === teacherAssignmentData.subjectId && 
+                    ta.sectionId === teacherAssignmentData.sectionId
+            );
+            return existingAssignment || null;
+          })()}
           isLoading={isLoading}
           inputBaseClass="w-full bg-slate-100 border-slate-200 rounded-md p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
           btnIndigoClass="font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors transform active:scale-95 bg-indigo-500 hover:bg-indigo-600 text-white"
           btnSlateClass="font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors transform active:scale-95 bg-slate-200 hover:bg-slate-300 text-slate-800"
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-auto border border-slate-200 max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">Confirm Deletion</h2>
+                  <p className="text-slate-500 text-sm">Please solve this math problem to confirm deletion</p>
+                </div>
+                <button
+                  onClick={closeDeleteConfirmation}
+                  className="p-2 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
+                >
+                  <i className="fas fa-times text-lg"></i>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="text-center p-6 bg-red-50 border-2 border-red-200 rounded-lg">
+                  <p className="text-lg font-semibold text-red-900 mb-2">Delete Subject Assignment?</p>
+                  <p className="text-sm text-red-700">This action cannot be undone.</p>
+                </div>
+
+                <div className="bg-slate-50 border-2 border-slate-200 rounded-lg p-4">
+                  <p className="text-center text-slate-700 mb-4">Solve this multiplication problem:</p>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-slate-900 mb-4">
+                      {deleteQuestion.num1} × {deleteQuestion.num2} = ?
+                    </div>
+                    <input
+                      type="number"
+                      value={deleteAnswer}
+                      onChange={(e) => setDeleteAnswer(e.target.value)}
+                      placeholder="Enter your answer"
+                      className="w-full p-3 border border-slate-300 rounded-lg text-center text-lg font-semibold focus:ring-2 focus:ring-red-500 outline-none"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 mt-8">
+                <button
+                  onClick={closeDeleteConfirmation}
+                  className="font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors transform active:scale-95 bg-slate-200 hover:bg-slate-300 text-slate-800 flex-1 sm:flex-none"
+                  disabled={isLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors transform active:scale-95 bg-red-500 hover:bg-red-600 text-white flex-1"
+                  disabled={!deleteAnswer || isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-trash"></i>
+                      Delete Assignment
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

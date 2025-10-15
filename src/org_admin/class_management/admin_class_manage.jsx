@@ -77,6 +77,9 @@ const AdminClassManage = () => {
   const [editingSubject, setEditingSubject] = useState(null);
   const [editingAssignment, setEditingAssignment] = useState(null);
 
+  // Quick Edit highlight state
+  const [highlightQuickEdit, setHighlightQuickEdit] = useState(false);
+
   // Filter states for assignments
   const [assignmentFilters, setAssignmentFilters] = useState({
     departmentId: '',
@@ -585,7 +588,7 @@ const AdminClassManage = () => {
   };
 
   return (
-    <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
+    <div className="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
       <Toaster position="top-right" />
       <LoaderOverlay isVisible={isLoading || loadingEntities.departments || loadingEntities.classes || loadingEntities.sections || loadingEntities.subjects || loadingEntities.assignments} title="MySkillDB" subtitle="Loading your data, please wait…" />
       
@@ -593,186 +596,144 @@ const AdminClassManage = () => {
       {!isAnyModalOpen && <OrgMenuNavigation currentPage="view-classrooms" onPageChange={handlePageChange} />}
 
       {/* Main Content */}
-      <div className={isAnyModalOpen ? "" : "lg:ml-72"}>
-        <main className="flex-1 p-4 md:p-8 space-y-8">
+      <div className={`flex-1 flex flex-col ${isAnyModalOpen ? "" : "lg:ml-72"}`}>
+        <main className="flex-1 p-4 md:p-8 space-y-8 pb-20">
           {/* Header */}
           <header className="flex justify-between items-center flex-wrap gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">View Classrooms</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Setup Classrooms</h1>
               <p className="text-slate-500 text-sm">Manage departments, classes, sections, subjects, and assignments for your organization</p>
             </div>
           </header>
 
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center gap-6">
-              <div className="bg-indigo-100 p-4 rounded-full">
-                <i className="fas fa-building fa-2x text-indigo-500"></i>
-              </div>
-              <div>
-                <p className="text-slate-500 text-sm">Departments</p>
-                <p className="text-3xl font-bold text-slate-900">{departments.length}</p>
-              </div>
-            </div>
+          {/* Quick Stats removed as per request */}
 
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center gap-6">
-              <div className="bg-emerald-100 p-4 rounded-full">
-                <i className="fas fa-graduation-cap fa-2x text-emerald-500"></i>
-              </div>
-              <div>
-                <p className="text-slate-500 text-sm">Classes</p>
-                <p className="text-3xl font-bold text-slate-900">{classes.length}</p>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center gap-6">
-              <div className="bg-purple-100 p-4 rounded-full">
-                <i className="fas fa-layer-group fa-2x text-purple-500"></i>
-              </div>
-              <div>
-                <p className="text-slate-500 text-sm">Sections</p>
-                <p className="text-3xl font-bold text-slate-900">{sections.length}</p>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center gap-6">
-              <div className="bg-amber-100 p-4 rounded-full">
-                <i className="fas fa-book fa-2x text-amber-500"></i>
-              </div>
-              <div>
-                <p className="text-slate-500 text-sm">Subjects</p>
-                <p className="text-3xl font-bold text-slate-900">{subjects.length}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Step-by-Step Workflow Guide */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                <i className="fas fa-route text-white"></i>
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Classroom Setup Workflow</h2>
-                <p className="text-sm text-slate-600">Follow these 2 simple steps to set up your classrooms</p>
-              </div>
+          {/* Step-by-Step Workflow Guide - Mobile Optimized */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg md:rounded-xl p-4 md:p-6">
+            <div className="text-center mb-4">
+              <h2 className="text-base md:text-lg font-bold text-slate-900 mb-1">Classroom Setup Workflow Guide</h2>
+              <p className="text-xs md:text-sm text-slate-600">Follow these 2 simple steps to set up your classrooms</p>
             </div>
             
-            <div className="flex items-center justify-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-100 border-2 border-green-500">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold bg-green-500 text-white">
+            <div className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-4">
+              <div className="flex items-center gap-2 px-4 md:px-6 py-2 md:py-3 rounded-lg bg-green-100 border-2 border-green-500 w-full md:w-auto">
+                <div className="w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center text-xs md:text-sm font-bold bg-green-500 text-white">
                   1
                 </div>
-                <div className="text-left">
-                  <span className="text-sm font-bold text-green-900 block">Create Entities</span>
-                  <span className="text-xs text-green-700">Departments, Classes, Sections & Subjects</span>
+                <div className="text-left flex-1">
+                  <span className="text-xs md:text-sm font-bold text-green-900 block">Create Entities</span>
+                  <span className="text-xs text-green-700 hidden md:block">Departments, Classes, Sections & Subjects</span>
+                  <span className="text-xs text-green-700 md:hidden">Create all base entities</span>
                 </div>
               </div>
               
-              <i className="fas fa-arrow-right text-slate-400 text-xl"></i>
+              <i className="fas fa-arrow-right text-slate-400 text-lg md:text-xl transform rotate-90 md:rotate-0"></i>
               
-              <div className="flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-100 border-2 border-blue-300">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold bg-blue-500 text-white">
+              <div className="flex items-center gap-2 px-4 md:px-6 py-2 md:py-3 rounded-lg bg-blue-100 border-2 border-blue-300 w-full md:w-auto">
+                <div className="w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center text-xs md:text-sm font-bold bg-blue-500 text-white">
                   2
                 </div>
-                <div className="text-left">
-                  <span className="text-sm font-bold text-blue-900 block">Assign & Define</span>
-                  <span className="text-xs text-blue-700">Map Sections to Classes, then Assign Subjects</span>
+                <div className="text-left flex-1">
+                  <span className="text-xs md:text-sm font-bold text-blue-900 block">Assign & Define</span>
+                  <span className="text-xs text-blue-700 hidden md:block">Map Sections to Classes, then Assign Subjects</span>
+                  <span className="text-xs text-blue-700 md:hidden">Assign sections & subjects</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Step 1: Create Entities */}
+          {/* Create Entities (header removed) */}
           <div className="bg-white rounded-xl shadow-sm border-2 border-green-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-green-500 to-emerald-500 px-6 py-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">1</span>
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-white">Step 1: Create Base Entities</h2>
-                  <p className="text-white text-opacity-90 text-sm">Create departments, classes, sections, and subjects</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+            <div className="p-4 md:p-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
               <button
                 onClick={() => openModal('department')}
-                  className="relative flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 rounded-lg transition-all hover:shadow-md group"
+                  className="relative flex flex-col items-center gap-2 p-3 md:p-4 bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 rounded-lg transition-all hover:shadow-md group"
                 >
-                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                    <i className="fas fa-plus text-white text-sm"></i>
+                  <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 w-6 h-6 md:w-8 md:h-8 bg-blue-500 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                    <i className="fas fa-plus text-white text-xs md:text-sm"></i>
                   </div>
-                  <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <i className="fas fa-building text-white text-xl"></i>
+                  <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <i className="fas fa-building text-white text-lg md:text-xl"></i>
                   </div>
-                  <div className="text-left flex-1">
-                    <p className="font-semibold text-slate-900">Department</p>
+                  <div className="text-center">
+                    <p className="font-semibold text-slate-900 text-sm md:text-base">Department</p>
                     <p className="text-xs text-slate-600">{departments.length} created</p>
                   </div>
               </button>
 
               <button
                 onClick={() => openModal('class')}
-                  className="relative flex items-center gap-3 p-4 bg-green-50 hover:bg-green-100 border-2 border-green-200 rounded-lg transition-all hover:shadow-md group"
+                  className="relative flex flex-col items-center gap-2 p-3 md:p-4 bg-green-50 hover:bg-green-100 border-2 border-green-200 rounded-lg transition-all hover:shadow-md group"
                 >
-                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                    <i className="fas fa-plus text-white text-sm"></i>
+                  <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 w-6 h-6 md:w-8 md:h-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                    <i className="fas fa-plus text-white text-xs md:text-sm"></i>
                   </div>
-                  <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <i className="fas fa-graduation-cap text-white text-xl"></i>
+                  <div className="w-10 h-10 md:w-12 md:h-12 bg-green-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <i className="fas fa-graduation-cap text-white text-lg md:text-xl"></i>
                   </div>
-                  <div className="text-left flex-1">
-                    <p className="font-semibold text-slate-900">Class</p>
+                  <div className="text-center">
+                    <p className="font-semibold text-slate-900 text-sm md:text-base">Class</p>
                     <p className="text-xs text-slate-600">{classes.length} created</p>
                   </div>
               </button>
 
               <button
                 onClick={() => openModal('section')}
-                  className="relative flex items-center gap-3 p-4 bg-purple-50 hover:bg-purple-100 border-2 border-purple-200 rounded-lg transition-all hover:shadow-md group"
+                  className="relative flex flex-col items-center gap-2 p-3 md:p-4 bg-purple-50 hover:bg-purple-100 border-2 border-purple-200 rounded-lg transition-all hover:shadow-md group"
                 >
-                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                    <i className="fas fa-plus text-white text-sm"></i>
+                  <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 w-6 h-6 md:w-8 md:h-8 bg-purple-500 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                    <i className="fas fa-plus text-white text-xs md:text-sm"></i>
                   </div>
-                  <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <i className="fas fa-layer-group text-white text-xl"></i>
+                  <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <i className="fas fa-layer-group text-white text-lg md:text-xl"></i>
                   </div>
-                  <div className="text-left flex-1">
-                    <p className="font-semibold text-slate-900">Section</p>
+                  <div className="text-center">
+                    <p className="font-semibold text-slate-900 text-sm md:text-base">Section</p>
                     <p className="text-xs text-slate-600">{sections.length} created</p>
                   </div>
               </button>
 
               <button
                 onClick={() => openModal('subject')}
-                  className="relative flex items-center gap-3 p-4 bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 rounded-lg transition-all hover:shadow-md group"
+                  className="relative flex flex-col items-center gap-2 p-3 md:p-4 bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 rounded-lg transition-all hover:shadow-md group"
                 >
-                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                    <i className="fas fa-plus text-white text-sm"></i>
+                  <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 w-6 h-6 md:w-8 md:h-8 bg-amber-500 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                    <i className="fas fa-plus text-white text-xs md:text-sm"></i>
                   </div>
-                  <div className="w-12 h-12 bg-amber-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <i className="fas fa-book text-white text-xl"></i>
+                  <div className="w-10 h-10 md:w-12 md:h-12 bg-amber-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <i className="fas fa-book text-white text-lg md:text-xl"></i>
                   </div>
-                  <div className="text-left flex-1">
-                    <p className="font-semibold text-slate-900">Subject</p>
+                  <div className="text-center">
+                    <p className="font-semibold text-slate-900 text-sm md:text-base">Subject</p>
                     <p className="text-xs text-slate-600">{subjects.length} created</p>
                   </div>
               </button>
             </div>
             
-            {/* Quick Edit Options */}
-            <div className="mt-6 pt-6 border-t border-slate-200">
-                <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                  <i className="fas fa-edit text-slate-500"></i>
-                  Quick Edit Existing Entities
-                </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Edit Department</label>
+            {/* Quick Edit Options - Mobile Optimized */}
+            <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-slate-200">
+              <div className="text-center mb-4 md:mb-6">
+                <div
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-lg border border-blue-200 cursor-pointer select-none hover:border-blue-300"
+                  onClick={() => setHighlightQuickEdit(true)}
+                  role="button"
+                  aria-label="Quick Edit"
+                >
+                  <i className="fas fa-edit text-blue-500 text-xs md:text-sm"></i>
+                  <h3 className="text-sm md:text-base font-semibold text-blue-700">
+                    Quick Edit
+                  </h3>
+                </div>
+                <p className="text-xs md:text-sm text-slate-500 mt-2">
+                  Select any entity below to edit its details
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                <div className="w-full">
+                  <label className="block text-sm font-medium text-blue-700 mb-2">View/Edit Department</label>
                   <select 
                     onChange={(e) => {
                       if (e.target.value) {
@@ -781,7 +742,9 @@ const AdminClassManage = () => {
                         e.target.value = '';
                       }
                     }}
-                      className="w-full text-sm p-2 border border-slate-200 rounded-md bg-white"
+                    onFocus={() => setHighlightQuickEdit(false)}
+                    className={`w-full block text-sm md:text-base p-3 border rounded-lg bg-white transition-colors shadow-sm hover:shadow focus:shadow-md ${highlightQuickEdit ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-slate-300 hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200'}`}
+                    style={{ minHeight: '44px' }}
                   >
                     <option value="">Select Department</option>
                     {departments.map(dept => (
@@ -790,8 +753,8 @@ const AdminClassManage = () => {
                   </select>
                 </div>
                 
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Edit Class</label>
+                <div className="w-full">
+                  <label className="block text-sm font-medium text-green-700 mb-2">View/Edit Class</label>
                   <select 
                     onChange={(e) => {
                       if (e.target.value) {
@@ -800,7 +763,9 @@ const AdminClassManage = () => {
                         e.target.value = '';
                       }
                     }}
-                      className="w-full text-sm p-2 border border-slate-200 rounded-md bg-white"
+                    onFocus={() => setHighlightQuickEdit(false)}
+                    className={`w-full block text-sm md:text-base p-3 border rounded-lg bg-white transition-colors shadow-sm hover:shadow focus:shadow-md ${highlightQuickEdit ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-slate-300 hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200'}`}
+                    style={{ minHeight: '44px' }}
                   >
                     <option value="">Select Class</option>
                     {classes.map(cls => (
@@ -809,8 +774,8 @@ const AdminClassManage = () => {
                   </select>
                 </div>
                 
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Edit Section</label>
+                <div className="w-full">
+                  <label className="block text-sm font-medium text-purple-700 mb-2">View/Edit Section</label>
                   <select 
                     onChange={(e) => {
                       if (e.target.value) {
@@ -819,7 +784,9 @@ const AdminClassManage = () => {
                         e.target.value = '';
                       }
                     }}
-                      className="w-full text-sm p-2 border border-slate-200 rounded-md bg-white"
+                    onFocus={() => setHighlightQuickEdit(false)}
+                    className={`w-full block text-sm md:text-base p-3 border rounded-lg bg-white transition-colors shadow-sm hover:shadow focus:shadow-md ${highlightQuickEdit ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-slate-300 hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200'}`}
+                    style={{ minHeight: '44px' }}
                   >
                     <option value="">Select Section</option>
                     {sections.map(section => (
@@ -828,8 +795,8 @@ const AdminClassManage = () => {
                   </select>
                 </div>
                 
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Edit Subject</label>
+                <div className="w-full">
+                  <label className="block text-sm font-medium text-amber-700 mb-2">View/Edit Subject</label>
                   <select 
                     onChange={(e) => {
                       if (e.target.value) {
@@ -838,54 +805,42 @@ const AdminClassManage = () => {
                         e.target.value = '';
                       }
                     }}
-                      className="w-full text-sm p-2 border border-slate-200 rounded-md bg-white"
+                    onFocus={() => setHighlightQuickEdit(false)}
+                    className={`w-full block text-sm md:text-base p-3 border rounded-lg bg-white transition-colors shadow-sm hover:shadow focus:shadow-md ${highlightQuickEdit ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200' : 'border-slate-300 hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200'}`}
+                    style={{ minHeight: '44px' }}
                   >
                     <option value="">Select Subject</option>
                     {subjects.map(subject => (
                       <option key={subject._id} value={subject._id}>{subject.name}</option>
                     ))}
                   </select>
-                  </div>
+                </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Step 2: Assign Sections to Classes & Step 3: Assign Subjects */}
+          {/* Assign Sections & Define Subjects (header removed) */}
           <div className="bg-white rounded-xl shadow-sm border-2 border-blue-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-500 to-indigo-500 px-6 py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-                    <span className="text-white font-bold text-lg">2</span>
-                  </div>
-                <div>
-                    <h2 className="text-lg font-bold text-white">Step 2: Assign Sections & Define Subjects</h2>
-                    <p className="text-white text-opacity-90 text-sm">Map sections to classes, then assign subjects to each section</p>
-                  </div>
-                </div>
+            <div className="px-4 md:px-6 py-4">
+              <p className="text-center font-semibold text-slate-900 pt-6 md:pt-8 mb-3 text-sm md:text-base">
+                Click below to Setup sections or batches
+              </p>
+              <div className="flex justify-center">
                 <button
                   onClick={() => openModal('assignment')}
-                  className="bg-white hover:bg-blue-50 text-blue-600 font-bold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-3"
+                  className="bg-white hover:bg-blue-50 text-blue-600 font-bold px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center gap-2 md:gap-3 text-sm md:text-base border border-blue-200"
                 >
-                  <i className="fas fa-link text-lg"></i>
-                  <span>Assign Sections</span>
+                  <i className="fas fa-layer-group text-sm md:text-lg"></i>
+                  <span>Section/Batch Setup</span>
                 </button>
               </div>
             </div>
             
-            <div className="p-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                <p className="text-sm text-blue-900 flex items-center gap-2">
-                  <i className="fas fa-info-circle"></i>
-                  <strong>Workflow:</strong> First assign sections to classes, then click "Assign Subjects" on each class to define which subjects are taught.
-                </p>
-              </div>
-              
+            <div className="p-4 md:p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="font-semibold text-slate-900">Current Section Assignments</h3>
-                  <p className="text-slate-500 text-sm">View sections assigned to classes and proceed to assign subjects</p>
+                  <h3 className="font-semibold text-slate-900">View/Edit Classrooms</h3>
                 </div>
               </div>
               
@@ -1038,15 +993,15 @@ const AdminClassManage = () => {
                                         
                                         {/* Action Buttons Row */}
                                         <div className="bg-white border-2 border-blue-200 rounded-lg p-3 mt-3">
-                                          <div className="flex items-center justify-between">
-                                            <p className="text-sm text-slate-600 flex items-center gap-2">
+                                          <div className="flex flex-col gap-3">
+                                            <p className="text-xs md:text-sm text-slate-600 flex items-center gap-2">
                                               <i className="fas fa-info-circle text-blue-500"></i>
                                               <span><strong>Next:</strong> View sections details or assign subjects to this class</span>
                                             </p>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                                               <button
                                                 onClick={() => handleViewSections(departmentId, classId)}
-                                                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 border border-slate-200"
+                                                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 border border-slate-200 flex-1"
                                                 title="View all sections assigned to this class"
                                               >
                                                 <i className="fas fa-eye"></i>
@@ -1054,7 +1009,7 @@ const AdminClassManage = () => {
                                               </button>
                                               <button
                                                 onClick={() => navigateToSubjectAssign(departmentId, classId)}
-                                                className="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white rounded-lg text-sm font-bold transition-all shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2"
+                                                className="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white rounded-lg text-sm font-bold transition-all shadow-md hover:shadow-lg transform hover:scale-105 flex items-center justify-center gap-2 flex-1"
                                                 title="Assign subjects to sections in this class"
                                               >
                                                 <i className="fas fa-book"></i>
@@ -1068,7 +1023,7 @@ const AdminClassManage = () => {
                                     </div>
                                   );
                                 })}
-                                </div>
+                              </div>
                               )}
                             </div>
                           );
@@ -1081,6 +1036,15 @@ const AdminClassManage = () => {
             </div>
           </div>
         </main>
+        
+        {/* Footer */}
+        <footer className="bg-white border-t border-slate-200 py-4 px-4 md:px-8 mt-auto">
+          <div className="text-center">
+            <p className="text-sm text-slate-600">
+              © 2024 <span className="font-semibold text-indigo-600">MySkillDB</span>. All rights reserved.
+            </p>
+          </div>
+        </footer>
       </div>
 
       {/* Sections View Modal */}

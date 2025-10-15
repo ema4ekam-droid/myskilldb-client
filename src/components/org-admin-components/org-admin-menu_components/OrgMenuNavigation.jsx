@@ -66,8 +66,8 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
       color: 'green',
       subItems: [
         { id: 'view-classrooms', label: 'Class Setup', icon: 'fas fa-list' },
-        { id: 'define-subjects', label: 'Subject Setup', icon: 'fas fa-book' },
-        { id: 'teacher-assignments', label: 'Teacher Assignments', icon: 'fas fa-user-tie' }
+        { id: 'define-subjects', label: 'Subjects & Teachers', icon: 'fas fa-book' },
+        { id: 'teacher-assignments', label: 'Teachers in Org', icon: 'fas fa-user-tie' }
       ]
     },
     {
@@ -184,7 +184,7 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
       {/* Navigation Sidebar - Higher z-index and better positioning */}
       <aside
         className={`
-        fixed inset-y-0 left-0 z-[95] w-72 bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out shadow-2xl
+        fixed inset-y-0 left-0 z-[95] w-72 bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out shadow-2xl flex flex-col
         ${
           isMobileMenuOpen
             ? "translate-x-0"
@@ -193,27 +193,31 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
       `}
       >
         {/* Logo Section */}
-        <div className="p-6 border-b border-slate-200">
+        <div className="p-4 md:p-6 border-b border-slate-200 flex-shrink-0">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">MySkillDB</h1>
-              <p className="text-sm text-slate-500 mt-1">
-                Organization Admin Panel
-              </p>
+            <div className="flex-1 min-w-0 pr-3">
+              <h1 className="text-xl md:text-2xl font-bold text-slate-900 truncate">MySkillDB</h1>
             </div>
             {/* Close button for mobile */}
             <button
-              className="lg:hidden p-2 rounded-lg hover:bg-slate-100 transition-colors"
+              className="lg:hidden p-2 rounded-lg hover:bg-slate-100 transition-colors flex-shrink-0"
               onClick={() => setIsMobileMenuOpen(false)}
               aria-label="Close Menu"
             >
-              <i className="fas fa-times text-slate-500"></i>
+              <i className="fas fa-times text-slate-500 text-sm"></i>
             </button>
           </div>
         </div>
 
-        {/* Navigation Menu */}
-        <nav className="p-4 space-y-1">
+        {/* Organization Admin Panel Text */}
+        <div className="px-4 md:px-6 py-2 bg-slate-50 border-b border-slate-200 flex-shrink-0">
+          <p className="text-xs md:text-sm text-slate-500">
+            Organization Admin Panel
+          </p>
+        </div>
+
+        {/* Navigation Menu - Scrollable */}
+        <nav className="flex-1 overflow-y-auto p-4 space-y-1">
           {menuItems.map((item) => {
             const isActive = currentPage === item.id;
             const isExpanded = expandedMenus[item.id];
@@ -335,7 +339,7 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
         </nav>
 
         {/* User Section */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-200 bg-slate-50">
+        <div className="p-4 border-t border-slate-200 bg-slate-50 flex-shrink-0">
           <div className="flex items-center gap-3">
             <img
               src="https://api.dicebear.com/8.x/initials/svg?seed=Org+Admin"

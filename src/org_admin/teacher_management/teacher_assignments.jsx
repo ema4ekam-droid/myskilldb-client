@@ -60,14 +60,6 @@ const TeacherAssignments = () => {
   // Current organization ID (would come from context/auth in real app)
   const [currentOrganizationId, setCurrentOrganizationId] = useState('org-123');
 
-  // Unassigned teachers accordion state
-  const [expandedUnassigned, setExpandedUnassigned] = useState(false);
-
-  useEffect(() => {
-    // Auto-expand unassigned accordion when a department is selected
-    setExpandedUnassigned(Boolean(selectedDepartment));
-  }, [selectedDepartment]);
-
   // --- API CALLS ---
 
   const fetchTeachers = async () => {
@@ -247,21 +239,61 @@ const TeacherAssignments = () => {
       
       // Dummy data for teacher assignments
       const dummyAssignments = [
-        // Lower Primary - Grade 5
-        { _id: 'ta-1', teacherId: 'teacher-1', departmentId: 'dept-2', classId: 'class-7', sectionId: 'section-1', subjectIds: ['subject-1', 'subject-3'], isClassTeacher: true },
-        { _id: 'ta-2', teacherId: 'teacher-2', departmentId: 'dept-2', classId: 'class-7', sectionId: 'section-2', subjectIds: ['subject-2', 'subject-4'], isClassTeacher: false },
+        // Lower Primary - Grade 5 Section A (5 teachers)
+        { _id: 'ta-1', teacherId: 'teacher-1', departmentId: 'dept-2', classId: 'class-7', sectionId: 'section-1', subjectIds: ['subject-1'], isClassTeacher: true },
+        { _id: 'ta-2', teacherId: 'teacher-2', departmentId: 'dept-2', classId: 'class-7', sectionId: 'section-1', subjectIds: ['subject-2'], isClassTeacher: false },
+        { _id: 'ta-3', teacherId: 'teacher-11', departmentId: 'dept-2', classId: 'class-7', sectionId: 'section-1', subjectIds: ['subject-3'], isClassTeacher: false },
+        { _id: 'ta-4', teacherId: 'teacher-12', departmentId: 'dept-2', classId: 'class-7', sectionId: 'section-1', subjectIds: ['subject-4'], isClassTeacher: false },
+        { _id: 'ta-5', teacherId: 'teacher-1', departmentId: 'dept-2', classId: 'class-7', sectionId: 'section-1', subjectIds: ['subject-5'], isClassTeacher: false },
         
-        // Upper Primary - Grade 6
-        { _id: 'ta-3', teacherId: 'teacher-3', departmentId: 'dept-3', classId: 'class-8', sectionId: 'section-1', subjectIds: ['subject-6', 'subject-8'], isClassTeacher: true },
-        { _id: 'ta-4', teacherId: 'teacher-4', departmentId: 'dept-3', classId: 'class-8', sectionId: 'section-2', subjectIds: ['subject-7', 'subject-9'], isClassTeacher: false },
+        // Lower Primary - Grade 5 Section B (5 teachers)
+        { _id: 'ta-6', teacherId: 'teacher-2', departmentId: 'dept-2', classId: 'class-7', sectionId: 'section-2', subjectIds: ['subject-1'], isClassTeacher: true },
+        { _id: 'ta-7', teacherId: 'teacher-1', departmentId: 'dept-2', classId: 'class-7', sectionId: 'section-2', subjectIds: ['subject-2'], isClassTeacher: false },
+        { _id: 'ta-8', teacherId: 'teacher-11', departmentId: 'dept-2', classId: 'class-7', sectionId: 'section-2', subjectIds: ['subject-3'], isClassTeacher: false },
+        { _id: 'ta-9', teacherId: 'teacher-12', departmentId: 'dept-2', classId: 'class-7', sectionId: 'section-2', subjectIds: ['subject-4'], isClassTeacher: false },
+        { _id: 'ta-10', teacherId: 'teacher-2', departmentId: 'dept-2', classId: 'class-7', sectionId: 'section-2', subjectIds: ['subject-5'], isClassTeacher: false },
         
-        // High School - Grade 10
-        { _id: 'ta-5', teacherId: 'teacher-5', departmentId: 'dept-4', classId: 'class-12', sectionId: 'section-1', subjectIds: ['subject-11', 'subject-13'], isClassTeacher: true },
-        { _id: 'ta-6', teacherId: 'teacher-6', departmentId: 'dept-4', classId: 'class-12', sectionId: 'section-2', subjectIds: ['subject-12', 'subject-14'], isClassTeacher: false },
+        // Upper Primary - Grade 6 Section A (5 teachers)
+        { _id: 'ta-11', teacherId: 'teacher-3', departmentId: 'dept-3', classId: 'class-8', sectionId: 'section-1', subjectIds: ['subject-6'], isClassTeacher: true },
+        { _id: 'ta-12', teacherId: 'teacher-4', departmentId: 'dept-3', classId: 'class-8', sectionId: 'section-1', subjectIds: ['subject-7'], isClassTeacher: false },
+        { _id: 'ta-13', teacherId: 'teacher-13', departmentId: 'dept-3', classId: 'class-8', sectionId: 'section-1', subjectIds: ['subject-8'], isClassTeacher: false },
+        { _id: 'ta-14', teacherId: 'teacher-3', departmentId: 'dept-3', classId: 'class-8', sectionId: 'section-1', subjectIds: ['subject-9'], isClassTeacher: false },
+        { _id: 'ta-15', teacherId: 'teacher-4', departmentId: 'dept-3', classId: 'class-8', sectionId: 'section-1', subjectIds: ['subject-10'], isClassTeacher: false },
         
-        // Higher Secondary - Grade 11 Bio Math
-        { _id: 'ta-7', teacherId: 'teacher-7', departmentId: 'dept-5', classId: 'class-13', sectionId: 'section-1', subjectIds: ['subject-16', 'subject-17'], isClassTeacher: true },
-        { _id: 'ta-8', teacherId: 'teacher-8', departmentId: 'dept-5', classId: 'class-13', sectionId: 'section-2', subjectIds: ['subject-18', 'subject-19'], isClassTeacher: false }
+        // Upper Primary - Grade 6 Section B (5 teachers)
+        { _id: 'ta-16', teacherId: 'teacher-4', departmentId: 'dept-3', classId: 'class-8', sectionId: 'section-2', subjectIds: ['subject-6'], isClassTeacher: true },
+        { _id: 'ta-17', teacherId: 'teacher-3', departmentId: 'dept-3', classId: 'class-8', sectionId: 'section-2', subjectIds: ['subject-7'], isClassTeacher: false },
+        { _id: 'ta-18', teacherId: 'teacher-13', departmentId: 'dept-3', classId: 'class-8', sectionId: 'section-2', subjectIds: ['subject-8'], isClassTeacher: false },
+        { _id: 'ta-19', teacherId: 'teacher-4', departmentId: 'dept-3', classId: 'class-8', sectionId: 'section-2', subjectIds: ['subject-9'], isClassTeacher: false },
+        { _id: 'ta-20', teacherId: 'teacher-3', departmentId: 'dept-3', classId: 'class-8', sectionId: 'section-2', subjectIds: ['subject-10'], isClassTeacher: false },
+        
+        // High School - Grade 10 Section A (5 teachers)
+        { _id: 'ta-21', teacherId: 'teacher-5', departmentId: 'dept-4', classId: 'class-12', sectionId: 'section-1', subjectIds: ['subject-11'], isClassTeacher: true },
+        { _id: 'ta-22', teacherId: 'teacher-6', departmentId: 'dept-4', classId: 'class-12', sectionId: 'section-1', subjectIds: ['subject-12'], isClassTeacher: false },
+        { _id: 'ta-23', teacherId: 'teacher-14', departmentId: 'dept-4', classId: 'class-12', sectionId: 'section-1', subjectIds: ['subject-13'], isClassTeacher: false },
+        { _id: 'ta-24', teacherId: 'teacher-15', departmentId: 'dept-4', classId: 'class-12', sectionId: 'section-1', subjectIds: ['subject-14'], isClassTeacher: false },
+        { _id: 'ta-25', teacherId: 'teacher-5', departmentId: 'dept-4', classId: 'class-12', sectionId: 'section-1', subjectIds: ['subject-15'], isClassTeacher: false },
+        
+        // High School - Grade 10 Section B (5 teachers)
+        { _id: 'ta-26', teacherId: 'teacher-6', departmentId: 'dept-4', classId: 'class-12', sectionId: 'section-2', subjectIds: ['subject-11'], isClassTeacher: true },
+        { _id: 'ta-27', teacherId: 'teacher-5', departmentId: 'dept-4', classId: 'class-12', sectionId: 'section-2', subjectIds: ['subject-12'], isClassTeacher: false },
+        { _id: 'ta-28', teacherId: 'teacher-14', departmentId: 'dept-4', classId: 'class-12', sectionId: 'section-2', subjectIds: ['subject-13'], isClassTeacher: false },
+        { _id: 'ta-29', teacherId: 'teacher-15', departmentId: 'dept-4', classId: 'class-12', sectionId: 'section-2', subjectIds: ['subject-14'], isClassTeacher: false },
+        { _id: 'ta-30', teacherId: 'teacher-6', departmentId: 'dept-4', classId: 'class-12', sectionId: 'section-2', subjectIds: ['subject-15'], isClassTeacher: false },
+        
+        // Higher Secondary - Grade 11 Bio Math Section A (5 teachers)
+        { _id: 'ta-31', teacherId: 'teacher-7', departmentId: 'dept-5', classId: 'class-13', sectionId: 'section-1', subjectIds: ['subject-16'], isClassTeacher: true },
+        { _id: 'ta-32', teacherId: 'teacher-8', departmentId: 'dept-5', classId: 'class-13', sectionId: 'section-1', subjectIds: ['subject-17'], isClassTeacher: false },
+        { _id: 'ta-33', teacherId: 'teacher-9', departmentId: 'dept-5', classId: 'class-13', sectionId: 'section-1', subjectIds: ['subject-18'], isClassTeacher: false },
+        { _id: 'ta-34', teacherId: 'teacher-10', departmentId: 'dept-5', classId: 'class-13', sectionId: 'section-1', subjectIds: ['subject-19'], isClassTeacher: false },
+        { _id: 'ta-35', teacherId: 'teacher-7', departmentId: 'dept-5', classId: 'class-13', sectionId: 'section-1', subjectIds: ['subject-20'], isClassTeacher: false },
+        
+        // Higher Secondary - Grade 11 Bio Math Section B (5 teachers)
+        { _id: 'ta-36', teacherId: 'teacher-8', departmentId: 'dept-5', classId: 'class-13', sectionId: 'section-2', subjectIds: ['subject-16'], isClassTeacher: true },
+        { _id: 'ta-37', teacherId: 'teacher-7', departmentId: 'dept-5', classId: 'class-13', sectionId: 'section-2', subjectIds: ['subject-17'], isClassTeacher: false },
+        { _id: 'ta-38', teacherId: 'teacher-9', departmentId: 'dept-5', classId: 'class-13', sectionId: 'section-2', subjectIds: ['subject-18'], isClassTeacher: false },
+        { _id: 'ta-39', teacherId: 'teacher-10', departmentId: 'dept-5', classId: 'class-13', sectionId: 'section-2', subjectIds: ['subject-19'], isClassTeacher: false },
+        { _id: 'ta-40', teacherId: 'teacher-8', departmentId: 'dept-5', classId: 'class-13', sectionId: 'section-2', subjectIds: ['subject-20'], isClassTeacher: false }
       ];
       
       await new Promise(resolve => setTimeout(resolve, 300));
@@ -504,30 +536,15 @@ const TeacherAssignments = () => {
     return teachers;
   }, [teachers, selectedDepartment, selectedClass, selectedSection, teacherAssignments]);
 
-  // Unassigned teachers within selected department
-  const unassignedTeachers = useMemo(() => {
-    if (!selectedDepartment) return [];
-    const assignedTeacherIdsInDept = teacherAssignments
-      .filter(a => a.departmentId === selectedDepartment)
-      .map(a => a.teacherId);
-    return teachers
-      .filter(t => t.departmentId === selectedDepartment && !assignedTeacherIdsInDept.includes(t._id))
-      .filter(t => {
-        if (!teacherSearchTerm) return true;
-        const term = teacherSearchTerm.toLowerCase();
-        return t.name.toLowerCase().includes(term) || t.email.toLowerCase().includes(term);
-      });
-  }, [teachers, teacherAssignments, selectedDepartment, teacherSearchTerm]);
 
-  // Department teacher counts
-  const deptTeacherStats = useMemo(() => {
-    if (!selectedDepartment) return { total: 0, assigned: 0, unassigned: 0 };
-    const total = teachers.filter(t => t.departmentId === selectedDepartment).length;
-    const assigned = teacherAssignments.filter(a => a.departmentId === selectedDepartment).map(a => a.teacherId)
-      .filter((id, idx, arr) => arr.indexOf(id) === idx).length;
+  // Overall teacher counts (all departments)
+  const overallTeacherStats = useMemo(() => {
+    const total = teachers.length;
+    const assignedTeacherIds = [...new Set(teacherAssignments.map(a => a.teacherId))];
+    const assigned = assignedTeacherIds.length;
     const unassigned = Math.max(total - assigned, 0);
     return { total, assigned, unassigned };
-  }, [teachers, teacherAssignments, selectedDepartment]);
+  }, [teachers, teacherAssignments]);
 
   const filteredSubjects = useMemo(() => {
     if (!selectedDepartment) return subjects;
@@ -639,7 +656,7 @@ const TeacherAssignments = () => {
   };
 
   return (
-    <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
+    <div className="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
       <Toaster position="top-right" />
       <LoaderOverlay isVisible={isLoading || loadingEntities.teachers || loadingEntities.departments || loadingEntities.classes || loadingEntities.sections || loadingEntities.subjects || loadingEntities.assignments} title="MySkillDB" subtitle="Loading your data, please wait…" />
       
@@ -647,68 +664,53 @@ const TeacherAssignments = () => {
       {!isAssignmentModalOpen && <OrgMenuNavigation currentPage="teacher-assignments" onPageChange={handlePageChange} />}
 
       {/* Main Content */}
-      <div className={isAssignmentModalOpen ? "" : "lg:ml-72"}>
+      <div className={isAssignmentModalOpen ? "flex-1 flex flex-col" : "lg:ml-72 flex-1 flex flex-col"}>
         <main className="flex-1 p-4 md:p-8 space-y-8">
           {/* Header */}
           <header className="flex justify-between items-center flex-wrap gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Teacher Assignments</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">View/Edit Teachers</h1>
               <p className="text-slate-500 text-sm">Manage teacher assignments to classes, sections, and subjects</p>
             </div>
           </header>
 
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
-              <div className="bg-blue-100 p-3 rounded-full flex-shrink-0">
-                <i className="fas fa-chalkboard-teacher text-xl text-blue-500"></i>
+          {/* Quick Stats - Mobile Optimized */}
+          <div className="grid grid-cols-3 gap-3 md:gap-6">
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col md:flex-row items-center gap-2 md:gap-4">
+              <div className="bg-blue-100 p-2 md:p-3 rounded-full flex-shrink-0">
+                <i className="fas fa-chalkboard-teacher text-lg md:text-xl text-blue-500"></i>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-slate-500 text-sm truncate">Teachers</p>
-                <p className="text-2xl font-bold text-slate-900">{teachers.length}</p>
-              </div>
-            </div>
-
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
-              <div className="bg-green-100 p-3 rounded-full flex-shrink-0">
-                <i className="fas fa-building text-xl text-green-500"></i>
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-slate-500 text-sm truncate">Departments</p>
-                <p className="text-2xl font-bold text-slate-900">{departments.length}</p>
+              <div className="min-w-0 flex-1 text-center md:text-left">
+                <p className="text-slate-500 text-xs md:text-sm truncate hidden md:block">Teachers in Org</p>
+                <p className="text-lg md:text-2xl font-bold text-slate-900">{overallTeacherStats.total}</p>
               </div>
             </div>
 
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
-              <div className="bg-purple-100 p-3 rounded-full flex-shrink-0">
-                <i className="fas fa-graduation-cap text-xl text-purple-500"></i>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col md:flex-row items-center gap-2 md:gap-4">
+              <div className="bg-green-100 p-2 md:p-3 rounded-full flex-shrink-0">
+                <i className="fas fa-user-check text-lg md:text-xl text-green-500"></i>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-slate-500 text-sm truncate">Classes</p>
-                <p className="text-2xl font-bold text-slate-900">{classes.length}</p>
+              <div className="min-w-0 flex-1 text-center md:text-left">
+                <p className="text-slate-500 text-xs md:text-sm truncate hidden md:block">Assigned Teachers</p>
+                <p className="text-lg md:text-2xl font-bold text-slate-900">{overallTeacherStats.assigned}</p>
               </div>
             </div>
 
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
-              <div className="bg-orange-100 p-3 rounded-full flex-shrink-0">
-                <i className="fas fa-link text-xl text-orange-500"></i>
+            <div className="bg-white p-3 md:p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col md:flex-row items-center gap-2 md:gap-4">
+              <div className="bg-orange-100 p-2 md:p-3 rounded-full flex-shrink-0">
+                <i className="fas fa-user-times text-lg md:text-xl text-orange-500"></i>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-slate-500 text-sm truncate">Assignments</p>
-                <p className="text-2xl font-bold text-slate-900">{teacherAssignments.length}</p>
+              <div className="min-w-0 flex-1 text-center md:text-left">
+                <p className="text-slate-500 text-xs md:text-sm truncate hidden md:block">Unassigned Teachers</p>
+                <p className="text-lg md:text-2xl font-bold text-slate-900">{overallTeacherStats.unassigned}</p>
               </div>
             </div>
           </div>
 
           {/* Selection Filters */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Filter Assignments</h2>
-                <p className="text-sm text-slate-600">
-                  Search for teachers or filter by department, class, and section
-                </p>
-              </div>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 md:p-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-3">
+              <h2 className="text-base md:text-lg font-bold text-slate-900">View/Edit Teachers</h2>
               <button
                 onClick={() => {
                   setSelectedDepartment('');
@@ -717,17 +719,16 @@ const TeacherAssignments = () => {
                   setSelectedTeacher('');
                   setTeacherSearchTerm('');
                 }}
-                className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                className="text-xs md:text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-2 self-start md:self-auto"
               >
-                <i className="fas fa-redo mr-2"></i>
+                <i className="fas fa-redo"></i>
                 Clear All
               </button>
             </div>
             
             {/* Teacher Search */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                <i className="fas fa-search mr-2 text-orange-500"></i>
+              <label className="block text-xs md:text-sm font-medium text-slate-700 mb-2">
                 Search Teacher
               </label>
               <div className="relative">
@@ -737,7 +738,7 @@ const TeacherAssignments = () => {
                   placeholder="Search by teacher name or email..."
                   value={teacherSearchTerm}
                   onChange={(e) => setTeacherSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                  className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs md:text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                 />
                 {teacherSearchTerm && (
                   <button
@@ -748,196 +749,25 @@ const TeacherAssignments = () => {
                   </button>
                 )}
               </div>
-              {teacherSearchTerm && (
-                <p className="text-xs text-orange-600 mt-1">
-                  <i className="fas fa-filter mr-1"></i>
-                  Filtering by: "{teacherSearchTerm}"
-                </p>
-              )}
-            </div>
-
-            <div className="border-t border-slate-200 pt-4 mb-4">
-              <p className="text-xs text-slate-500 mb-3">
-                <i className="fas fa-info-circle mr-1"></i>
-                Or filter by organizational structure
-              </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  <i className="fas fa-building mr-2 text-blue-500"></i>
-                  Department/Level
-                </label>
-                <select
-                  value={selectedDepartment}
-                  onChange={(e) => handleDepartmentChange(e.target.value)}
-                  className={inputBaseClass}
-                >
-                  <option value="">All Departments</option>
-                  {departments.map(dept => (
-                    <option key={dept._id} value={dept._id}>{dept.name}</option>
-                  ))}
-                </select>
-                {selectedDepartment && (
-                  <p className="text-xs text-green-600 mt-1">
-                    <i className="fas fa-check mr-1"></i>
-                    {departments.find(d => d._id === selectedDepartment)?.name} selected
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  <i className="fas fa-graduation-cap mr-2 text-green-500"></i>
-                  Class
-                </label>
-                <select
-                  value={selectedClass}
-                  onChange={(e) => handleClassChange(e.target.value)}
-                  className={inputBaseClass}
-                  disabled={!selectedDepartment}
-                >
-                  <option value="">All Classes</option>
-                  {classes.map(cls => (
-                    <option key={cls._id} value={cls._id}>{cls.name}</option>
-                  ))}
-                </select>
-                {selectedClass && (
-                  <p className="text-xs text-green-600 mt-1">
-                    <i className="fas fa-check mr-1"></i>
-                    {classes.find(c => c._id === selectedClass)?.name} selected
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  <i className="fas fa-layer-group mr-2 text-purple-500"></i>
-                  Section
-                </label>
-                <select
-                  value={selectedSection}
-                  onChange={(e) => handleSectionChange(e.target.value)}
-                  className={inputBaseClass}
-                  disabled={!selectedClass}
-                >
-                  <option value="">All Sections</option>
-                  {sections.map(section => (
-                    <option key={section._id} value={section._id}>{section.name}</option>
-                  ))}
-                </select>
-                {selectedSection && (
-                  <p className="text-xs text-green-600 mt-1">
-                    <i className="fas fa-check mr-1"></i>
-                    {sections.find(s => s._id === selectedSection)?.name} selected
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center mt-6">
-              <div className="flex items-center gap-4">
-                <label className="text-sm font-medium text-slate-700">Sort by:</label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="bg-slate-100 border-slate-200 rounded-md p-2 text-sm"
-                >
-                  <option value="subjectsCount">Subjects Count</option>
-                  <option value="teacherName">Teacher Name</option>
-                  <option value="department">Department</option>
-                </select>
-              </div>
-              
-              <button
-                onClick={() => openAssignmentModal()}
-                className="bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white font-bold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-3 text-base"
-                title="Create new teacher assignment"
+            {/* Department Filter */}
+            <div>
+              <label className="block text-xs md:text-sm font-medium text-slate-700 mb-2">
+                Department
+              </label>
+              <select
+                value={selectedDepartment}
+                onChange={(e) => handleDepartmentChange(e.target.value)}
+                className="w-full block p-3 min-h-[44px] bg-slate-100 border-slate-200 rounded-md text-xs md:text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
               >
-                <span className="text-gray-300 text-lg">+</span>
-                <span>Create Assignment</span>
-                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-              </button>
+                <option value="">All Departments</option>
+                {departments.map(dept => (
+                  <option key={dept._id} value={dept._id}>{dept.name}</option>
+                ))}
+              </select>
             </div>
           </div>
-
-          {/* Unassigned Teachers - Auto expanded when department is selected */}
-          {selectedDepartment && (
-            <div className="mt-6 bg-white rounded-xl shadow-sm border-2 border-amber-200 overflow-hidden">
-              <button
-                onClick={() => setExpandedUnassigned(prev => !prev)}
-                className="w-full px-6 py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-                      <i className="fas fa-user-times text-white"></i>
-                    </div>
-                    <div className="text-left">
-                      <h3 className="text-white font-bold">Unassigned Teachers in {departments.find(d => d._id === selectedDepartment)?.name}</h3>
-                      <p className="text-amber-100 text-xs">Click a teacher to create an assignment</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-white text-sm font-semibold">Total: {deptTeacherStats.total}</div>
-                    <div className="text-amber-100 text-xs">Assigned: {deptTeacherStats.assigned} • Unassigned: {deptTeacherStats.unassigned}</div>
-                  </div>
-                </div>
-              </button>
-
-              {expandedUnassigned && (
-                <div className="p-4">
-                  {deptTeacherStats.total === 0 ? (
-                    <div className="text-center py-6 text-slate-500">
-                      <p className="mb-3">No teacher users found in this department.</p>
-                      <button
-                        onClick={() => { window.location.href = '/admin/access/manage'; }}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium border border-slate-200"
-                      >
-                        <i className="fas fa-user-plus"></i>
-                        Create Teacher Users
-                      </button>
-                    </div>
-                  ) : unassignedTeachers.length === 0 ? (
-                    <div className="text-center py-6 text-slate-500">
-                      <i className="fas fa-check-circle text-green-500 mr-2"></i>
-                      All teachers in this department are assigned.
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {unassignedTeachers.map(t => (
-                        <button
-                          key={t._id}
-                          onClick={() => {
-                            setSelectedTeacher(t._id);
-                            setAssignmentFormData(prev => ({
-                              ...prev,
-                              teacherId: t._id,
-                              departmentId: selectedDepartment,
-                              classId: '',
-                              sectionId: '',
-                              subjectIds: [],
-                              isClassTeacher: false
-                            }));
-                            setIsAssignmentModalOpen(true);
-                          }}
-                          className="flex items-center justify-between p-4 border border-amber-200 rounded-lg hover:bg-amber-50 transition-colors text-left"
-                          title="Assign this teacher"
-                        >
-                          <div className="min-w-0">
-                            <p className="font-semibold text-slate-900 truncate">{t.name}</p>
-                            <p className="text-xs text-slate-500 truncate">{t.email}</p>
-                          </div>
-                          <i className="fas fa-plus text-amber-600"></i>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Teacher Assignments Display */}
           <AssignmentDisplay
@@ -953,6 +783,15 @@ const TeacherAssignments = () => {
             sortBy={sortBy}
           />
         </main>
+
+        {/* Footer */}
+        <footer className="bg-white border-t border-slate-200 mt-auto">
+          <div className="px-4 md:px-8 py-4">
+            <p className="text-center text-xs md:text-sm text-slate-500">
+              © 2024 MySkillDB. All rights reserved.
+            </p>
+          </div>
+        </footer>
       </div>
 
       {/* Assignment Modal */}
