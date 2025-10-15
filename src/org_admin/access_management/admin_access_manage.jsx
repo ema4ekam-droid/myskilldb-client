@@ -306,7 +306,7 @@ const AdminAccessManage = () => {
   }, [isLoading, loadingEntities]);
 
   return (
-    <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
+    <div className="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
       <Toaster position="top-right" />
       {/* Global Loader Overlay */}
       <LoaderOverlay isVisible={isAnyLoading} title="MySkillDB" subtitle="Loading your data, please wait…" />
@@ -315,7 +315,7 @@ const AdminAccessManage = () => {
       {!isLoginFormOpen && <OrgMenuNavigation currentPage="access-management" onPageChange={handlePageChange} />}
 
       {/* Main Content */}
-      <div className={isLoginFormOpen ? "" : "lg:ml-72"}>
+      <div className={isLoginFormOpen ? "flex-1 flex flex-col" : "lg:ml-72 flex-1 flex flex-col"}>
         <main className="flex-1 p-4 md:p-8 space-y-8">
           {/* Header */}
           <header className="flex justify-between items-center flex-wrap gap-4">

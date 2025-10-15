@@ -9,6 +9,7 @@ const TopicModal = ({
   subjects,
   classes,
   sections,
+  departments,
   editingTopic,
   isLoading,
   inputBaseClass,
@@ -32,6 +33,10 @@ const TopicModal = ({
 
     if (!formData.description.trim()) {
       newErrors.description = 'Topic description is required';
+    }
+
+    if (!formData.departmentId) {
+      newErrors.departmentId = 'Please select a department';
     }
 
     if (!formData.subjectId) {
@@ -77,6 +82,13 @@ const TopicModal = ({
     setFormData(prev => ({ ...prev, sectionIds: newSections }));
     if (errors.sectionIds) {
       setErrors(prev => ({ ...prev, sectionIds: '' }));
+    }
+  };
+
+  const handleDepartmentChange = (departmentId) => {
+    setFormData(prev => ({ ...prev, departmentId, classId: '', sectionIds: [] }));
+    if (errors.departmentId) {
+      setErrors(prev => ({ ...prev, departmentId: '' }));
     }
   };
 
@@ -143,12 +155,30 @@ const TopicModal = ({
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
+                Department *
+              </label>
+              <select
+                value={formData.departmentId}
+                onChange={(e) => handleDepartmentChange(e.target.value)}
+                className={`${inputBaseClass} ${errors.departmentId ? 'border-red-300 focus:ring-red-500' : ''}`}
+              >
+                <option value="">Select Department</option>
+                {departments.map(dept => (
+                  <option key={dept._id} value={dept._id}>{dept.name}</option>
+                ))}
+              </select>
+              {errors.departmentId && <p className="text-red-500 text-xs mt-1">{errors.departmentId}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Class *
               </label>
               <select
                 value={formData.classId}
                 onChange={(e) => handleClassChange(e.target.value)}
                 className={`${inputBaseClass} ${errors.classId ? 'border-red-300 focus:ring-red-500' : ''}`}
+                disabled={!formData.departmentId}
               >
                 <option value="">Select Class</option>
                 {classes.map(cls => (
@@ -212,10 +242,10 @@ const TopicModal = ({
             </label>
             {errors.sectionIds && <p className="text-red-500 text-xs mb-2">{errors.sectionIds}</p>}
             
-            {!formData.classId ? (
+            {!formData.departmentId || !formData.classId ? (
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-center text-slate-500">
                 <i className="fas fa-info-circle mb-2"></i>
-                <p>Please select a class first to choose sections</p>
+                <p>Please select department and class first to choose sections</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -248,45 +278,6 @@ const TopicModal = ({
             )}
           </div>
 
-          {/* Learning Objectives */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Learning Objectives
-            </label>
-            <textarea
-              value={formData.learningObjectives}
-              onChange={(e) => handleInputChange('learningObjectives', e.target.value)}
-              className={`${inputBaseClass} h-20 resize-none`}
-              placeholder="What will students learn from this topic?"
-            />
-          </div>
-
-          {/* Prerequisites and Resources */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Prerequisites
-              </label>
-              <textarea
-                value={formData.prerequisites}
-                onChange={(e) => handleInputChange('prerequisites', e.target.value)}
-                className={`${inputBaseClass} h-16 resize-none`}
-                placeholder="What knowledge should students have before this topic?"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Resources Required
-              </label>
-              <textarea
-                value={formData.resources}
-                onChange={(e) => handleInputChange('resources', e.target.value)}
-                className={`${inputBaseClass} h-16 resize-none`}
-                placeholder="Books, equipment, software needed"
-              />
-            </div>
-          </div>
 
           {/* Status */}
           <div className="flex items-center space-x-2">

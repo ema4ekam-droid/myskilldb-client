@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import TeacherSelector from './TeacherSelector';
-import SubjectAssignment from './SubjectAssignment';
 
 const TeacherAssignmentModal = ({
   isOpen,
@@ -51,25 +50,6 @@ const TeacherAssignmentModal = ({
     setFormData(newFormData);
   };
 
-  const handleSubjectToggle = (subjectId) => {
-    const newSubjectIds = localFormData.subjectIds.includes(subjectId)
-      ? localFormData.subjectIds.filter(id => id !== subjectId)
-      : [...localFormData.subjectIds, subjectId];
-    
-    handleInputChange('subjectIds', newSubjectIds);
-  };
-
-  const handleClassTeacherToggle = () => {
-    const newIsClassTeacher = !localFormData.isClassTeacher;
-    
-    if (newIsClassTeacher) {
-      // When setting as class teacher, select all available subjects
-      const allSubjectIds = filteredSubjects.map(subject => subject._id);
-      handleInputChange('subjectIds', allSubjectIds);
-    }
-    
-    handleInputChange('isClassTeacher', newIsClassTeacher);
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -89,15 +69,6 @@ const TeacherAssignmentModal = ({
   const filteredSubjects = (() => {
     if (!localFormData.departmentId) return subjects;
     
-    // Get already assigned subjects for the selected section to prevent duplicates
-    const alreadyAssignedSubjects = (teacherAssignments || [])
-      .filter(assignment => 
-        assignment.sectionId === localFormData.sectionId &&
-        assignment.departmentId === localFormData.departmentId &&
-        assignment.classId === localFormData.classId
-      )
-      .flatMap(assignment => assignment.subjectIds || []);
-    
     // If section is selected, show only subjects assigned to that section
     if (localFormData.sectionId) {
       // Get all subject assignments for the selected section
@@ -106,8 +77,23 @@ const TeacherAssignmentModal = ({
       );
       const assignedSubjectIds = sectionSubjectAssignments.map(assignment => assignment.subjectId);
       
-      // Return subjects that are assigned to this section, belong to the selected department,
-      // and are NOT already assigned to a teacher in this section
+      // EDIT MODE: Show ALL subjects in the section so teacher can be reassigned
+      if (editingAssignment) {
+        return subjects.filter(subject => 
+          subject.departmentId === localFormData.departmentId && 
+          assignedSubjectIds.includes(subject._id)
+        );
+      }
+      
+      // CREATE MODE: Only show subjects not yet assigned to any teacher
+      const alreadyAssignedSubjects = (teacherAssignments || [])
+        .filter(assignment => 
+          assignment.sectionId === localFormData.sectionId &&
+          assignment.departmentId === localFormData.departmentId &&
+          assignment.classId === localFormData.classId
+        )
+        .flatMap(assignment => assignment.subjectIds || []);
+      
       return subjects.filter(subject => 
         subject.departmentId === localFormData.departmentId && 
         assignedSubjectIds.includes(subject._id) &&
@@ -115,7 +101,14 @@ const TeacherAssignmentModal = ({
       );
     }
     
-    // If only department is selected, show all subjects in that department
+    // If only department is selected (create mode only)
+    const alreadyAssignedSubjects = (teacherAssignments || [])
+      .filter(assignment => 
+        assignment.departmentId === localFormData.departmentId &&
+        assignment.classId === localFormData.classId
+      )
+      .flatMap(assignment => assignment.subjectIds || []);
+      
     return subjects.filter(subject => 
       subject.departmentId === localFormData.departmentId &&
       !alreadyAssignedSubjects.includes(subject._id)
@@ -149,45 +142,105 @@ const TeacherAssignmentModal = ({
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Step Progress Indicator */}
-            <div className="flex items-center justify-center mb-6">
-              <div className="flex items-center space-x-4">
-                <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
-                  localFormData.departmentId 
-                    ? 'bg-green-500 text-white' 
-                    : 'bg-blue-500 text-white'
-                }`}>
-                  1
+            {editingAssignment ? (
+              /* Teacher Assignment Summary Card for Editing */
+              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border-2 border-indigo-200 rounded-xl p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <i className="fas fa-user-graduate text-indigo-600 text-xl"></i>
+                  <h3 className="text-lg font-bold text-slate-900">Teacher Assignment Summary</h3>
                 </div>
-                <div className={`w-12 h-1 ${
-                  localFormData.departmentId ? 'bg-green-500' : 'bg-slate-300'
-                }`}></div>
-                <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
-                  localFormData.classId 
-                    ? 'bg-green-500 text-white' 
-                    : localFormData.departmentId 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-slate-300 text-slate-500'
-                }`}>
-                  2
-                </div>
-                <div className={`w-12 h-1 ${
-                  localFormData.sectionId ? 'bg-green-500' : localFormData.classId ? 'bg-blue-500' : 'bg-slate-300'
-                }`}></div>
-                <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
-                  localFormData.teacherId 
-                    ? 'bg-green-500 text-white' 
-                    : localFormData.sectionId 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-slate-300 text-slate-500'
-                }`}>
-                  3
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3 bg-white rounded-lg p-3 shadow-sm">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <i className="fas fa-chalkboard-teacher text-blue-600"></i>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Teacher</p>
+                      <p className="font-semibold text-slate-900">
+                        {teachers.find(t => t._id === localFormData.teacherId)?.name || 'Unknown'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 bg-white rounded-lg p-3 shadow-sm">
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                      <i className="fas fa-building text-green-600"></i>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Department</p>
+                      <p className="font-semibold text-slate-900">
+                        {departments.find(d => d._id === localFormData.departmentId)?.name || 'Unknown'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 bg-white rounded-lg p-3 shadow-sm">
+                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <i className="fas fa-graduation-cap text-purple-600"></i>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Class</p>
+                      <p className="font-semibold text-slate-900">
+                        {classes.find(c => c._id === localFormData.classId)?.name || 'Unknown'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 bg-white rounded-lg p-3 shadow-sm">
+                    <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                      <i className="fas fa-layer-group text-orange-600"></i>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Section</p>
+                      <p className="font-semibold text-slate-900">
+                        {sections.find(s => s._id === localFormData.sectionId)?.name || 'Unknown'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <>
+                {/* Step Progress Indicator */}
+                <div className="flex items-center justify-center mb-6">
+                  <div className="flex items-center space-x-4">
+                    <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
+                      localFormData.departmentId 
+                        ? 'bg-green-500 text-white' 
+                        : 'bg-blue-500 text-white'
+                    }`}>
+                      1
+                    </div>
+                    <div className={`w-12 h-1 ${
+                      localFormData.departmentId ? 'bg-green-500' : 'bg-slate-300'
+                    }`}></div>
+                    <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
+                      localFormData.classId 
+                        ? 'bg-green-500 text-white' 
+                        : localFormData.departmentId 
+                        ? 'bg-blue-500 text-white' 
+                        : 'bg-slate-300 text-slate-500'
+                    }`}>
+                      2
+                    </div>
+                    <div className={`w-12 h-1 ${
+                      localFormData.sectionId ? 'bg-green-500' : localFormData.classId ? 'bg-blue-500' : 'bg-slate-300'
+                    }`}></div>
+                    <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
+                      localFormData.teacherId 
+                        ? 'bg-green-500 text-white' 
+                        : localFormData.sectionId 
+                        ? 'bg-blue-500 text-white' 
+                        : 'bg-slate-300 text-slate-500'
+                    }`}>
+                      3
+                    </div>
+                  </div>
+                </div>
 
-            {/* Selection Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Selection Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Department Selection */}
               <div className={`p-4 rounded-lg border-2 transition-all duration-200 ${
                 !localFormData.departmentId 
@@ -361,125 +414,100 @@ const TeacherAssignmentModal = ({
                   </div>
                 )}
               </div>
-            </div>
-
-            {/* Subject Assignment */}
-            {localFormData.departmentId && (
-              <div className="border-t border-slate-200 pt-6">
-                {localFormData.sectionId && filteredSubjects.length === 0 ? (
-                  <div className="text-center py-8 text-slate-500">
-                    <i className="fas fa-book text-4xl mb-4 text-slate-300"></i>
-                    <p className="font-medium mb-2">No subjects assigned to this section</p>
-                    <p className="text-sm">Please assign subjects to this section first in the Subject Assignment page.</p>
-                  </div>
-                ) : (
-                  <SubjectAssignment
-                    subjects={filteredSubjects}
-                    selectedSubjects={localFormData.subjectIds}
-                    onSubjectToggle={handleSubjectToggle}
-                    isClassTeacher={localFormData.isClassTeacher}
-                    onClassTeacherToggle={handleClassTeacherToggle}
-                    disabled={isLoading}
-                  />
-                )}
-              </div>
+                </div>
+              </>
             )}
 
-            {/* Assignment Preview */}
-            {localFormData.teacherId && localFormData.departmentId && 
-             localFormData.classId && localFormData.sectionId && (
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <i className="fas fa-eye text-blue-600"></i>
-                  <h4 className="font-bold text-slate-900">Teaching Assignment Summary</h4>
+            {/* Subjects Selection - Always shown when classroom context is available */}
+            {localFormData.teacherId && localFormData.sectionId && (
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <i className="fas fa-book text-indigo-600"></i>
+                    <h4 className="font-bold text-slate-900">
+                      {editingAssignment ? 'Edit Subjects to Teach in this Classroom' : 'Select Subjects to Teach'}
+                    </h4>
+                  </div>
+                  <span className="text-sm text-slate-600 bg-white px-3 py-1 rounded-full border border-slate-200">
+                    {localFormData.subjectIds.length} selected
+                  </span>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <i className="fas fa-chalkboard-teacher text-blue-600 text-sm"></i>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500">Teacher</p>
-                        <p className="font-semibold text-slate-900">
-                          {teachers.find(t => t._id === localFormData.teacherId)?.name}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                        <i className="fas fa-building text-green-600 text-sm"></i>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500">Department</p>
-                        <p className="font-semibold text-slate-900">
-                          {departments.find(d => d._id === localFormData.departmentId)?.name}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <i className="fas fa-graduation-cap text-purple-600 text-sm"></i>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500">Class</p>
-                        <p className="font-semibold text-slate-900">
-                          {classes.find(c => c._id === localFormData.classId)?.name}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                        <i className="fas fa-layer-group text-orange-600 text-sm"></i>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500">Section</p>
-                        <p className="font-semibold text-slate-900">
-                          {sections.find(s => s._id === localFormData.sectionId)?.name}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Subjects Teaching */}
-                {localFormData.subjectIds.length > 0 && (
-                  <div className="border-t border-blue-200 pt-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <i className="fas fa-book text-indigo-600"></i>
-                      <span className="font-semibold text-slate-900">
-                        Subjects to Teach ({localFormData.subjectIds.length})
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {localFormData.subjectIds.map(subjectId => {
-                        const subject = subjects.find(s => s._id === subjectId);
-                        return (
-                          <span key={subjectId} className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm font-medium">
-                            {subject?.name} ({subject?.code})
-                          </span>
-                        );
-                      })}
+                {editingAssignment && (
+                  <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+                    <i className="fas fa-info-circle text-blue-600 mt-0.5"></i>
+                    <div className="text-sm text-blue-800">
+                      <p className="font-medium">All subjects in this section are shown below.</p>
+                      <p className="text-xs mt-1">Subjects with <i className="fas fa-exclamation text-orange-600 text-xs"></i> are assigned to other teachers. Selecting them will reassign to this teacher.</p>
                     </div>
                   </div>
                 )}
-
-                {/* Class Teacher Status */}
-                {localFormData.isClassTeacher && (
-                  <div className="border-t border-blue-200 pt-4">
-                    <div className="flex items-center gap-2 text-yellow-700">
-                      <i className="fas fa-crown text-lg"></i>
-                      <span className="font-semibold">Class Teacher Assignment</span>
-                    </div>
-                    <p className="text-sm text-slate-600 mt-1">
-                      This teacher will be responsible for all subjects in this section
-                    </p>
+                
+                {filteredSubjects.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500">
+                    <i className="fas fa-inbox text-4xl mb-3 text-slate-300"></i>
+                    <p className="font-medium">No subjects available</p>
+                    <p className="text-sm">All subjects for this section have been assigned.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-64 overflow-y-auto p-2">
+                    {filteredSubjects.map(subject => {
+                      const isSelected = localFormData.subjectIds.includes(subject._id);
+                      
+                      // Check if this subject is assigned to another teacher
+                      const assignedToOther = editingAssignment && teacherAssignments.find(
+                        ta => ta.subjectId === subject._id && 
+                              ta.sectionId === localFormData.sectionId &&
+                              ta.teacherId !== editingAssignment.teacherId
+                      );
+                      const otherTeacher = assignedToOther ? teachers.find(t => t._id === assignedToOther.teacherId) : null;
+                      
+                      return (
+                        <button
+                          key={subject._id}
+                          type="button"
+                          onClick={() => {
+                            const newSubjectIds = isSelected
+                              ? localFormData.subjectIds.filter(id => id !== subject._id)
+                              : [...localFormData.subjectIds, subject._id];
+                            handleInputChange('subjectIds', newSubjectIds);
+                          }}
+                          className={`p-3 rounded-lg border-2 transition-all text-left relative ${
+                            isSelected
+                              ? 'border-indigo-500 bg-indigo-50 shadow-md'
+                              : 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50'
+                          }`}
+                        >
+                          {assignedToOther && (
+                            <div className="absolute -top-1 -right-1 bg-orange-500 text-white rounded-full w-4 h-4 flex items-center justify-center" title={`Assigned to ${otherTeacher?.name}`}>
+                              <i className="fas fa-exclamation text-xs"></i>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className={`w-5 h-5 rounded flex items-center justify-center ${
+                              isSelected ? 'bg-indigo-600' : 'bg-slate-200'
+                            }`}>
+                              {isSelected && <i className="fas fa-check text-white text-xs"></i>}
+                            </div>
+                            <span className={`font-medium text-sm ${
+                              isSelected ? 'text-indigo-900' : 'text-slate-700'
+                            }`}>
+                              {subject.code}
+                            </span>
+                          </div>
+                          <p className={`text-xs truncate ${
+                            isSelected ? 'text-indigo-700' : 'text-slate-500'
+                          }`}>
+                            {subject.name}
+                          </p>
+                          {assignedToOther && otherTeacher && (
+                            <div className="mt-1 text-xs text-orange-600 truncate">
+                              <i className="fas fa-user-tie text-xs"></i> {otherTeacher.name}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>

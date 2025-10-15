@@ -13,7 +13,7 @@ const SectionModal = ({
 
   return (
     <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md border border-slate-200">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-auto border border-slate-200 max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-slate-200">
           <h3 className="text-lg font-semibold text-slate-900">
             {editingSection ? 'Edit Section' : 'Add Section'}
@@ -39,7 +39,7 @@ const SectionModal = ({
               onChange={(e) => setSectionFormData(prev => ({ ...prev, description: e.target.value }))}
             />
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <button type="submit" className={btnTealClass}>
               {editingSection ? 'Update' : 'Add'} Section
             </button>

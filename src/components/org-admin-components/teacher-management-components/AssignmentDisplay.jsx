@@ -14,7 +14,6 @@ const AssignmentDisplay = ({
   className = ""
 }) => {
   const [expandedDepartments, setExpandedDepartments] = useState({});
-  const [expandedSections, setExpandedSections] = useState({});
   const [deleteConfirmation, setDeleteConfirmation] = useState({
     isOpen: false,
     assignmentId: null,
@@ -27,13 +26,6 @@ const AssignmentDisplay = ({
     setExpandedDepartments(prev => ({
       ...prev,
       [deptId]: !prev[deptId]
-    }));
-  };
-
-  const toggleSection = (sectionKey) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [sectionKey]: !prev[sectionKey]
     }));
   };
 
@@ -78,15 +70,7 @@ const AssignmentDisplay = ({
   if (isLoading) {
     return (
       <div className={`bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden ${className}`}>
-        <div className="p-6 border-b border-slate-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">Current Assignments</h2>
-              <p className="text-slate-500 text-sm">Loading assignments...</p>
-            </div>
-          </div>
-        </div>
-        <div className="p-6">
+        <div className="p-4 md:p-6">
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
             <span className="ml-3 text-slate-600">Loading assignments...</span>
@@ -99,15 +83,7 @@ const AssignmentDisplay = ({
   if (assignments.length === 0) {
     return (
       <div className={`bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden ${className}`}>
-        <div className="p-6 border-b border-slate-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">Current Assignments</h2>
-              <p className="text-slate-500 text-sm">No assignments found for the selected filters</p>
-            </div>
-          </div>
-        </div>
-        <div className="p-6">
+        <div className="p-4 md:p-6">
           <div className="text-center py-8 text-slate-500">
             <i className="fas fa-chalkboard-teacher text-4xl mb-4 text-slate-300"></i>
             <p className="font-medium mb-2">No teacher assignments found</p>
@@ -147,18 +123,7 @@ const AssignmentDisplay = ({
 
   return (
     <div className={`bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden ${className}`}>
-      <div className="p-6 border-b border-slate-200">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900">Teacher Assignments</h2>
-            <p className="text-slate-500 text-sm">
-              Organized by Department → Class → Section
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         {Object.keys(hierarchicalData).length === 0 ? (
           <div className="text-center py-8 text-slate-500">
             <i className="fas fa-chalkboard-teacher text-4xl mb-4 text-slate-300"></i>
@@ -214,128 +179,125 @@ const AssignmentDisplay = ({
 
                   {/* Department Content */}
                   {isExpanded && (
-                    <div className="bg-white">
+                    <div className="bg-white p-3 md:p-4">
                       {Object.entries(deptClasses).map(([classId, classSections]) => {
                         const classItem = classes.find(c => c._id === classId);
                         
                         return (
-                          <div key={classId} className="border-t border-blue-200">
-                            {Object.entries(classSections).map(([sectionId, sectionAssignments]) => {
-                              const section = sections.find(s => s._id === sectionId);
-                              const sectionKey = `${deptId}-${classId}-${sectionId}`;
-                              const isSectionExpanded = expandedSections[sectionKey];
-                              
-                              // Get all teachers in this section
-                              const teachersInSection = sectionAssignments.map(a => ({
-                                ...a,
-                                teacher: teachers.find(t => t._id === a.teacherId)
-                              }));
-
-                              return (
-                                <div key={sectionId} className="border-b border-slate-200 last:border-b-0">
-                                  {/* Section Header */}
-                                  <button
-                                    onClick={() => toggleSection(sectionKey)}
-                                    className="w-full bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 px-6 py-3 transition-all"
-                                  >
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-                                          <i className="fas fa-graduation-cap text-white"></i>
-                                        </div>
-                                        <span className="text-sm font-semibold text-slate-900">{classItem?.name}</span>
-                                        <span className="text-slate-400">•</span>
-                                        <div className="flex items-center gap-2">
-                                          <div className="w-6 h-6 bg-purple-500 rounded flex items-center justify-center">
-                                            <i className="fas fa-layer-group text-white text-xs"></i>
+                          <div key={classId} className="mb-3 last:mb-0 border border-slate-200 rounded-lg overflow-hidden">
+                            {/* Grade Header */}
+                            <div className="bg-slate-50 px-3 md:px-4 py-2 border-b border-slate-200">
+                              <div className="flex items-center gap-2">
+                                <i className="fas fa-graduation-cap text-green-600 text-sm"></i>
+                                <span className="font-semibold text-slate-900 text-sm md:text-base">{classItem?.name}</span>
+                              </div>
+                            </div>
+                            
+                            {/* Sections List */}
+                            <div className="divide-y divide-slate-100">
+                              {Object.entries(classSections).map(([sectionId, sectionAssignments]) => {
+                                const section = sections.find(s => s._id === sectionId);
+                                
+                                // Get all unique subjects taught by teachers in this section
+                                const assignedSubjectIds = new Set();
+                                sectionAssignments.forEach(assignment => {
+                                  assignment.subjectIds?.forEach(subId => assignedSubjectIds.add(subId));
+                                });
+                                
+                                // Get total subjects that could be taught
+                                const totalSubjectsInDept = subjects.filter(s => s.departmentId === deptId).length;
+                                const subjectsWithoutTeacher = Math.max(0, totalSubjectsInDept - assignedSubjectIds.size);
+                                
+                                // Get teachers with their details
+                                const teachersInSection = sectionAssignments.map(assignment => {
+                                  const teacher = teachers.find(t => t._id === assignment.teacherId);
+                                  const teacherSubjects = subjects.filter(s => assignment.subjectIds?.includes(s._id));
+                                  return {
+                                    assignment,
+                                    teacher,
+                                    teacherSubjects
+                                  };
+                                });
+                                
+                                return (
+                                  <div key={sectionId} className="p-2 md:p-3">
+                                    {/* Section Name */}
+                                    <div className="flex items-center gap-2 mb-3">
+                                      <div className="w-6 h-6 bg-purple-500 rounded flex items-center justify-center flex-shrink-0">
+                                        <i className="fas fa-layer-group text-white text-xs"></i>
+                                      </div>
+                                      <span className="font-medium text-slate-900 text-sm">{section?.name}</span>
+                                    </div>
+                                    
+                                    {/* Horizontal Scrollable Teacher Cards */}
+                                    {teachersInSection.length > 0 && (
+                                      <div className="mb-3">
+                                        <div className="overflow-x-auto pb-2">
+                                          <div className="flex gap-2 min-w-min">
+                                            {teachersInSection.map(({ assignment, teacher, teacherSubjects }) => (
+                                              <div 
+                                                key={assignment._id} 
+                                                className="flex-shrink-0 w-52 bg-indigo-50 border border-indigo-200 rounded-lg p-2.5"
+                                              >
+                                                {/* Teacher Info */}
+                                                <div className="mb-2">
+                                                  <div className="flex items-start justify-between mb-0.5">
+                                                    <h4 className="font-semibold text-slate-900 text-xs truncate flex-1">
+                                                      {teacher?.name || 'Unknown'}
+                                                    </h4>
+                                                    <button
+                                                      onClick={() => onEdit(assignment)}
+                                                      className="ml-1 p-0.5 text-blue-600 hover:bg-blue-100 rounded transition-colors flex-shrink-0"
+                                                      title="Edit teacher assignment"
+                                                    >
+                                                      <i className="fas fa-edit text-xs"></i>
+                                                    </button>
+                                                  </div>
+                                                  <p className="text-xs text-slate-600 truncate">{teacher?.email || 'N/A'}</p>
+                                                </div>
+                                                
+                                                {/* Subject Codes */}
+                                                <div className="flex items-start gap-1">
+                                                  <span className="text-xs text-slate-700 font-medium flex-shrink-0">Subjects:</span>
+                                                  <div className="flex flex-wrap gap-1 flex-1">
+                                                    {teacherSubjects.map(subject => (
+                                                      <span 
+                                                        key={subject._id}
+                                                        className="text-xs bg-indigo-600 text-white px-1.5 py-0.5 rounded font-medium"
+                                                        title={subject.name}
+                                                      >
+                                                        {subject.code}
+                                                      </span>
+                                                    ))}
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            ))}
                                           </div>
-                                          <span className="text-sm font-medium text-slate-700">{section?.name}</span>
                                         </div>
-                                        <span className="text-xs text-slate-500 ml-2">
-                                          ({teachersInSection.length} teacher{teachersInSection.length !== 1 ? 's' : ''})
+                                      </div>
+                                    )}
+                                    
+                                    {/* Subjects without teacher message */}
+                                    {subjectsWithoutTeacher > 0 && (
+                                      <div className="flex items-center gap-2 text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded px-3 py-2">
+                                        <i className="fas fa-exclamation-circle"></i>
+                                        <span className="font-medium">
+                                          {subjectsWithoutTeacher} subject{subjectsWithoutTeacher !== 1 ? 's' : ''} of this class {subjectsWithoutTeacher !== 1 ? 'have' : 'has'} no teacher
                                         </span>
                                       </div>
-                                      <i className={`fas fa-chevron-${isSectionExpanded ? 'up' : 'down'} text-slate-600 transition-transform`}></i>
-                                    </div>
-                                  </button>
-
-                                  {/* Section Content - Teacher Cards */}
-                                  {isSectionExpanded && (
-                                    <div className="p-4 bg-slate-50">
-                                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                        {teachersInSection.map((assignment) => {
-                                          const assignmentSubjects = subjects.filter(s => assignment.subjectIds?.includes(s._id));
-                                          
-                                          return (
-                                            <div key={assignment._id} className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                                              {/* Teacher Header */}
-                                              <div className="flex items-start justify-between mb-3">
-                                                <div className="flex items-center gap-3">
-                                                  <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                                                    <i className="fas fa-chalkboard-teacher text-indigo-600"></i>
-                                                  </div>
-                                                  <div>
-                                                    <h4 className="font-semibold text-slate-900 text-sm">{assignment.teacher?.name || 'Unknown'}</h4>
-                                                    <p className="text-xs text-slate-500">{assignment.teacher?.email || 'N/A'}</p>
-                                                  </div>
-                                                </div>
-                                              </div>
-
-                                              {/* Class Teacher Badge */}
-                                              {assignment.isClassTeacher && (
-                                                <div className="mb-3">
-                                                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 rounded-md text-xs font-medium">
-                                                    <i className="fas fa-crown"></i>
-                                                    Class Teacher (All Subjects)
-                                                  </span>
-                                                </div>
-                                              )}
-
-                                              {/* Subjects Teaching */}
-                                              <div className="mb-3">
-                                                <p className="text-xs font-medium text-slate-600 mb-2">
-                                                  <i className="fas fa-book mr-1"></i>
-                                                  Subjects Teaching:
-                                                </p>
-                                                <div className="flex flex-wrap gap-1">
-                                                  {assignmentSubjects.map((subject) => (
-                                                    <span 
-                                                      key={subject._id}
-                                                      className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded font-medium"
-                                                      title={subject.name}
-                                                    >
-                                                      {subject.code}
-                                                    </span>
-                                                  ))}
-                                                </div>
-                                              </div>
-
-                                              {/* Actions */}
-                                              <div className="flex gap-2 pt-3 border-t border-slate-200">
-                                                <button
-                                                  onClick={() => onEdit(assignment)}
-                                                  className="flex-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2"
-                                                >
-                                                  <i className="fas fa-edit"></i>
-                                                  Edit
-                                                </button>
-                                                <button
-                                                  onClick={() => openDeleteConfirmation(assignment)}
-                                                  className="flex-1 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2"
-                                                >
-                                                  <i className="fas fa-trash"></i>
-                                                  Delete
-                                                </button>
-                                              </div>
-                                            </div>
-                                          );
-                                        })}
+                                    )}
+                                    
+                                    {teachersInSection.length === 0 && (
+                                      <div className="text-center py-4 text-slate-500 text-sm">
+                                        <i className="fas fa-user-slash mb-2"></i>
+                                        <p>No teachers assigned to this section</p>
                                       </div>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
                         );
                       })}

@@ -29,7 +29,7 @@ const SubjectModal = ({
 
   return (
     <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md border border-slate-200">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-auto border border-slate-200 max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-slate-200">
           <h3 className="text-lg font-semibold text-slate-900">
             {editingSubject ? 'Edit Subject' : 'Add Subject'}
@@ -87,14 +87,14 @@ const SubjectModal = ({
               disabled={!isDepartmentSelected}
             />
           </div>
-          <div className="flex gap-3">
-            <button type="submit" className={`${btnTealClass} ${!isDepartmentSelected ? 'opacity-60 cursor-not-allowed' : ''}`} disabled={!isDepartmentSelected}>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button type="submit" className={`${btnTealClass} flex-1 ${!isDepartmentSelected ? 'opacity-60 cursor-not-allowed' : ''}`} disabled={!isDepartmentSelected}>
               {editingSubject ? 'Update' : 'Add'} Subject
             </button>
             <button 
               type="button" 
               onClick={onClose}
-              className={btnSlateClass}
+              className={`${btnSlateClass} flex-1 sm:flex-none`}
             >
               Cancel
             </button>
