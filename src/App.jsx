@@ -14,6 +14,7 @@ import MasterOrganizationSetup from './master/master-organization-setup/master-o
 import OrganizationLoginManager from './master/master-login-create/organization_login_manager.jsx';
 import AuthWrapper from './wrappers/AuthWrapper.jsx';
 import ProtectedWrapper from './wrappers/ProtectedWrapper.jsx';
+import Azy from './org_admin/subject_assign/Azy.jsx';
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
           <Route path="/admin/classrooms/teacher-assignments" element={<TeacherAssignments />} />
           <Route path="/admin/access/manage" element={<AdminAccessManage />} />
           <Route path="/admin/skills/topics" element={<TopicManagement />} />
+          <Route path="/abc" element={<Azy />} />
         </Route>
       </Routes>
     </BrowserRouter>
