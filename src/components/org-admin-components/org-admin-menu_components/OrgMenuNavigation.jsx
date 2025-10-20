@@ -1,13 +1,15 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { logoutRequest } from "../../../api/apiRequests";
+import { useSelector } from "react-redux";
 
 const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState({});
   const navigate = useNavigate();
-
+  const org = useSelector((state) => state.organization);
+  
   // Menu structure
   const menuItems = [
     {
@@ -212,7 +214,7 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
         {/* Organization Admin Panel Text */}
         <div className="px-4 md:px-6 py-2 bg-slate-50 border-b border-slate-200 flex-shrink-0">
           <p className="text-xs md:text-sm text-slate-500">
-            Organization Admin Panel
+            {org.name} Admin Panel
           </p>
         </div>
 
