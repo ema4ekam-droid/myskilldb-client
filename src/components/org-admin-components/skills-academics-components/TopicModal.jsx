@@ -10,11 +10,14 @@ const TopicModal = ({
   classes,
   sections,
   departments,
+  jobs,
   editingTopic,
   isLoading,
   inputBaseClass,
   btnIndigoClass,
-  btnSlateClass
+  btnSlateClass,
+  onDelete,
+  hideJobSelection
 }) => {
   const [errors, setErrors] = useState({});
 
@@ -235,46 +238,72 @@ const TopicModal = ({
             </div>
           </div>
 
+          {/* Job Selection - Hidden for unassigned topics */}
+          {!hideJobSelection && formData.departmentId && formData.classId && formData.sectionIds && formData.sectionIds.length > 0 && (() => {
+            const availableJobs = jobs?.filter(job => 
+              job.departmentId === formData.departmentId && 
+              job.classId === formData.classId && 
+              formData.sectionIds.some(sectionId => job.sectionId === sectionId)
+            ) || [];
+            
+            return availableJobs.length > 0 ? (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Job (Optional)
+                </label>
+                <select
+                  value={formData.jobId || ''}
+                  onChange={(e) => handleInputChange('jobId', e.target.value)}
+                  className={inputBaseClass}
+                >
+                  <option value="">Select a job (optional)</option>
+                  {availableJobs.map(job => (
+                    <option key={job._id} value={job._id}>
+                      {job.jobTitle} - {job.company}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null;
+          })()}
+
           {/* Section Selection */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-3">
-              Select Sections * (Choose multiple sections for this topic)
+              Sections *
             </label>
             {errors.sectionIds && <p className="text-red-500 text-xs mb-2">{errors.sectionIds}</p>}
             
-            {!formData.departmentId || !formData.classId ? (
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-center text-slate-500">
-                <i className="fas fa-info-circle mb-2"></i>
-                <p>Please select department and class first to choose sections</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {sections.map(section => (
-                  <label key={section._id} className="flex items-center space-x-2 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.sectionIds?.includes(section._id) || false}
-                      onChange={() => handleSectionToggle(section._id)}
-                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <span className="text-sm text-slate-700">{section.name}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-            
-            {formData.sectionIds && formData.sectionIds.length > 0 && (
-              <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <i className="fas fa-check-circle mr-2"></i>
-                  Selected {formData.sectionIds.length} section(s): {
-                    formData.sectionIds.map(sectionId => {
-                      const section = sections.find(s => s._id === sectionId);
-                      return section?.name;
-                    }).join(', ')
-                  }
-                </p>
-              </div>
+            {formData.departmentId && formData.classId && (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {sections.map(section => (
+                    <label key={section._id} className="flex items-center space-x-2 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.sectionIds?.includes(section._id) || false}
+                        onChange={() => handleSectionToggle(section._id)}
+                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="text-sm text-slate-700">{section.name}</span>
+                    </label>
+                  ))}
+                </div>
+                
+                {formData.sectionIds && formData.sectionIds.length > 0 && (
+                  <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <i className="fas fa-check-circle mr-2"></i>
+                      {formData.sectionIds.length} selected: {
+                        formData.sectionIds.map(sectionId => {
+                          const section = sections.find(s => s._id === sectionId);
+                          return section?.name;
+                        }).join(', ')
+                      }
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -294,32 +323,54 @@ const TopicModal = ({
           </div>
 
           {/* Form Actions */}
-          <div className="flex justify-end space-x-3 pt-6 border-t border-slate-200">
-            <button
-              type="button"
-              onClick={onClose}
-              className={btnSlateClass}
-              disabled={isLoading}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className={btnIndigoClass}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  {editingTopic ? 'Updating...' : 'Creating...'}
-                </>
-              ) : (
-                <>
-                  <i className="fas fa-save"></i>
-                  {editingTopic ? 'Update Topic' : 'Create Topic'}
-                </>
+          <div className="flex justify-between items-center pt-6 border-t border-slate-200">
+            {/* Delete button - only shown when editing */}
+            <div>
+              {editingTopic && onDelete && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm('⚠️ Are you sure you want to delete this topic?\n\nThis action cannot be undone and will remove the topic from all associated sections.')) {
+                      onDelete(editingTopic._id);
+                    }
+                  }}
+                  className="font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors transform active:scale-95 bg-red-500 hover:bg-red-600 text-white"
+                  disabled={isLoading}
+                >
+                  <i className="fas fa-times"></i>
+                  Delete Topic
+                </button>
               )}
-            </button>
+            </div>
+            
+            {/* Save/Cancel buttons */}
+            <div className="flex space-x-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className={btnSlateClass}
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className={btnIndigoClass}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    {editingTopic ? 'Updating...' : 'Creating...'}
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-save"></i>
+                    {editingTopic ? 'Update Topic' : 'Create Topic'}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </form>
       </div>

@@ -24,8 +24,13 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
       subItems: [
         {
           id: "topic-management",
-          label: "Topic Management",
+          label: "Topic Generator",
           icon: "fas fa-tags",
+        },
+        {
+          id: "classroom-sessions",
+          label: "Classroom Recordings",
+          icon: "fas fa-video",
         },
         {
           id: "test-management",
@@ -111,7 +116,8 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
       "define-subjects": "/admin/classrooms/subjects",
       "teacher-assignments": "/admin/classrooms/teacher-assignments",
       "topic-management": "/admin/skills/topics",
-      "test-management": "/admin/skills/tests",
+      "classroom-sessions": "/admin/skills/sessions",
+      "test-management": "/admin/tests/manage",
       "test-topics": "/admin/skills/test-topics",
       "school-reports": "/admin/reports/organization",
       "student-ratings": "/admin/reports/student-ratings",
@@ -327,7 +333,13 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
                           >
                             <i className={`${subItem.icon} text-sm`}></i>
                           </div>
-                          <span className="font-medium">{subItem.label}</span>
+                          <span className="font-medium flex-1">{subItem.label}</span>
+                          {(subItem.id === 'topic-management' || subItem.id === 'test-management') && (
+                            <span className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                              <i className="fas fa-robot text-[8px]"></i>
+                              <span>AI</span>
+                            </span>
+                          )}
                         </button>
                       );
                     })}
