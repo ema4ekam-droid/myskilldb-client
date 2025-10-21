@@ -8,7 +8,7 @@ const API = axios.create({
 export const getRequest = (route) => API.get(route);
 export const postRequest = (route, data) => API.post(route, data);
 export const putRequest = (route, data) => API.put(route, data);
-export const patchRequest = (route) => API.patch(route);
+export const patchRequest = (route, data) => API.patch(route, data);
 export const deleteRequest = (route) => API.delete(route);
 
 export const logoutRequest = (route) => API.post(route);

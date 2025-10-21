@@ -10,3 +10,6 @@ export { default as AssignmentModal } from "./AssignmentModal";
 export { default as ViewModal } from "./ViewModal";
 export { default as EditListModal } from "./EditListModal";
 export { default as SectionsViewModal } from "./SectionsViewModal";
+export { default as HeaderSection } from "./HeaderSection";
+export { default as QuickEditSection } from "./QuickEditSection";
+export { default as Aai } from "../../org-admin-components/calss-setup-components/EntityManagement";

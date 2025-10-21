@@ -12,7 +12,9 @@ import {
   ViewModal,
   EditListModal,
   SectionsViewModal,
-  EntityManagement,
+  HeaderSection,
+  QuickEditSection,
+  EntityManagement
 } from "../../components/master-user-components/master-class-setup-components";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
@@ -129,6 +131,12 @@ const MasterOrganizationSetup = () => {
 
   // State to track expanded departments in assignment view
   const [expandedDepartments, setExpandedDepartments] = useState({});
+
+  // State for quick edit dropdowns
+  const [selectedDepartmentEdit, setSelectedDepartmentEdit] = useState("");
+  const [selectedClassEdit, setSelectedClassEdit] = useState("");
+  const [selectedSectionEdit, setSelectedSectionEdit] = useState("");
+  const [selectedSubjectEdit, setSelectedSubjectEdit] = useState("");
 
   // --- API CALLS FOR LOCATIONS ---
   const fetchCountries = async () => {
@@ -710,6 +718,43 @@ const MasterOrganizationSetup = () => {
     setIsSectionsViewModalOpen(true);
   };
 
+  // Quick Edit Handlers
+  const handleQuickEditDepartment = () => {
+    if (!selectedDepartmentEdit) return;
+    const department = departments.find(d => d._id === selectedDepartmentEdit);
+    if (department) {
+      handleEditDepartment(department);
+    }
+    setSelectedDepartmentEdit("");
+  };
+
+  const handleQuickEditClass = () => {
+    if (!selectedClassEdit) return;
+    const classItem = classes.find(c => c._id === selectedClassEdit);
+    if (classItem) {
+      handleEditClass(classItem);
+    }
+    setSelectedClassEdit("");
+  };
+
+  const handleQuickEditSection = () => {
+    if (!selectedSectionEdit) return;
+    const section = sections.find(s => s._id === selectedSectionEdit);
+    if (section) {
+      handleEditSection(section);
+    }
+    setSelectedSectionEdit("");
+  };
+
+  const handleQuickEditSubject = () => {
+    if (!selectedSubjectEdit) return;
+    const subject = subjects.find(s => s._id === selectedSubjectEdit);
+    if (subject) {
+      handleEditSubject(subject);
+    }
+    setSelectedSubjectEdit("");
+  };
+
   useEffect(() => {
     fetchCountries();
   }, []);
@@ -1075,18 +1120,8 @@ const MasterOrganizationSetup = () => {
       {/* Main Content */}
       <div className={isAnyModalOpen ? "" : "lg:ml-72"}>
         <main className="flex-1 p-4 md:p-8 space-y-8">
-          {/* Header */}
-          <header className="flex justify-between items-center flex-wrap gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
-                Organization Setup
-              </h1>
-              <p className="text-slate-500 text-sm">
-                Select an organization first, then manage departments, classes,
-                sections, subjects, and assignments
-              </p>
-            </div>
-          </header>
+          {/* Header Section */}
+          <HeaderSection />
 
           {/* Organization Selection */}
           <OrganizationSelection
@@ -1118,8 +1153,30 @@ const MasterOrganizationSetup = () => {
               onAddSection={handleAddSection}
               onAddSubject={handleAddSubject}
               onViewEntity={handleViewEntity}
-              onEditEntity={handleEditEntity}
               getSelectedOrganizationInfo={getSelectedOrganizationInfo}
+            />
+          )}
+
+          {/* Quick Edit Section */}
+          {selectedOrganization && (
+            <QuickEditSection
+              departments={departments}
+              classes={classes}
+              sections={sections}
+              subjects={subjects}
+              selectedDepartmentEdit={selectedDepartmentEdit}
+              selectedClassEdit={selectedClassEdit}
+              selectedSectionEdit={selectedSectionEdit}
+              selectedSubjectEdit={selectedSubjectEdit}
+              setSelectedDepartmentEdit={setSelectedDepartmentEdit}
+              setSelectedClassEdit={setSelectedClassEdit}
+              setSelectedSectionEdit={setSelectedSectionEdit}
+              setSelectedSubjectEdit={setSelectedSubjectEdit}
+              onQuickEditDepartment={handleQuickEditDepartment}
+              onQuickEditClass={handleQuickEditClass}
+              onQuickEditSection={handleQuickEditSection}
+              onQuickEditSubject={handleQuickEditSubject}
+              inputBaseClass={inputBaseClass}
             />
           )}
 

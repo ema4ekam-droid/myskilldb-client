@@ -1,13 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
 import OrgMenuNavigation from '../../components/org-admin-components/org-admin-menu_components/OrgMenuNavigation';
 import { TeacherAssignmentModal } from '../../components/org-admin-components/teacher-management-components';
-import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import LoaderOverlay from '../../components/loader/LoaderOverlay';
+import { useSelector } from 'react-redux';
+import { getRequest, postRequest, deleteRequest, patchRequest } from '../../api/apiRequests';
 
 const AdminSubjectAssign = () => {
-  const API_BASE_URL = useMemo(() => `${import.meta.env.VITE_SERVER_API_URL}/api`, []);
-  
+  const organization = useSelector((state) => state.organization);
+  const organizationId = organization?._id;
+
   // State for data
   const [departments, setDepartments] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -36,22 +38,35 @@ const AdminSubjectAssign = () => {
   // Search and filter for subjects
   const [subjectSearchTerm, setSubjectSearchTerm] = useState('');
   
-  // Collapsible state for teacher setup section - All departments open, all classes closed by default
+  // Collapsible state for teacher setup section
   const [collapsedDepartments, setCollapsedDepartments] = useState({});
-  const [collapsedClasses, setCollapsedClasses] = useState({
-    'class-1': true, 'class-2': true, 'class-3': true, 'class-4': true, 'class-5': true,
-    'class-6': true, 'class-7': true, 'class-8': true, 'class-9': true, 'class-10': true,
-    'class-11': true, 'class-12': true, 'class-13': true, 'class-14': true, 'class-15': true,
-    'class-16': true, 'class-17': true, 'class-18': true, 'class-19': true, 'class-20': true
-  });
+  const [collapsedClasses, setCollapsedClasses] = useState({});
   
   // Teacher assignment modal state
   const [isTeacherAssignModalOpen, setIsTeacherAssignModalOpen] = useState(false);
   const [teacherAssignmentData, setTeacherAssignmentData] = useState({
+    assignmentId: '',
+    subjectId: '',
     departmentId: '',
     classId: '',
     sectionId: '',
-    subjectId: ''
+    departmentName: '',
+    className: '',
+    sectionName: '',
+    subjectName: ''
+  });
+  const [teacherFormData, setTeacherFormData] = useState({
+    teacherId: '',
+    departmentId: '',
+    classId: '',
+    sectionId: '',
+    subjectIds: [],
+    isClassTeacher: false,
+    // Display fields for modal
+    departmentName: '',
+    className: '',
+    sectionName: '',
+    subjectName: ''
   });
 
   // Delete confirmation modal state
@@ -66,22 +81,18 @@ const AdminSubjectAssign = () => {
   // Loading states
   const [isLoading, setIsLoading] = useState(false);
 
-  // Current organization ID (would come from context/auth in real app)
-  const [currentOrganizationId, setCurrentOrganizationId] = useState('org-123');
-
-  // Quick action modals (local popups)
+  // Quick action modals
   const [isAddSubjectModalOpen, setIsAddSubjectModalOpen] = useState(false);
   const [subjectFormData, setSubjectFormData] = useState({
     name: '',
     code: '',
     departmentId: '',
     description: '',
-    credits: '',
     type: 'core'
   });
 
   const [isCreateTeacherModalOpen, setIsCreateTeacherModalOpen] = useState(false);
-  const [teacherFormData, setTeacherFormData] = useState({
+  const [createTeacherFormData, setCreateTeacherFormData] = useState({
     name: '',
     email: '',
     mobile: '',
@@ -93,118 +104,69 @@ const AdminSubjectAssign = () => {
   
   const fetchDepartments = async () => {
     try {
-      // Dummy data for departments (School Levels)
-      const dummyDepartments = [
-        { _id: 'dept-1', name: 'Nursery', description: 'Nursery Level' },
-        { _id: 'dept-2', name: 'Lower Primary', description: 'Lower Primary Level (Grades 1-5)' },
-        { _id: 'dept-3', name: 'Upper Primary', description: 'Upper Primary Level (Grades 6-7)' },
-        { _id: 'dept-4', name: 'High School', description: 'High School Level (Grades 8-10)' },
-        { _id: 'dept-5', name: 'Higher Secondary', description: 'Higher Secondary Level (Grades 11-12)' }
-      ];
-      
-      await new Promise(resolve => setTimeout(resolve, 300));
-      setDepartments(dummyDepartments);
+      const response = await getRequest(
+        `/organization-setup/departments/${organizationId}`
+      );
+
+      if (response.data.success) {
+        setDepartments(response.data.data);
+      }
     } catch (error) {
       console.error('Error fetching departments:', error);
       toast.error('Failed to fetch departments');
     }
   };
 
-  const fetchClasses = async () => {
+  const fetchClasses = async (departmentId = null) => {
     try {
-      // Dummy data for classes (LKG to Grade 12)
-      const dummyClasses = [
-        // Nursery
-        { _id: 'class-1', name: 'LKG', description: 'Lower Kindergarten', departmentId: 'dept-1' },
-        { _id: 'class-2', name: 'UKG', description: 'Upper Kindergarten', departmentId: 'dept-1' },
-        // Lower Primary
-        { _id: 'class-3', name: 'Grade 1', description: 'First Grade', departmentId: 'dept-2' },
-        { _id: 'class-4', name: 'Grade 2', description: 'Second Grade', departmentId: 'dept-2' },
-        { _id: 'class-5', name: 'Grade 3', description: 'Third Grade', departmentId: 'dept-2' },
-        { _id: 'class-6', name: 'Grade 4', description: 'Fourth Grade', departmentId: 'dept-2' },
-        { _id: 'class-7', name: 'Grade 5', description: 'Fifth Grade', departmentId: 'dept-2' },
-        // Upper Primary
-        { _id: 'class-8', name: 'Grade 6', description: 'Sixth Grade', departmentId: 'dept-3' },
-        { _id: 'class-9', name: 'Grade 7', description: 'Seventh Grade', departmentId: 'dept-3' },
-        // High School
-        { _id: 'class-10', name: 'Grade 8', description: 'Eighth Grade', departmentId: 'dept-4' },
-        { _id: 'class-11', name: 'Grade 9', description: 'Ninth Grade', departmentId: 'dept-4' },
-        { _id: 'class-12', name: 'Grade 10', description: 'Tenth Grade', departmentId: 'dept-4' },
-        // Higher Secondary
-        { _id: 'class-13', name: 'Grade 11 Bio Math', description: 'Biology with Mathematics Stream', departmentId: 'dept-5' },
-        { _id: 'class-14', name: 'Grade 11 Bio Language', description: 'Biology with Language Stream', departmentId: 'dept-5' },
-        { _id: 'class-15', name: 'Grade 11 Computer Maths', description: 'Computer Science with Mathematics Stream', departmentId: 'dept-5' },
-        { _id: 'class-16', name: 'Grade 11 Commerce', description: 'Commerce Stream', departmentId: 'dept-5' },
-        { _id: 'class-17', name: 'Grade 12 Bio Math', description: 'Biology with Mathematics Stream', departmentId: 'dept-5' },
-        { _id: 'class-18', name: 'Grade 12 Bio Language', description: 'Biology with Language Stream', departmentId: 'dept-5' },
-        { _id: 'class-19', name: 'Grade 12 Computer Maths', description: 'Computer Science with Mathematics Stream', departmentId: 'dept-5' },
-        { _id: 'class-20', name: 'Grade 12 Commerce', description: 'Commerce Stream', departmentId: 'dept-5' }
-      ];
-      
-      await new Promise(resolve => setTimeout(resolve, 300));
-      setClasses(dummyClasses);
+      if (departmentId) {
+        const response = await getRequest(
+          `/organization-setup/classes/${organizationId}/${departmentId}`
+        );
+
+        if (response.data.success) {
+          setClasses(response.data.data);
+        }
+      } else {
+        setClasses([]);
+      }
     } catch (error) {
       console.error('Error fetching classes:', error);
       toast.error('Failed to fetch classes');
     }
   };
 
-  const fetchSections = async () => {
+  const fetchSections = async (departmentId = null, classId = null) => {
     try {
-      // Dummy data for sections (Only A and B for each class)
-      const dummySections = [
-        { _id: 'section-1', name: 'Section A', description: 'Section A' },
-        { _id: 'section-2', name: 'Section B', description: 'Section B' }
-      ];
-      
-      await new Promise(resolve => setTimeout(resolve, 300));
-      setSections(dummySections);
+      if (departmentId && classId) {
+        const response = await getRequest(
+          `/organization-setup/sections/${organizationId}/${departmentId}/${classId}`
+        );
+
+        if (response.data.success) {
+          setSections(response.data.data);
+        }
+      } else {
+        setSections([]);
+      }
     } catch (error) {
       console.error('Error fetching sections:', error);
       toast.error('Failed to fetch sections');
     }
   };
 
-  const fetchSubjects = async () => {
+  const fetchSubjects = async (departmentId = null) => {
     try {
-      // Dummy data for subjects based on grade levels
-      const dummySubjects = [
-        // Common subjects for Grades 1-10
-        { _id: 'subject-1', name: 'English', code: 'ENG', departmentId: 'dept-2', description: 'English Language' },
-        { _id: 'subject-2', name: 'Malayalam', code: 'MAL', departmentId: 'dept-2', description: 'Malayalam Language' },
-        { _id: 'subject-3', name: 'Mathematics', code: 'MATH', departmentId: 'dept-2', description: 'Mathematics' },
-        { _id: 'subject-4', name: 'Science', code: 'SCI', departmentId: 'dept-2', description: 'General Science' },
-        { _id: 'subject-5', name: 'Social Science', code: 'SOC', departmentId: 'dept-2', description: 'Social Studies' },
-        
-        // Upper Primary subjects
-        { _id: 'subject-6', name: 'English', code: 'ENG', departmentId: 'dept-3', description: 'English Language' },
-        { _id: 'subject-7', name: 'Malayalam', code: 'MAL', departmentId: 'dept-3', description: 'Malayalam Language' },
-        { _id: 'subject-8', name: 'Mathematics', code: 'MATH', departmentId: 'dept-3', description: 'Mathematics' },
-        { _id: 'subject-9', name: 'Science', code: 'SCI', departmentId: 'dept-3', description: 'General Science' },
-        { _id: 'subject-10', name: 'Social Science', code: 'SOC', departmentId: 'dept-3', description: 'Social Studies' },
-        
-        // High School subjects
-        { _id: 'subject-11', name: 'English', code: 'ENG', departmentId: 'dept-4', description: 'English Language' },
-        { _id: 'subject-12', name: 'Malayalam', code: 'MAL', departmentId: 'dept-4', description: 'Malayalam Language' },
-        { _id: 'subject-13', name: 'Mathematics', code: 'MATH', departmentId: 'dept-4', description: 'Mathematics' },
-        { _id: 'subject-14', name: 'Science', code: 'SCI', departmentId: 'dept-4', description: 'General Science' },
-        { _id: 'subject-15', name: 'Social Science', code: 'SOC', departmentId: 'dept-4', description: 'Social Studies' },
-        
-        // Grade 11 & 12 - Higher Secondary (Unique subjects shared across streams)
-        { _id: 'subject-16', name: 'Physics', code: 'PHY', departmentId: 'dept-5', description: 'Physics' },
-        { _id: 'subject-17', name: 'Chemistry', code: 'CHEM', departmentId: 'dept-5', description: 'Chemistry' },
-        { _id: 'subject-18', name: 'Biology', code: 'BIO', departmentId: 'dept-5', description: 'Biology' },
-        { _id: 'subject-19', name: 'Mathematics', code: 'MATH', departmentId: 'dept-5', description: 'Mathematics' },
-        { _id: 'subject-20', name: 'English', code: 'ENG', departmentId: 'dept-5', description: 'English Language' },
-        { _id: 'subject-21', name: 'Malayalam', code: 'MAL', departmentId: 'dept-5', description: 'Malayalam Language' },
-        { _id: 'subject-22', name: 'Computer Science', code: 'CS', departmentId: 'dept-5', description: 'Computer Science' },
-        { _id: 'subject-23', name: 'Accountancy', code: 'ACC', departmentId: 'dept-5', description: 'Accountancy' },
-        { _id: 'subject-24', name: 'Business Studies', code: 'BS', departmentId: 'dept-5', description: 'Business Studies' },
-        { _id: 'subject-25', name: 'Economics', code: 'ECON', departmentId: 'dept-5', description: 'Economics' }
-      ];
-      
-      await new Promise(resolve => setTimeout(resolve, 300));
-      setSubjects(dummySubjects);
+      if (departmentId) {
+        const response = await getRequest(
+          `/organization-setup/subjects/${organizationId}/${departmentId}`
+        );
+        if (response.data.success) {
+          setSubjects(response.data.data);
+        }
+      } else {
+        setSubjects([]);
+      }
     } catch (error) {
       console.error('Error fetching subjects:', error);
       toast.error('Failed to fetch subjects');
@@ -213,114 +175,133 @@ const AdminSubjectAssign = () => {
 
   const fetchTeachers = async () => {
     try {
-      // Dummy data for teachers
-      const dummyTeachers = [
-        { _id: 'teacher-1', name: 'Ms. Priya Nair', email: 'priya.nair@school.edu', departmentId: 'dept-2' },
-        { _id: 'teacher-2', name: 'Mr. Rajan Kumar', email: 'rajan.kumar@school.edu', departmentId: 'dept-2' },
-        { _id: 'teacher-3', name: 'Ms. Lakshmi Menon', email: 'lakshmi.menon@school.edu', departmentId: 'dept-3' },
-        { _id: 'teacher-4', name: 'Mr. Suresh Pillai', email: 'suresh.pillai@school.edu', departmentId: 'dept-3' },
-        { _id: 'teacher-5', name: 'Dr. Anjali Varma', email: 'anjali.varma@school.edu', departmentId: 'dept-4' },
-        { _id: 'teacher-6', name: 'Prof. Ramesh Iyer', email: 'ramesh.iyer@school.edu', departmentId: 'dept-4' },
-        { _id: 'teacher-7', name: 'Dr. Kavita Sharma', email: 'kavita.sharma@school.edu', departmentId: 'dept-5' },
-        { _id: 'teacher-8', name: 'Mr. Arun Krishnan', email: 'arun.krishnan@school.edu', departmentId: 'dept-5' },
-        { _id: 'teacher-9', name: 'Ms. Divya Thomas', email: 'divya.thomas@school.edu', departmentId: 'dept-5' },
-        { _id: 'teacher-10', name: 'Dr. Vinod Menon', email: 'vinod.menon@school.edu', departmentId: 'dept-5' }
-      ];
-      
-      await new Promise(resolve => setTimeout(resolve, 300));
-      setTeachers(dummyTeachers);
+      const response = await getRequest(`/users?organizationId=${organizationId}&role=teacher`);
+      if (response.data.success) {
+        setTeachers(response.data.data);
+      }
     } catch (error) {
       console.error('Error fetching teachers:', error);
       toast.error('Failed to fetch teachers');
     }
   };
 
+  const fetchTeachersByDepartment = async (departmentId) => {
+    try {
+      console.log('Fetching teachers for department:', departmentId);
+      const response = await getRequest(`/users?departmentId=${departmentId}&role=teacher`);
+      if (response.data.success) {
+        // Update teachers list with filtered results
+        setTeachers(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching teachers by department:', error);
+      toast.error('Failed to fetch teachers');
+    }
+  };
+
   const fetchSubjectAssignments = async () => {
     try {
-      // Dummy data for existing subject assignments
-      const dummyAssignments = [
-        // Lower Primary - Grade 5 (all 5 subjects to both sections)
-        { _id: 'assign-1', subjectId: 'subject-1', departmentId: 'dept-2', classId: 'class-7', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-2', subjectId: 'subject-2', departmentId: 'dept-2', classId: 'class-7', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-3', subjectId: 'subject-3', departmentId: 'dept-2', classId: 'class-7', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-4', subjectId: 'subject-4', departmentId: 'dept-2', classId: 'class-7', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-5', subjectId: 'subject-5', departmentId: 'dept-2', classId: 'class-7', sectionIds: ['section-1', 'section-2'] },
-        
-        // Upper Primary - Grade 6 (all 5 subjects to both sections)
-        { _id: 'assign-6', subjectId: 'subject-6', departmentId: 'dept-3', classId: 'class-8', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-7', subjectId: 'subject-7', departmentId: 'dept-3', classId: 'class-8', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-8', subjectId: 'subject-8', departmentId: 'dept-3', classId: 'class-8', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-9', subjectId: 'subject-9', departmentId: 'dept-3', classId: 'class-8', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-10', subjectId: 'subject-10', departmentId: 'dept-3', classId: 'class-8', sectionIds: ['section-1', 'section-2'] },
-        
-        // High School - Grade 10 (all 5 subjects to both sections)
-        { _id: 'assign-11', subjectId: 'subject-11', departmentId: 'dept-4', classId: 'class-12', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-12', subjectId: 'subject-12', departmentId: 'dept-4', classId: 'class-12', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-13', subjectId: 'subject-13', departmentId: 'dept-4', classId: 'class-12', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-14', subjectId: 'subject-14', departmentId: 'dept-4', classId: 'class-12', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-15', subjectId: 'subject-15', departmentId: 'dept-4', classId: 'class-12', sectionIds: ['section-1', 'section-2'] },
-        
-        // Higher Secondary - Grade 11 Bio Math (Physics, Chemistry, Biology, Mathematics, English)
-        { _id: 'assign-16', subjectId: 'subject-16', departmentId: 'dept-5', classId: 'class-13', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-17', subjectId: 'subject-17', departmentId: 'dept-5', classId: 'class-13', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-18', subjectId: 'subject-18', departmentId: 'dept-5', classId: 'class-13', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-19', subjectId: 'subject-19', departmentId: 'dept-5', classId: 'class-13', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-20', subjectId: 'subject-20', departmentId: 'dept-5', classId: 'class-13', sectionIds: ['section-1', 'section-2'] },
-        
-        // Higher Secondary - Grade 11 Bio Language (Biology, Physics, Chemistry, Malayalam, English)
-        { _id: 'assign-21', subjectId: 'subject-18', departmentId: 'dept-5', classId: 'class-14', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-22', subjectId: 'subject-16', departmentId: 'dept-5', classId: 'class-14', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-23', subjectId: 'subject-17', departmentId: 'dept-5', classId: 'class-14', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-24', subjectId: 'subject-21', departmentId: 'dept-5', classId: 'class-14', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-25', subjectId: 'subject-20', departmentId: 'dept-5', classId: 'class-14', sectionIds: ['section-1', 'section-2'] },
-        
-        // Higher Secondary - Grade 11 Computer Maths (Computer Science, Mathematics, Physics, Chemistry, English)
-        { _id: 'assign-26', subjectId: 'subject-22', departmentId: 'dept-5', classId: 'class-15', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-27', subjectId: 'subject-19', departmentId: 'dept-5', classId: 'class-15', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-28', subjectId: 'subject-16', departmentId: 'dept-5', classId: 'class-15', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-29', subjectId: 'subject-17', departmentId: 'dept-5', classId: 'class-15', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-30', subjectId: 'subject-20', departmentId: 'dept-5', classId: 'class-15', sectionIds: ['section-1', 'section-2'] },
-        
-        // Higher Secondary - Grade 11 Commerce (Accountancy, Business Studies, Economics, Mathematics, English)
-        { _id: 'assign-31', subjectId: 'subject-23', departmentId: 'dept-5', classId: 'class-16', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-32', subjectId: 'subject-24', departmentId: 'dept-5', classId: 'class-16', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-33', subjectId: 'subject-25', departmentId: 'dept-5', classId: 'class-16', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-34', subjectId: 'subject-19', departmentId: 'dept-5', classId: 'class-16', sectionIds: ['section-1', 'section-2'] },
-        { _id: 'assign-35', subjectId: 'subject-20', departmentId: 'dept-5', classId: 'class-16', sectionIds: ['section-1', 'section-2'] }
-      ];
-      
-      await new Promise(resolve => setTimeout(resolve, 300));
-      setSubjectAssignments(dummyAssignments);
+      const response = await getRequest(`/organization-setup/teachingAssignments/${organizationId}`);
+      console.log('Fetched subject assignments:', response.data);
+      if (response.data.success) {
+        // Transform API data to match our component structure
+        const transformedAssignments = transformAssignmentsData(response.data.data);
+        setSubjectAssignments(transformedAssignments);
+      }
     } catch (error) {
       console.error('Error fetching subject assignments:', error);
       toast.error('Failed to fetch subject assignments');
     }
   };
 
+  // Transform API data to match our component structure
+  const transformAssignmentsData = (apiData) => {
+    const assignments = [];
+    
+    apiData.forEach(assignment => {
+      const { assignmentId, assignedSubTeachers = [] } = assignment;
+
+      // Skip invalid records where assignmentId or its nested fields are missing
+      if (!assignmentId || !assignmentId.departmentId || !assignmentId.classId || !assignmentId.sectionId) {
+        console.warn('Skipping invalid teaching assignment record (missing assignmentId or nested ids):', assignment);
+        return;
+      }
+
+      assignedSubTeachers.forEach(subTeacher => {
+        const subjectObj = subTeacher?.subjectId;
+        const subjectId = subjectObj?._id;
+        const subjectName = subjectObj?.name;
+
+        // Skip if subject is missing
+        if (!subjectId) return;
+
+        assignments.push({
+          _id: `${assignment._id}-${subjectId}`,
+          subjectId: subjectId,
+          subjectName: subjectName || '',
+          departmentId: assignmentId.departmentId._id,
+          departmentName: assignmentId.departmentId.name,
+          classId: assignmentId.classId._id,
+          className: assignmentId.classId.name,
+          sectionId: assignmentId.sectionId._id,
+          sectionName: assignmentId.sectionId.name,
+          assignmentId: assignmentId._id,
+          teachingAssignmentId: assignment._id,
+          teacherId: subTeacher.teacherId?._id || null,
+          teacherName: subTeacher.teacherId?.name || null
+        });
+      });
+    });
+    
+    return assignments;
+  };
+
   const fetchAllData = async () => {
+    if (!organizationId) return;
+    
     setIsLoading(true);
-    await Promise.all([
-      fetchDepartments(),
-      fetchClasses(),
-      fetchSections(),
-      fetchSubjects(),
-      fetchSubjectAssignments(),
-      fetchTeachers()
-    ]);
-    setIsLoading(false);
+    try {
+      await Promise.all([
+        fetchDepartments(),
+        fetchClasses(),
+        fetchSubjectAssignments(),
+        fetchTeachers()
+      ]);
+    } catch (error) {
+      console.error('Error fetching all data:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // --- HANDLERS ---
   
-  const handleDepartmentChange = (deptId) => {
+  const handleDepartmentChange = async (deptId) => {
     setSelectedDepartment(deptId);
     setSelectedClass('');
     setSelectedSection('');
+    setSelectedSubjects([]);
+    
+    if (deptId) {
+      await Promise.all([
+        fetchClasses(deptId),
+        fetchSubjects(deptId)
+      ]);
+    } else {
+      await fetchClasses();
+      setSubjects([]);
+    }
   };
 
-  const handleClassChange = (classId) => {
+  const handleClassChange = async (classId) => {
     setSelectedClass(classId);
     setSelectedSection('');
+    
+    if (selectedDepartment && classId) {
+      await fetchSections(selectedDepartment, classId);
+    } else {
+      await fetchSections();
+    }
   };
 
   const handleSectionChange = (sectionId) => {
@@ -336,7 +317,21 @@ const AdminSubjectAssign = () => {
   };
 
   const selectAllSubjects = () => {
-    const allSubjectIds = filteredAndSearchedSubjects.map(s => s._id);
+    // Select all subjects except those already assigned to any of the target sections
+    const allSubjectIds = filteredAndSearchedSubjects
+      .map(s => s._id)
+      .filter(subjectId => {
+        // Check if subject is already assigned to any of the selected sections using assignmentId
+        return !sectionsToAssign.some(sectionId => {
+          const section = sections.find(s => s._id === sectionId);
+          if (!section || !section.assignmentId) return false;
+          
+          return subjectAssignments.some(a => 
+            a.assignmentId === section.assignmentId && 
+            a.subjectId === subjectId
+          );
+        });
+      });
     setSelectedSubjects(allSubjectIds);
   };
 
@@ -344,34 +339,80 @@ const AdminSubjectAssign = () => {
     setSelectedSubjects([]);
   };
 
+  // Handle batch assignment with API calls for each section
   const handleBatchAssignment = async () => {
     if (selectedSubjects.length === 0) {
       toast.error('Please select at least one subject');
       return;
     }
 
+    if (sectionsToAssign.length === 0) {
+      toast.error('Please select at least one section');
+      return;
+    }
+
     try {
       setIsLoading(true);
       
-      // Create assignments for each selected subject
-      const newAssignments = selectedSubjects.map(subjectId => ({
-        _id: `sa-${Date.now()}-${subjectId}`,
-        subjectId,
-        departmentId: selectedDepartment,
-        classId: selectedClass,
-        sectionIds: sectionsToAssign,
-        organizationId: currentOrganizationId
-      }));
+      // Filter out subjects that are already assigned to the same specific sections
+      const subjectsToAssign = selectedSubjects.filter(subjectId => {
+        return !sectionsToAssign.some(sectionId => {
+          // Find the section to get its assignmentId
+          const section = sections.find(s => s._id === sectionId);
+          if (!section || !section.assignmentId) return false;
+          
+          // Check if this subject is already assigned to this exact assignment (same assignmentId)
+          return subjectAssignments.some(a => 
+            a.assignmentId === section.assignmentId && 
+            a.subjectId === subjectId
+          );
+        });
+      });
       
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (subjectsToAssign.length === 0) {
+        toast.error('Selected subjects are already assigned to the selected sections');
+        setIsLoading(false);
+        return;
+      }
+
+      // Create API calls for each selected section using the filtered subjects
+      const apiCalls = sectionsToAssign.map(sectionId => {
+        const section = sections.find(s => s._id === sectionId);
+        if (!section || !section.assignmentId) {
+          console.error(`No assignmentId found for section: ${sectionId}`);
+          return Promise.reject(`No assignmentId for section ${sectionId}`);
+        }
+
+        const requestData = {
+          organizationId: organizationId,
+          assignmentId: section.assignmentId,
+          assignedSubTeachers: subjectsToAssign.map(subjectId => ({ subjectId }))
+        };
+
+        return postRequest('/organization-setup/teachingAssignments', requestData);
+      });
+
+      // Execute all API calls
+      const responses = await Promise.all(apiCalls);
       
-      setSubjectAssignments(prev => [...prev, ...newAssignments]);
-      toast.success(`${selectedSubjects.length} subject${selectedSubjects.length !== 1 ? 's' : ''} assigned successfully!`);
+      // Check if all API calls were successful
+      const allSuccess = responses.every(response => response.data.success);
       
-      // Clear selections
-      setSelectedSubjects([]);
+      if (allSuccess) {
+        toast.success(`${selectedSubjects.length} subject${selectedSubjects.length !== 1 ? 's' : ''} assigned to ${sectionsToAssign.length} section${sectionsToAssign.length !== 1 ? 's' : ''} successfully!`);
+        
+        // Refresh assignments data
+        await fetchSubjectAssignments();
+        
+        // Clear selections
+        setSelectedSubjects([]);
+        setSectionsToAssign([]);
+      } else {
+        toast.error('Some assignments failed to save');
+      }
       
     } catch (error) {
+      console.error('Error creating assignments:', error);
       toast.error('Failed to create assignments');
     } finally {
       setIsLoading(false);
@@ -380,7 +421,6 @@ const AdminSubjectAssign = () => {
 
   const openAssignmentModal = (subjectId) => {
     setSelectedSubject(subjectId);
-    // Pre-fill with selected sections from Step 3
     setSelectedSections(sectionsToAssign.length > 0 ? [...sectionsToAssign] : []);
     setIsAssignmentModalOpen(true);
   };
@@ -399,31 +439,65 @@ const AdminSubjectAssign = () => {
     );
   };
 
+  // Handle single assignment with API call
   const handleCreateAssignment = async () => {
     if (!selectedSubject || selectedSections.length === 0) {
       toast.error('Please select a subject and at least one section');
       return;
     }
 
+    // Prevent assigning a subject to sections where it already exists in the same assignment
+    const alreadyAssignedInSelected = selectedSections.some(sectionId => {
+      const section = sections.find(s => s._id === sectionId);
+      if (!section || !section.assignmentId) return false;
+      
+      return subjectAssignments.some(a => 
+        a.assignmentId === section.assignmentId && 
+        a.subjectId === selectedSubject
+      );
+    });
+    if (alreadyAssignedInSelected) {
+      toast.error('Selected subject is already assigned to one or more of the selected sections');
+      return;
+    }
+
     try {
       setIsLoading(true);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Create API calls for each selected section
+      const apiCalls = selectedSections.map(sectionId => {
+        const section = sections.find(s => s._id === sectionId);
+        if (!section || !section.assignmentId) {
+          console.error(`No assignmentId found for section: ${sectionId}`);
+          return Promise.reject(`No assignmentId for section ${sectionId}`);
+        }
+
+        const requestData = {
+          organizationId: organizationId,
+          assignmentId: section.assignmentId,
+          assignedSubTeachers: [{
+            subjectId: selectedSubject
+          }]
+        };
+
+        return postRequest('/organization-setup/teachingAssignments', requestData);
+      });
+
+      // Execute all API calls
+      const responses = await Promise.all(apiCalls);
       
-      // Create assignments for each selected section
-      const newAssignments = selectedSections.map(sectionId => ({
-        _id: `assign-${Date.now()}-${sectionId}`,
-        subjectId: selectedSubject,
-        departmentId: selectedDepartment,
-        classId: selectedClass,
-        sectionIds: [sectionId]
-      }));
+      // Check if all API calls were successful
+      const allSuccess = responses.every(response => response.data.success);
       
-      setSubjectAssignments(prev => [...prev, ...newAssignments]);
-      toast.success('Subject assignment created successfully!');
-      closeAssignmentModal();
+      if (allSuccess) {
+        toast.success('Subject assignment created successfully!');
+        await fetchSubjectAssignments();
+        closeAssignmentModal();
+      } else {
+        toast.error('Some assignments failed to save');
+      }
     } catch (error) {
+      console.error('Error creating assignment:', error);
       toast.error('Failed to create assignment');
     } finally {
       setIsLoading(false);
@@ -431,8 +505,8 @@ const AdminSubjectAssign = () => {
   };
 
   const generateDeleteQuestion = () => {
-    const num1 = Math.floor(Math.random() * 9) + 1; // 1-9
-    const num2 = Math.floor(Math.random() * 9) + 1; // 1-9
+    const num1 = Math.floor(Math.random() * 9) + 1;
+    const num2 = Math.floor(Math.random() * 9) + 1;
     setDeleteQuestion({ num1, num2, answer: num1 * num2 });
     setDeleteAnswer('');
   };
@@ -459,24 +533,33 @@ const AdminSubjectAssign = () => {
     try {
       setIsLoading(true);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      setSubjectAssignments(prev => 
-        prev.filter(assignment => assignment._id !== assignmentToDelete)
+      // Find the assignment to get assignmentId and subjectId
+      const assignment = subjectAssignments.find(a => a._id === assignmentToDelete);
+      if (!assignment) {
+        toast.error('Assignment not found');
+        return;
+      }
+
+      // Remove the subject from assignedSubTeachers using PATCH
+      await patchRequest(
+        `/organization-setup/teachingAssignments/${assignment.assignmentId}/subjects/${assignment.subjectId}`,
+        {
+          organizationId: organizationId
+        }
       );
       
-      toast.success('Assignment deleted successfully!');
+      toast.success('Subject removed from assignment successfully!');
+      await fetchSubjectAssignments();
       closeDeleteConfirmation();
     } catch (error) {
-      toast.error('Failed to delete assignment');
+      console.error('Error removing subject from assignment:', error);
+      toast.error('Failed to remove subject from assignment');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDeleteAssignment = async (assignmentId) => {
-    // This function is now replaced by openDeleteConfirmation
     openDeleteConfirmation(assignmentId);
   };
 
@@ -494,59 +577,179 @@ const AdminSubjectAssign = () => {
     }));
   };
 
-  const openTeacherAssignModal = (departmentId, classId, sectionId, subjectId) => {
+// UPDATED: Derive assignmentId from subjectAssignments instead of sections state
+const openTeacherAssignModal = (departmentId, classId, sectionId, subjectId) => {
+  console.log('Opening teacher modal with:', { departmentId, classId, sectionId, subjectId });
+
+  // Prefer the flattened subjectAssignments which already include assignmentId
+  const assignment = subjectAssignments.find(a =>
+    a.departmentId === departmentId &&
+    a.classId === classId &&
+    a.sectionId === sectionId &&
+    a.subjectId === subjectId
+  );
+
+  if (!assignment || !assignment.assignmentId) {
+    // As a fallback, try to read from sections if present
+    const fallbackSection = sections.find(s => s._id === sectionId);
+    const fallbackAssignmentId = fallbackSection?.assignmentId;
+    if (!fallbackAssignmentId) {
+      toast.error('Section or assignment not found');
+      return;
+    }
+
+    // Still set up modal with limited info
+    const department = departments.find(d => d._id === departmentId);
+    const classItem = classes.find(c => c._id === classId);
+    const subject = subjects.find(s => s._id === subjectId);
+
     setTeacherAssignmentData({
-      departmentId,
-      classId,
-      sectionId,
-      subjectId
+      assignmentId: fallbackAssignmentId,
+      subjectId: subjectId,
+      departmentId: departmentId,
+      classId: classId,
+      sectionId: sectionId,
+      departmentName: department?.name || '',
+      className: classItem?.name || '',
+      sectionName: fallbackSection?.name || '',
+      subjectName: subject?.name || ''
     });
+
+    setTeacherFormData({
+      teacherId: '',
+      departmentId: departmentId,
+      classId: classId,
+      sectionId: sectionId,
+      subjectIds: [subjectId],
+      isClassTeacher: false,
+      departmentName: department?.name || '',
+      className: classItem?.name || '',
+      sectionName: fallbackSection?.name || '',
+      subjectName: subject?.name || ''
+    });
+
     setIsTeacherAssignModalOpen(true);
-  };
+    return;
+  }
+
+  // Find details from arrays as fallback for display names
+  const department = departments.find(d => d._id === departmentId);
+  const classItem = classes.find(c => c._id === classId);
+  const subject = subjects.find(s => s._id === subjectId);
+
+  setTeacherAssignmentData({
+    assignmentId: assignment.assignmentId,
+    subjectId: subjectId,
+    departmentId: departmentId,
+    classId: classId,
+    sectionId: sectionId,
+    departmentName: assignment.departmentName || department?.name || '',
+    className: assignment.className || classItem?.name || '',
+    sectionName: assignment.sectionName || '',
+    subjectName: assignment.subjectName || subject?.name || ''
+  });
+
+  setTeacherFormData({
+    teacherId: assignment.teacherId || '',
+    departmentId: departmentId,
+    classId: classId,
+    sectionId: sectionId,
+    subjectIds: [subjectId],
+    isClassTeacher: false,
+    departmentName: assignment.departmentName || department?.name || '',
+    className: assignment.className || classItem?.name || '',
+    sectionName: assignment.sectionName || '',
+    subjectName: assignment.subjectName || subject?.name || ''
+  });
+
+  setIsTeacherAssignModalOpen(true);
+};
+
+
 
   const closeTeacherAssignModal = () => {
     setIsTeacherAssignModalOpen(false);
     setTeacherAssignmentData({
+      assignmentId: '',
+      subjectId: '',
       departmentId: '',
       classId: '',
       sectionId: '',
-      subjectId: ''
+      departmentName: '',
+      className: '',
+      sectionName: '',
+      subjectName: ''
+    });
+    setTeacherFormData({
+      teacherId: '',
+      departmentId: '',
+      classId: '',
+      sectionId: '',
+      subjectIds: [],
+      isClassTeacher: false,
+      departmentName: '',
+      className: '',
+      sectionName: '',
+      subjectName: ''
     });
   };
+
+  // UPDATED: Modified handleTeacherAssignmentSubmit to use correct API endpoint
+ // UPDATED: Modified handleTeacherAssignmentSubmit to use correct API endpoint
+const handleTeacherAssignmentSubmit = async (formData) => {
+  try {
+    setIsLoading(true);
+    
+    console.log('Submitting teacher assignment with data:', {
+      assignmentId: teacherAssignmentData.assignmentId,
+      subjectId: teacherAssignmentData.subjectId,
+      teacherId: formData.teacherId,
+      organizationId: organizationId
+    });
+
+    // Call the API to assign teacher using PATCH method
+    const response = await patchRequest(
+      `/organization-setup/teachingAssignments/${teacherAssignmentData.assignmentId}/teachers/${teacherAssignmentData.subjectId}`,
+      {
+        organizationId: organizationId,
+        teacherId: formData.teacherId
+      }
+    );
+
+    if (response.data.success) {
+      toast.success('Teacher assigned successfully!');
+      // Refresh assignments to get updated teacher information
+      await fetchSubjectAssignments();
+      closeTeacherAssignModal();
+    } else {
+      toast.error('Failed to assign teacher');
+    }
+  } catch (error) {
+    console.error('Error assigning teacher:', error);
+    toast.error('Failed to assign teacher');
+  } finally {
+    setIsLoading(false);
+  }
+};
   
   const navigateToTeacherAssign = (departmentId, classId, sectionId, subjectId) => {
-    // Store the selected filters in localStorage for the teacher assign page
     localStorage.setItem('preselectedDepartment', departmentId);
     localStorage.setItem('preselectedClass', classId);
     localStorage.setItem('preselectedSection', sectionId);
     localStorage.setItem('preselectedSubject', subjectId);
     
-    // Navigate to the teacher assign page
     window.location.href = '/admin/classrooms/teacher-assignments';
   };
 
   // --- COMPUTED VALUES ---
   
   const filteredSubjects = useMemo(() => {
-    if (!selectedDepartment) return subjects;
-    return subjects.filter(subject => subject.departmentId === selectedDepartment);
-  }, [subjects, selectedDepartment]);
+    return subjects;
+  }, [subjects]);
 
   const filteredAndSearchedSubjects = useMemo(() => {
-    let filtered = filteredSubjects;
-    
-    // Apply search filter
-    if (subjectSearchTerm.trim()) {
-      const searchLower = subjectSearchTerm.toLowerCase();
-      filtered = filtered.filter(subject => 
-        subject.name.toLowerCase().includes(searchLower) ||
-        subject.code.toLowerCase().includes(searchLower) ||
-        subject.description?.toLowerCase().includes(searchLower)
-      );
-    }
-    
-    return filtered;
-  }, [filteredSubjects, subjectSearchTerm]);
+    return filteredSubjects;
+  }, [filteredSubjects]);
 
   const filteredAssignments = useMemo(() => {
     let filtered = subjectAssignments;
@@ -558,23 +761,59 @@ const AdminSubjectAssign = () => {
       filtered = filtered.filter(assignment => assignment.classId === selectedClass);
     }
     if (selectedSection) {
-      filtered = filtered.filter(assignment => assignment.sectionIds.includes(selectedSection));
+      filtered = filtered.filter(assignment => assignment.sectionId === selectedSection);
     }
     
     return filtered;
   }, [subjectAssignments, selectedDepartment, selectedClass, selectedSection]);
 
   const availableSections = useMemo(() => {
-    // Return sections that are available for the selected department/class
     return sections;
   }, [sections, selectedDepartment, selectedClass]);
+
+  // Get grouped assignments for display
+  const getGroupedAssignments = () => {
+    const grouped = {};
+
+    subjectAssignments.forEach(assignment => {
+      const { departmentId, departmentName, classId, className, sectionId, sectionName } = assignment;
+
+      if (!grouped[departmentId]) {
+        grouped[departmentId] = {
+          name: departmentName,
+          classes: {},
+        };
+      }
+
+      if (!grouped[departmentId].classes[classId]) {
+        grouped[departmentId].classes[classId] = {
+          name: className,
+          sections: {},
+        };
+      }
+
+      if (!grouped[departmentId].classes[classId].sections[sectionId]) {
+        grouped[departmentId].classes[classId].sections[sectionId] = {
+          name: sectionName,
+          assignments: [],
+        };
+      }
+
+      grouped[departmentId].classes[classId].sections[sectionId].assignments.push(assignment);
+    });
+
+    return grouped;
+  };
+
+  const groupedAssignments = useMemo(() => {
+    return getGroupedAssignments();
+  }, [subjectAssignments]);
 
   // --- EFFECTS ---
   
   useEffect(() => {
     fetchAllData();
     
-    // Check for preselected filters from navigation
     const preselectedDepartment = localStorage.getItem('preselectedDepartment');
     const preselectedClass = localStorage.getItem('preselectedClass');
     
@@ -582,11 +821,31 @@ const AdminSubjectAssign = () => {
       setSelectedDepartment(preselectedDepartment);
       setSelectedClass(preselectedClass);
       
-      // Clear the localStorage after using the values
       localStorage.removeItem('preselectedDepartment');
       localStorage.removeItem('preselectedClass');
     }
-  }, []);
+  }, [organizationId]);
+
+  // Initialize collapsed states when departments and classes are loaded
+  useEffect(() => {
+    if (departments.length > 0) {
+      const initialCollapsedDepartments = {};
+      departments.forEach(dept => {
+        initialCollapsedDepartments[dept._id] = true;
+      });
+      setCollapsedDepartments(initialCollapsedDepartments);
+    }
+  }, [departments]);
+
+  useEffect(() => {
+    if (classes.length > 0) {
+      const initialCollapsedClasses = {};
+      classes.forEach(cls => {
+        initialCollapsedClasses[cls._id] = true;
+      });
+      setCollapsedClasses(initialCollapsedClasses);
+    }
+  }, [classes]);
 
   // --- STYLES ---
   const inputBaseClass = "w-full bg-slate-100 border-slate-200 rounded-md p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none";
@@ -607,14 +866,13 @@ const AdminSubjectAssign = () => {
       code: '',
       departmentId: selectedDepartment || '',
       description: '',
-      credits: '',
       type: 'core'
     });
     setIsAddSubjectModalOpen(true);
   };
 
   const openCreateTeacherModal = () => {
-    setTeacherFormData({
+    setCreateTeacherFormData({
       name: '',
       email: '',
       mobile: '',
@@ -689,19 +947,19 @@ const AdminSubjectAssign = () => {
                   </button>
                 </div>
                 <div className="p-6 space-y-4">
-              <div>
+                  <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Department *</label>
-                <select
+                    <select
                       value={subjectFormData.departmentId}
                       onChange={(e) => setSubjectFormData(prev => ({ ...prev, departmentId: e.target.value }))}
-                  className={inputBaseClass}
-                >
+                      className={inputBaseClass}
+                    >
                       <option value="">Select Department</option>
-                  {departments.map(dept => (
-                    <option key={dept._id} value={dept._id}>{dept.name}</option>
-                  ))}
-                </select>
-              </div>
+                      {departments.map(dept => (
+                        <option key={dept._id} value={dept._id}>{dept.name}</option>
+                      ))}
+                    </select>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Subject Name *</label>
                     <input
@@ -712,27 +970,15 @@ const AdminSubjectAssign = () => {
                       placeholder="e.g., Computer Science"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">Code</label>
-                      <input
-                        type="text"
-                        value={subjectFormData.code}
-                        onChange={(e) => setSubjectFormData(prev => ({ ...prev, code: e.target.value }))}
-                        className={inputBaseClass}
-                        placeholder="e.g., CS"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">Credits</label>
-                      <input
-                        type="text"
-                        value={subjectFormData.credits}
-                        onChange={(e) => setSubjectFormData(prev => ({ ...prev, credits: e.target.value }))}
-                        className={inputBaseClass}
-                        placeholder="e.g., 5"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Code</label>
+                    <input
+                      type="text"
+                      value={subjectFormData.code}
+                      onChange={(e) => setSubjectFormData(prev => ({ ...prev, code: e.target.value }))}
+                      className={inputBaseClass}
+                      placeholder="e.g., CS"
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
@@ -747,24 +993,50 @@ const AdminSubjectAssign = () => {
                 <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
                   <button onClick={() => setIsAddSubjectModalOpen(false)} className={btnSlateClass}>Cancel</button>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       if (!subjectFormData.departmentId || !subjectFormData.name) {
                         toast.error('Please fill required fields');
                         return;
                       }
-                      const newSubject = {
-                        _id: `subject-${Date.now()}`,
-                        ...subjectFormData,
-                        organizationId: currentOrganizationId
-                      };
-                      setSubjects(prev => [...prev, newSubject]);
-                      toast.success('Subject created');
-                      setIsAddSubjectModalOpen(false);
+                      
+                      try {
+                        setIsLoading(true);
+                        
+                        const response = await postRequest(`/organization-setup/subjects`, {
+                          name: subjectFormData.name,
+                          code: subjectFormData.code,
+                          description: subjectFormData.description,
+                          organizationId: organizationId,
+                          departmentId: subjectFormData.departmentId
+                        });
+
+                        if (response.data.success) {
+                          const newSubject = response.data.data;
+                          setSubjects(prev => [...prev, newSubject]);
+                          toast.success('Subject created successfully!');
+                          setIsAddSubjectModalOpen(false);
+                        }
+                      } catch (error) {
+                        console.error('Error creating subject:', error);
+                        toast.error('Failed to create subject');
+                      } finally {
+                        setIsLoading(false);
+                      }
                     }}
                     className={btnIndigoClass}
+                    disabled={isLoading}
                   >
-                    <i className="fas fa-save"></i>
-                    Save Subject
+                    {isLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-save"></i>
+                        Save Subject
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -786,8 +1058,8 @@ const AdminSubjectAssign = () => {
                     <label className="block text-sm font-medium text-slate-700 mb-2">Full Name *</label>
                     <input
                       type="text"
-                      value={teacherFormData.name}
-                      onChange={(e) => setTeacherFormData(prev => ({ ...prev, name: e.target.value }))}
+                      value={createTeacherFormData.name}
+                      onChange={(e) => setCreateTeacherFormData(prev => ({ ...prev, name: e.target.value }))}
                       className={inputBaseClass}
                       placeholder="e.g., John Doe"
                     />
@@ -796,8 +1068,8 @@ const AdminSubjectAssign = () => {
                     <label className="block text-sm font-medium text-slate-700 mb-2">Email *</label>
                     <input
                       type="email"
-                      value={teacherFormData.email}
-                      onChange={(e) => setTeacherFormData(prev => ({ ...prev, email: e.target.value }))}
+                      value={createTeacherFormData.email}
+                      onChange={(e) => setCreateTeacherFormData(prev => ({ ...prev, email: e.target.value }))}
                       className={inputBaseClass}
                       placeholder="e.g., john@school.com"
                     />
@@ -806,8 +1078,8 @@ const AdminSubjectAssign = () => {
                     <label className="block text-sm font-medium text-slate-700 mb-2">Mobile Number *</label>
                     <input
                       type="tel"
-                      value={teacherFormData.mobile}
-                      onChange={(e) => setTeacherFormData(prev => ({ ...prev, mobile: e.target.value }))}
+                      value={createTeacherFormData.mobile}
+                      onChange={(e) => setCreateTeacherFormData(prev => ({ ...prev, mobile: e.target.value }))}
                       className={inputBaseClass}
                       placeholder="e.g., +1234567890"
                     />
@@ -815,8 +1087,8 @@ const AdminSubjectAssign = () => {
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Department *</label>
                     <select
-                      value={teacherFormData.departmentId}
-                      onChange={(e) => setTeacherFormData(prev => ({ ...prev, departmentId: e.target.value }))}
+                      value={createTeacherFormData.departmentId}
+                      onChange={(e) => setCreateTeacherFormData(prev => ({ ...prev, departmentId: e.target.value }))}
                       className={inputBaseClass}
                     >
                       <option value="">Select Department</option>
@@ -829,8 +1101,8 @@ const AdminSubjectAssign = () => {
                     <label className="block text-sm font-medium text-slate-700 mb-2">Temporary Password *</label>
                     <input
                       type="text"
-                      value={teacherFormData.password}
-                      onChange={(e) => setTeacherFormData(prev => ({ ...prev, password: e.target.value }))}
+                      value={createTeacherFormData.password}
+                      onChange={(e) => setCreateTeacherFormData(prev => ({ ...prev, password: e.target.value }))}
                       className={inputBaseClass}
                       placeholder="Enter temporary password"
                     />
@@ -839,24 +1111,50 @@ const AdminSubjectAssign = () => {
                 <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
                   <button onClick={() => setIsCreateTeacherModalOpen(false)} className={btnSlateClass}>Cancel</button>
                   <button
-                    onClick={() => {
-                      if (!teacherFormData.name || !teacherFormData.email || !teacherFormData.mobile || !teacherFormData.departmentId || !teacherFormData.password) {
+                    onClick={async () => {
+                      if (!createTeacherFormData.name || !createTeacherFormData.email || !createTeacherFormData.mobile || !createTeacherFormData.departmentId || !createTeacherFormData.password) {
                         toast.error('Please fill all required fields');
                         return;
                       }
-                      const newTeacher = {
-                        _id: `teacher-${Date.now()}`,
-                        ...teacherFormData,
-                        organizationId: currentOrganizationId
-                      };
-                      setTeachers(prev => [...prev, newTeacher]);
-                      toast.success('Teacher created successfully');
-                      setIsCreateTeacherModalOpen(false);
+                      
+                      try {
+                        setIsLoading(true);
+                        
+                        const response = await postRequest(`/users`, {
+                          organizationId: organizationId,
+                          role: "teacher",
+                          name: createTeacherFormData.name,
+                          email: createTeacherFormData.email,
+                          departmentId: createTeacherFormData.departmentId
+                        });
+
+                        if (response.data.success) {
+                          const newTeacher = response.data.data;
+                          setTeachers(prev => [...prev, newTeacher]);
+                          toast.success('Teacher created successfully!');
+                          setIsCreateTeacherModalOpen(false);
+                        }
+                      } catch (error) {
+                        console.error('Error creating teacher:', error);
+                        toast.error('Failed to create teacher');
+                      } finally {
+                        setIsLoading(false);
+                      }
                     }}
                     className={btnIndigoClass}
+                    disabled={isLoading}
                   >
-                    <i className="fas fa-save"></i>
-                    Save Teacher
+                    {isLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-save"></i>
+                        Save Teacher
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -882,38 +1180,38 @@ const AdminSubjectAssign = () => {
                   <h2 className="text-lg font-bold text-slate-900 mb-4">Choose Department and Class</h2>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Department *
-                </label>
-                <select
-                  value={selectedDepartment}
-                  onChange={(e) => handleDepartmentChange(e.target.value)}
-                  className={inputBaseClass}
-                >
-                  <option value="">Select Department</option>
-                  {departments.map(dept => (
-                    <option key={dept._id} value={dept._id}>{dept.name}</option>
-                  ))}
-                </select>
-              </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Department *
+                      </label>
+                      <select
+                        value={selectedDepartment}
+                        onChange={(e) => handleDepartmentChange(e.target.value)}
+                        className={inputBaseClass}
+                      >
+                        <option value="">Select Department</option>
+                        {departments.map(dept => (
+                          <option key={dept._id} value={dept._id}>{dept.name}</option>
+                        ))}
+                      </select>
+                    </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Class *
-                </label>
-                <select
-                  value={selectedClass}
-                  onChange={(e) => handleClassChange(e.target.value)}
-                  className={inputBaseClass}
-                  disabled={!selectedDepartment}
-                >
-                  <option value="">Select Class</option>
-                  {classes.map(cls => (
-                    <option key={cls._id} value={cls._id}>{cls.name}</option>
-                  ))}
-                </select>
-              </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Class *
+                      </label>
+                      <select
+                        value={selectedClass}
+                        onChange={(e) => handleClassChange(e.target.value)}
+                        className={inputBaseClass}
+                        disabled={!selectedDepartment}
+                      >
+                        <option value="">Select Class</option>
+                        {classes.map(cls => (
+                          <option key={cls._id} value={cls._id}>{cls.name}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
 
@@ -922,41 +1220,41 @@ const AdminSubjectAssign = () => {
                   <div className="bg-slate-50 rounded-lg p-4 md:p-6 border border-slate-200">
                     <h2 className="text-lg font-bold text-slate-900 mb-4">Select Sections</h2>
               
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                {sections.map(section => {
-                  const isSelected = sectionsToAssign.includes(section._id);
-                  return (
-                    <button
-                      key={section._id}
-                      onClick={() => {
-                        if (isSelected) {
-                          setSectionsToAssign(prev => prev.filter(id => id !== section._id));
-                        } else {
-                          setSectionsToAssign(prev => [...prev, section._id]);
-                        }
-                      }}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        isSelected 
-                          ? 'border-green-500 bg-green-50' 
-                          : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50'
-                      }`}
-                    >
-                      <div className="flex flex-col items-center gap-2">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                          isSelected ? 'bg-green-500' : 'bg-slate-100'
-                        }`}>
-                          <i className={`fas fa-layer-group ${isSelected ? 'text-white' : 'text-slate-600'}`}></i>
-              </div>
-                        <span className={`text-sm font-medium ${isSelected ? 'text-green-900' : 'text-slate-700'}`}>
-                          {section.name}
-                        </span>
-                        {isSelected && (
-                          <i className="fas fa-check-circle text-green-600"></i>
-                        )}
-            </div>
-                    </button>
-                  );
-                })}
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                      {sections.map(section => {
+                        const isSelected = sectionsToAssign.includes(section._id);
+                        return (
+                          <button
+                            key={section._id}
+                            onClick={() => {
+                              if (isSelected) {
+                                setSectionsToAssign(prev => prev.filter(id => id !== section._id));
+                              } else {
+                                setSectionsToAssign(prev => [...prev, section._id]);
+                              }
+                            }}
+                            className={`p-4 rounded-lg border-2 transition-all ${
+                              isSelected 
+                                ? 'border-green-500 bg-green-50' 
+                                : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50'
+                            }`}
+                          >
+                            <div className="flex flex-col items-center gap-2">
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                isSelected ? 'bg-green-500' : 'bg-slate-100'
+                              }`}>
+                                <i className={`fas fa-layer-group ${isSelected ? 'text-white' : 'text-slate-600'}`}></i>
+                              </div>
+                              <span className={`text-sm font-medium ${isSelected ? 'text-green-900' : 'text-slate-700'}`}>
+                                {section.name}
+                              </span>
+                              {isSelected && (
+                                <i className="fas fa-check-circle text-green-600"></i>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -968,129 +1266,150 @@ const AdminSubjectAssign = () => {
                       <h2 className="text-lg font-bold text-slate-900">Assign Subjects</h2>
                     </div>
 
-            <div className="p-4 md:p-6">
-                {/* Search and Actions */}
-                <div className="flex items-center gap-4 mb-4 flex-wrap">
-                  <div className="flex-1 min-w-64">
-                    <div className="relative">
-                      <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                      <input
-                        type="text"
-                        placeholder="Search subjects by name, code, or description..."
-                        value={subjectSearchTerm}
-                        onChange={(e) => setSubjectSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                      {subjectSearchTerm && (
-                        <button
-                          onClick={() => setSubjectSearchTerm('')}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                        >
-                          <i className="fas fa-times"></i>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <button
-                      onClick={selectAllSubjects}
-                      className="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-sm font-medium transition-colors"
-                    >
-                      Select All
-                    </button>
-                    <button
-                      onClick={clearAllSubjects}
-                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
-
-                {/* Subjects Grid */}
-              {isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                  <span className="ml-3 text-slate-600">Loading subjects...</span>
-                </div>
-                ) : filteredAndSearchedSubjects.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">
-                  <i className="fas fa-book text-4xl mb-4 text-slate-300"></i>
-                  <p className="font-medium mb-2">
-                    {subjectSearchTerm ? 'No subjects match your search' : 'No subjects found for the selected department'}
-                  </p>
-                  <p className="text-sm">
-                    {subjectSearchTerm ? 'Try a different search term' : 'Try selecting a different department or add subjects to this department'}
-                  </p>
-                  {!subjectSearchTerm && (
-                    <div className="mt-4">
-                      <button
-                        onClick={openAddSubjectModal}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium border border-slate-200"
-                      >
-                        <span className="text-gray-500 text-lg">+</span>
-                        <span>Add subjects to this department</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 mb-6 max-h-96 overflow-y-auto p-2">
-                      {filteredAndSearchedSubjects.map(subject => {
-                        const isSelected = selectedSubjects.includes(subject._id);
-                        
-                    return (
-                          <button
-                            key={subject._id}
-                            onClick={() => toggleSubjectSelection(subject._id)}
-                            className={`p-2 md:p-3 rounded-lg border-2 transition-all text-left ${
-                              isSelected 
-                                ? 'border-green-500 bg-green-50 shadow-md' 
-                                : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50 hover:shadow-sm'
-                            }`}
-                          >
-                            <div className="flex items-start gap-2 md:gap-3">
-                              <div className={`hidden md:flex w-8 h-8 rounded-lg items-center justify-center flex-shrink-0 ${
-                                isSelected ? 'bg-green-500' : 'bg-slate-100'
-                              }`}>
-                                <i className={`fas fa-book text-sm ${isSelected ? 'text-white' : 'text-slate-600'}`}></i>
+                    <div className="p-4 md:p-6">
+                      {/* Department Selector and Actions */}
+                      <div className="flex items-center gap-4 mb-4 flex-wrap">
+                        <div className="flex-1 min-w-64">
+                          <div className="relative">
+                            <select
+                              value={selectedDepartment}
+                              onChange={(e) => handleDepartmentChange(e.target.value)}
+                              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                              <option value="">Select Department to view subjects</option>
+                              {departments.map(dept => (
+                                <option key={dept._id} value={dept._id}>{dept.name}</option>
+                              ))}
+                            </select>
                           </div>
-                              <div className="flex-1 min-w-0">
-                                <h3 className={`font-semibold text-xs md:text-sm mb-1 ${isSelected ? 'text-green-900' : 'text-slate-900'} truncate`}>
-                                  {subject.name}
-                                </h3>
-                                <p className={`text-xs mb-1 md:mb-2 ${isSelected ? 'text-green-700' : 'text-slate-500'} truncate`}>
-                            {subject.code}
-                                </p>
-                                {isSelected && (
-                                  <div className="flex items-center gap-1">
-                                    <i className="fas fa-check-circle text-green-600 text-xs"></i>
-                                    <span className="text-xs text-green-700 font-medium">Selected</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })}
                         </div>
                         
-                    {/* Assignment Action */}
-                    {selectedSubjects.length > 0 && (
-                      <div className="flex justify-end">
-                        <button
-                            onClick={handleBatchAssignment}
-                            className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold px-6 py-2.5 rounded-lg transition-colors flex items-center gap-2"
-                        >
-                            <i className="fas fa-save"></i>
-                            <span>Save</span>
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={selectAllSubjects}
+                            className="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-sm font-medium transition-colors"
+                          >
+                            Select All
+                          </button>
+                          <button
+                            onClick={clearAllSubjects}
+                            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors"
+                          >
+                            Clear
+                          </button>
+                        </div>
                       </div>
-                    )}
-                  </>
-              )}
+
+                      {/* Subjects Grid */}
+                      {isLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                          <span className="ml-3 text-slate-600">Loading subjects...</span>
+                        </div>
+                      ) : filteredAndSearchedSubjects.length === 0 ? (
+                        <div className="text-center py-8 text-slate-500">
+                          <i className="fas fa-book text-4xl mb-4 text-slate-300"></i>
+                          <p className="font-medium mb-2">
+                            {selectedDepartment ? 'No subjects found for the selected department' : 'Please select a department to view subjects'}
+                          </p>
+                          <p className="text-sm">
+                            {selectedDepartment ? 'Add subjects to this department using the "Create New Subject" button above' : 'Choose a department from the dropdown above'}
+                          </p>
+                          {selectedDepartment && (
+                            <div className="mt-4">
+                              <button
+                                onClick={openAddSubjectModal}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium border border-slate-200"
+                              >
+                                <span className="text-gray-500 text-lg">+</span>
+                                <span>Add subjects to this department</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 mb-6 max-h-96 overflow-y-auto p-2">
+                            {filteredAndSearchedSubjects.map(subject => {
+                              const isSelected = selectedSubjects.includes(subject._id);
+                              // Check if subject is already assigned to any of the selected sections using assignmentId
+                              const isAlreadyAssigned = sectionsToAssign.some(sectionId => {
+                                const section = sections.find(s => s._id === sectionId);
+                                if (!section || !section.assignmentId) return false;
+                                
+                                return subjectAssignments.some(a => 
+                                  a.assignmentId === section.assignmentId && 
+                                  a.subjectId === subject._id
+                                );
+                              });
+                              
+                              return (
+                                <button
+                                  key={subject._id}
+                                  onClick={() => toggleSubjectSelection(subject._id)}
+                                  className={`p-2 md:p-3 rounded-lg border-2 transition-all text-left ${
+                                    isAlreadyAssigned ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-80 pointer-events-none' : (
+                                      isSelected ? 'border-green-500 bg-green-50 shadow-md' : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50 hover:shadow-sm'
+                                    )
+                                  }`}
+                                  aria-disabled={isAlreadyAssigned}
+                                  title={isAlreadyAssigned ? 'Already assigned to one of the selected sections' : ''}
+                                >
+                                  <div className="flex items-start gap-2 md:gap-3">
+                                    <div className={`hidden md:flex w-8 h-8 rounded-lg items-center justify-center flex-shrink-0 ${
+                                      isSelected ? 'bg-green-500' : 'bg-slate-100'
+                                    }`}>
+                                      <i className={`fas fa-book text-sm ${isSelected ? 'text-white' : 'text-slate-600'}`}></i>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <h3 className={`font-semibold text-xs md:text-sm mb-1 ${isSelected ? 'text-green-900' : 'text-slate-900'} truncate`}>
+                                        {subject.name}
+                                      </h3>
+                                      <p className={`text-xs mb-1 md:mb-2 ${isSelected ? 'text-green-700' : 'text-slate-500'} truncate`}>
+                                        {subject.code}
+                                      </p>
+                                      {isSelected && (
+                                        <div className="flex items-center gap-1">
+                                          <i className="fas fa-check-circle text-green-600 text-xs"></i>
+                                          <span className="text-xs text-green-700 font-medium">Selected</span>
+                                        </div>
+                                      )}
+                                      {isAlreadyAssigned && (
+                                        <div className="inline-block mt-2">
+                                          <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">Assigned</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                          
+                          {/* Assignment Action */}
+                          {selectedSubjects.length > 0 && (
+                            <div className="flex justify-end">
+                              <button
+                                onClick={handleBatchAssignment}
+                                className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold px-6 py-2.5 rounded-lg transition-colors flex items-center gap-2"
+                                disabled={isLoading}
+                              >
+                                {isLoading ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                    <span>Saving...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <i className="fas fa-save"></i>
+                                    <span>Save</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1106,173 +1425,139 @@ const AdminSubjectAssign = () => {
             </div>
 
             <div className="p-4 md:p-6">
-                {subjectAssignments.length === 0 ? (
+              {subjectAssignments.length === 0 ? (
                 <div className="text-center py-8 text-slate-500">
                   <i className="fas fa-book text-4xl mb-4 text-slate-300"></i>
-                    <p className="font-medium mb-2">No assignments found</p>
-                    <p className="text-sm">Create subject assignments using the accordion above.</p>
+                  <p className="font-medium mb-2">No assignments found</p>
+                  <p className="text-sm">Create subject assignments using the accordion above.</p>
                 </div>
               ) : (
-                  <div className="space-y-6">
-                    {/* Group assignments by department, then class, then section */}
-                    {(() => {
-                      // Group by department - show all assignments, not just filtered
-                      const displayAssignments = selectedDepartment ? filteredAssignments : subjectAssignments;
-                      const groupedByDept = displayAssignments.reduce((acc, assignment) => {
-                        if (!acc[assignment.departmentId]) {
-                          acc[assignment.departmentId] = {};
-                        }
-                        if (!acc[assignment.departmentId][assignment.classId]) {
-                          acc[assignment.departmentId][assignment.classId] = {};
-                        }
-                        
-                        // Group by sections
-                        assignment.sectionIds.forEach(sectionId => {
-                          if (!acc[assignment.departmentId][assignment.classId][sectionId]) {
-                            acc[assignment.departmentId][assignment.classId][sectionId] = [];
-                          }
-                          acc[assignment.departmentId][assignment.classId][sectionId].push(assignment);
-                        });
-                        
-                        return acc;
-                      }, {});
-
-                      return Object.entries(groupedByDept).map(([deptId, deptClasses]) => {
-                        const department = departments.find(d => d._id === deptId);
-                        const isHigherSecondary = deptId === 'dept-5';
-                        const isDeptCollapsed = collapsedDepartments[deptId];
+                <div className="space-y-6">
+                  {/* Group assignments by department, then class, then section */}
+                  {Object.entries(groupedAssignments).map(([deptId, deptData]) => {
+                    const isDeptCollapsed = collapsedDepartments[deptId];
                     
                     return (
-                          <div key={deptId} className="border-2 border-purple-200 rounded-xl overflow-hidden bg-white">
-                            {/* Department Header - Always Collapsible */}
-                            <button
-                              onClick={() => toggleDepartmentCollapse(deptId)}
-                              className="w-full bg-gradient-to-r from-blue-500 to-blue-600 px-4 md:px-6 py-3 md:py-4 cursor-pointer hover:from-blue-600 hover:to-blue-700"
-                            >
-                              <div className="flex items-center justify-between">
-                                <h3 className="text-base md:text-xl font-bold text-white">{department?.name}</h3>
-                                <i className={`fas fa-chevron-${isDeptCollapsed ? 'down' : 'up'} text-white text-sm md:text-lg`}></i>
-                            </div>
-                            </button>
+                      <div key={deptId} className="border-2 border-purple-200 rounded-xl overflow-hidden bg-white">
+                        {/* Department Header - Always Collapsible */}
+                        <button
+                          onClick={() => toggleDepartmentCollapse(deptId)}
+                          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 px-4 md:px-6 py-3 md:py-4 cursor-pointer hover:from-blue-600 hover:to-blue-700"
+                        >
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-base md:text-xl font-bold text-white">{deptData.name}</h3>
+                            <i className={`fas fa-chevron-${isDeptCollapsed ? 'down' : 'up'} text-white text-sm md:text-lg`}></i>
+                          </div>
+                        </button>
 
-                            {/* Classes */}
-                            {!isDeptCollapsed && (
-                              <div className="divide-y divide-slate-200">
-                                {Object.entries(deptClasses).map(([classId, classSections]) => {
-                                  const classItem = classes.find(c => c._id === classId);
-                                  const isGrade11 = classItem?.name.includes('Grade 11');
-                                  const isClassCollapsed = collapsedClasses[classId];
-                                  
-                                  return (
-                                    <div key={classId} className="bg-white">
-                                      {/* Class Header - Always Collapsible */}
-                                      <button
-                                        onClick={() => toggleClassCollapse(classId)}
-                                        className="w-full bg-gradient-to-r from-green-500 to-emerald-500 px-4 md:px-6 py-2 md:py-3 cursor-pointer hover:from-green-600 hover:to-emerald-600"
-                                      >
-                                        <div className="flex items-center justify-between">
-                                          <span className="text-sm md:text-lg font-semibold text-white">{classItem?.name}</span>
-                                          <i className={`fas fa-chevron-${isClassCollapsed ? 'down' : 'up'} text-white text-sm`}></i>
-                            </div>
-                                      </button>
+                        {/* Classes */}
+                        {!isDeptCollapsed && (
+                          <div className="divide-y divide-slate-200">
+                            {Object.entries(deptData.classes).map(([classId, classData]) => {
+                              const isClassCollapsed = collapsedClasses[classId];
+                              
+                              return (
+                                <div key={classId} className="bg-white">
+                                  {/* Class Header - Always Collapsible */}
+                                  <button
+                                    onClick={() => toggleClassCollapse(classId)}
+                                    className="w-full bg-gradient-to-r from-green-500 to-emerald-500 px-4 md:px-6 py-2 md:py-3 cursor-pointer hover:from-green-600 hover:to-emerald-600"
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-sm md:text-lg font-semibold text-white">{classData.name}</span>
+                                      <i className={`fas fa-chevron-${isClassCollapsed ? 'down' : 'up'} text-white text-sm`}></i>
+                                    </div>
+                                  </button>
                             
-                                      {/* Sections */}
-                                      {!isClassCollapsed && (
-                                        <div className="p-2 md:p-4">
-                                          {Object.entries(classSections).map(([sectionId, sectionAssignments]) => {
-                                            const section = sections.find(s => s._id === sectionId);
-                                            const uniqueSubjects = [...new Set(sectionAssignments.map(a => a.subjectId))];
-                                            
-                                            return (
-                                              <div key={sectionId} className="mb-4 last:mb-0 border border-slate-200 rounded-lg overflow-hidden">
-                                                {/* Section Header */}
-                                                <div className="bg-purple-50 px-3 md:px-4 py-2 md:py-3 border-b border-slate-200">
-                                                  <div className="flex items-center gap-2">
-                                                    <div className="w-6 h-6 md:w-8 md:h-8 bg-purple-500 rounded-lg flex items-center justify-center">
-                                                      <i className="fas fa-layer-group text-white text-xs md:text-sm"></i>
-                                                    </div>
-                                                    <span className="font-semibold text-slate-900">{section?.name}</span>
-                                                    <span className="text-xs text-slate-500">
-                                                      ({uniqueSubjects.length} subject{uniqueSubjects.length !== 1 ? 's' : ''})
-                                                    </span>
-                                                  </div>
+                                  {/* Sections */}
+                                  {!isClassCollapsed && (
+                                    <div className="p-2 md:p-4">
+                                      {Object.entries(classData.sections).map(([sectionId, sectionData]) => {
+                                        const uniqueSubjects = [...new Set(sectionData.assignments.map(a => a.subjectId))];
+                                        
+                                        return (
+                                          <div key={sectionId} className="mb-4 last:mb-0 border border-slate-200 rounded-lg overflow-hidden">
+                                            {/* Section Header */}
+                                            <div className="bg-purple-50 px-3 md:px-4 py-2 md:py-3 border-b border-slate-200">
+                                              <div className="flex items-center gap-2">
+                                                <div className="w-6 h-6 md:w-8 md:h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+                                                  <i className="fas fa-layer-group text-white text-xs md:text-sm"></i>
                                                 </div>
+                                                <span className="font-semibold text-slate-900">{sectionData.name}</span>
+                                                <span className="text-xs text-slate-500">
+                                                  ({uniqueSubjects.length} subject{uniqueSubjects.length !== 1 ? 's' : ''})
+                                                </span>
+                                              </div>
+                                            </div>
                           
-                                                {/* Subjects in this section */}
-                                                <div className="p-2 md:p-4 bg-white">
-                                                  <div className="flex flex-wrap gap-2">
-                                                    {uniqueSubjects.map(subjectId => {
-                                                      const subject = subjects.find(s => s._id === subjectId);
-                                                      const assignment = sectionAssignments.find(a => a.subjectId === subjectId);
-                                                      const teacherAssignment = subjectTeacherAssignments.find(
-                                                        ta => ta.subjectId === subjectId && ta.sectionId === sectionId
-                                                      );
-                                                      const assignedTeacher = teacherAssignment ? teachers.find(t => t._id === teacherAssignment.teacherId) : null;
-                                                      
-                                                      return (
-                                                        <div key={subjectId} className="flex items-center justify-between gap-2 px-3 py-2 bg-indigo-50 border border-indigo-200 rounded-lg">
-                                                          <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-1">
-                                                              <span className="text-sm font-medium text-indigo-900 truncate">{subject?.name}</span>
-                                                              <span className="text-xs text-indigo-600 flex-shrink-0">({subject?.code})</span>
-                                                            </div>
-                                                            {assignedTeacher ? (
-                                                              <div className="text-xs mt-1 flex items-center gap-1 text-green-600">
-                                                                <i className="fas fa-user-tie"></i>
-                                                                <span className="truncate">{assignedTeacher.name}</span>
-                                                              </div>
-                                                            ) : (
-                                                              <button
-                                                                onClick={() => openTeacherAssignModal(deptId, classId, sectionId, subjectId)}
-                                                                className="mt-1 text-xs text-orange-600 hover:text-orange-700 font-medium flex items-center gap-1"
-                                                              >
-                                                                <i className="fas fa-plus"></i>
-                                                                Add Teacher
-                                                              </button>
-                                                            )}
-                                                          </div>
-                                                          <div className="flex gap-1 flex-shrink-0">
-                                                            {assignedTeacher && (
-                                                              <button
-                                                                onClick={() => openTeacherAssignModal(deptId, classId, sectionId, subjectId)}
-                                                                className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
-                                                                title="Edit Teacher Assignment"
-                                                              >
-                                                                <i className="fas fa-edit text-xs"></i>
-                                                              </button>
-                                                            )}
-                                                            <button
-                                                              onClick={() => handleDeleteAssignment(assignment._id)}
-                                                              className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
-                                                              title="Delete Assignment"
-                                                            >
-                                                              <i className="fas fa-trash text-xs"></i>
-                                                            </button>
-                                                          </div>
+                                            {/* Subjects in this section */}
+                                            <div className="p-2 md:p-4 bg-white">
+                                              <div className="flex flex-wrap gap-2">
+                                                {sectionData.assignments.map(assignment => {
+                                                  const subject = subjects.find(s => s._id === assignment.subjectId);
+                                                  const assignedTeacher = assignment.teacherId ? teachers.find(t => t._id === assignment.teacherId) : null;
+                                                  
+                                                  return (
+                                                    <div key={assignment._id} className="flex items-center justify-between gap-2 px-3 py-2 bg-indigo-50 border border-indigo-200 rounded-lg">
+                                                      <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-1">
+                                                          <span className="text-sm font-medium text-indigo-900 truncate">{subject?.name || assignment.subjectName}</span>
                                                         </div>
-                                                      );
-                                                    })}
-                                                  </div>
-                        </div>
+                                                        {assignedTeacher ? (
+                                                          <div className="text-xs mt-1 flex items-center gap-1 text-green-600">
+                                                            <i className="fas fa-user-tie"></i>
+                                                            <span className="truncate">{assignedTeacher.name}</span>
+                                                          </div>
+                                                        ) : (
+                                                          <button
+                                                            onClick={() => openTeacherAssignModal(deptId, classId, sectionId, assignment.subjectId)}
+                                                            className="mt-1 text-xs text-orange-600 hover:text-orange-700 font-medium flex items-center gap-1"
+                                                          >
+                                                            <i className="fas fa-plus"></i>
+                                                            Add Teacher
+                                                          </button>
+                                                        )}
+                                                      </div>
+                                                      <div className="flex gap-1 flex-shrink-0">
+                                                        {assignedTeacher && (
+                                                          <button
+                                                            onClick={() => openTeacherAssignModal(deptId, classId, sectionId, assignment.subjectId)}
+                                                            className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                                                            title="Edit Teacher Assignment"
+                                                          >
+                                                            <i className="fas fa-edit text-xs"></i>
+                                                          </button>
+                                                        )}
+                                                        <button
+                                                          onClick={() => handleDeleteAssignment(assignment._id)}
+                                                          className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
+                                                          title="Delete Assignment"
+                                                        >
+                                                          <i className="fas fa-trash text-xs"></i>
+                                                        </button>
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                })}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
               )}
             </div>
-                                  );
-                                })}
           </div>
-                            )}
-                          </div>
-                        );
-                      });
-                    })()}
-                </div>
-              )}
-            </div>
-          </div>
-
         </main>
         
         {/* Footer */}
@@ -1363,129 +1648,22 @@ const AdminSubjectAssign = () => {
         </div>
       )}
 
-      {/* Teacher Assignment Modal */}
+      {/* Teacher Assignment Modal - UPDATED: Pass assignmentId and subjectId */}
       {isTeacherAssignModalOpen && (
         <TeacherAssignmentModal
           isOpen={isTeacherAssignModalOpen}
           onClose={closeTeacherAssignModal}
-          onSubmit={async (formData) => {
-            try {
-              setIsLoading(true);
-              
-              // Find the existing assignment being edited
-              const existingAssignment = subjectTeacherAssignments.find(
-                ta => ta.subjectId === teacherAssignmentData.subjectId && 
-                      ta.sectionId === teacherAssignmentData.sectionId
-              );
-              
-              // Simulate API call
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              
-              if (existingAssignment) {
-                // EDITING MODE: Update all assignments for this teacher in this section
-                setSubjectTeacherAssignments(prev => {
-                  // Step 1: Remove all assignments for this teacher in this section
-                  let filtered = prev.filter(assignment => 
-                    !(assignment.teacherId === existingAssignment.teacherId && 
-                      assignment.sectionId === formData.sectionId)
-                  );
-                  
-                  // Step 2: Remove any subjects from other teachers that are being reassigned to this teacher
-                  filtered = filtered.filter(assignment => 
-                    !(formData.subjectIds.includes(assignment.subjectId) && 
-                      assignment.sectionId === formData.sectionId)
-                  );
-                  
-                  // Step 3: Add new assignments with the updated subject list
-                  const newAssignments = formData.subjectIds.map(subjectId => ({
-                    _id: `ta-${Date.now()}-${subjectId}-${Math.random()}`,
-                    teacherId: formData.teacherId,
-                    subjectId: subjectId,
-                    sectionId: formData.sectionId,
-                    classId: formData.classId,
-                    departmentId: formData.departmentId,
-                    isClassTeacher: formData.isClassTeacher
-                  }));
-                  
-                  return [...filtered, ...newAssignments];
-                });
-                
-                toast.success('Teacher assignment updated successfully!');
-              } else {
-                // CREATE MODE: Save new teacher assignments
-                const newAssignments = formData.subjectIds.map(subjectId => ({
-                  _id: `ta-${Date.now()}-${subjectId}-${Math.random()}`,
-                  teacherId: formData.teacherId,
-                  subjectId: subjectId,
-                  sectionId: formData.sectionId,
-                  classId: formData.classId,
-                  departmentId: formData.departmentId,
-                  isClassTeacher: formData.isClassTeacher
-                }));
-                
-                setSubjectTeacherAssignments(prev => {
-                  // Remove any existing assignments for these subjects in this section
-                  const filtered = prev.filter(assignment => 
-                    !(formData.subjectIds.includes(assignment.subjectId) && 
-                      assignment.sectionId === formData.sectionId)
-                  );
-                  return [...filtered, ...newAssignments];
-                });
-                
-                toast.success('Teacher assigned successfully!');
-              }
-              
-              closeTeacherAssignModal();
-            } catch (error) {
-              toast.error('Failed to assign teacher');
-            } finally {
-              setIsLoading(false);
-            }
-          }}
-          formData={(() => {
-            const existingAssignment = subjectTeacherAssignments.find(
-              ta => ta.subjectId === teacherAssignmentData.subjectId && 
-                    ta.sectionId === teacherAssignmentData.sectionId
-            );
-            
-            // When editing, get all subjects assigned to this teacher in this section
-            const teacherSubjectsInSection = existingAssignment 
-              ? subjectTeacherAssignments
-                  .filter(ta => 
-                    ta.teacherId === existingAssignment.teacherId &&
-                    ta.sectionId === teacherAssignmentData.sectionId
-                  )
-                  .map(ta => ta.subjectId)
-              : [teacherAssignmentData.subjectId];
-            
-            return {
-              teacherId: existingAssignment?.teacherId || '',
-              departmentId: teacherAssignmentData.departmentId,
-              classId: teacherAssignmentData.classId,
-              sectionId: teacherAssignmentData.sectionId,
-              subjectIds: teacherSubjectsInSection,
-              isClassTeacher: existingAssignment?.isClassTeacher || false
-            };
-          })()}
-          setFormData={() => {}}
+          onSubmit={handleTeacherAssignmentSubmit}
+          formData={teacherFormData}
+          setFormData={setTeacherFormData}
           teachers={teachers}
           departments={departments}
-          classes={classes}
-          sections={sections}
-          subjects={subjects}
-          subjectAssignments={subjectAssignments}
-          teacherAssignments={subjectTeacherAssignments}
-          editingAssignment={(() => {
-            const existingAssignment = subjectTeacherAssignments.find(
-              ta => ta.subjectId === teacherAssignmentData.subjectId && 
-                    ta.sectionId === teacherAssignmentData.sectionId
-            );
-            return existingAssignment || null;
-          })()}
           isLoading={isLoading}
-          inputBaseClass="w-full bg-slate-100 border-slate-200 rounded-md p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-          btnIndigoClass="font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors transform active:scale-95 bg-indigo-500 hover:bg-indigo-600 text-white"
-          btnSlateClass="font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors transform active:scale-95 bg-slate-200 hover:bg-slate-300 text-slate-800"
+          inputBaseClass={inputBaseClass}
+          btnIndigoClass={btnIndigoClass}
+          btnSlateClass={btnSlateClass}
+          fetchTeachersByDepartment={fetchTeachersByDepartment}
+          assignmentData={teacherAssignmentData} // Pass assignment data to modal
         />
       )}
 
