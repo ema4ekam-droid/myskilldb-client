@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import OrgMenuNavigation from '../../components/org-admin-components/org-admin-menu_components/OrgMenuNavigation';
-import TopicModal from '../../components/org-admin-components/skills-academics-components/TopicModal';
-import LoaderOverlay from '../../components/loader/LoaderOverlay';
+import OrgMenuNavigation from '../../../components/org-admin-components/org-admin-menu_components/OrgMenuNavigation';
+import TopicModal from '../../../components/org-admin-components/skills-academics-components/TopicModal';
+import LoaderOverlay from '../../../components/loader/LoaderOverlay';
 import toast, { Toaster } from 'react-hot-toast';
 
 const TopicManagement = () => {
@@ -25,11 +25,42 @@ const TopicManagement = () => {
   const [jobViewClass, setJobViewClass] = useState('');
   const [jobViewSection, setJobViewSection] = useState('');
   const [expandedJobs, setExpandedJobs] = useState(new Set());
+  const [expandedJobDescriptions, setExpandedJobDescriptions] = useState(new Set());
   const [isNoJobsAccordionOpen, setIsNoJobsAccordionOpen] = useState(false);
   
   // Topic view/edit modals
   const [isTopicViewModalOpen, setIsTopicViewModalOpen] = useState(false);
   const [viewingTopic, setViewingTopic] = useState(null);
+  
+  // Multi-select for unassigned topics
+  const [selectedUnassignedTopics, setSelectedUnassignedTopics] = useState([]);
+  const [isAssignToJobModalOpen, setIsAssignToJobModalOpen] = useState(false);
+  
+  // Manual job creation modal
+  const [isManualJobModalOpen, setIsManualJobModalOpen] = useState(false);
+  const [manualJobFormData, setManualJobFormData] = useState({
+    jobTitle: '',
+    jobDescription: '',
+    company: '',
+    jobPostingLink: '',
+    departmentId: '',
+    classId: '',
+    sectionId: '',
+    requirements: []
+  });
+  
+  // Quick Job creation modal (non-AI)
+  const [isQuickJobModalOpen, setIsQuickJobModalOpen] = useState(false);
+  const [quickJobFormData, setQuickJobFormData] = useState({
+    company: '',
+    jobTitle: '',
+    jobDescription: ''
+  });
+  
+  // Section toggle for viewing jobs
+  const [sectionToggleModalOpen, setSectionToggleModalOpen] = useState(false);
+  const [currentToggleDepartment, setCurrentToggleDepartment] = useState(null);
+  const [currentToggleClass, setCurrentToggleClass] = useState(null);
 
   // Modal states
   const [isTopicModalOpen, setIsTopicModalOpen] = useState(false);
@@ -41,6 +72,7 @@ const TopicManagement = () => {
   const [selectedTopicForJob, setSelectedTopicForJob] = useState(null);
   const [selectedTopicForJobView, setSelectedTopicForJobView] = useState(null);
   const [selectedTopics, setSelectedTopics] = useState([]);
+  const [isEditingUnassignedTopic, setIsEditingUnassignedTopic] = useState(false);
 
   // Form data for topic modal
   const [topicFormData, setTopicFormData] = useState({
@@ -52,6 +84,7 @@ const TopicManagement = () => {
     sectionIds: [],
     difficulty: 'medium',
     estimatedTime: '',
+    jobId: '',
     isActive: true
   });
 
@@ -71,7 +104,8 @@ const TopicManagement = () => {
     company: '',
     departmentId: '',
     classId: '',
-    sectionId: ''
+    sectionId: '',
+    jobPostingLink: ''
   });
   
   // Subject confirmation modal states
@@ -648,9 +682,8 @@ const TopicManagement = () => {
           jobTitle: 'Junior Frontend Developer',
           jobDescription: 'Entry-level frontend development role focusing on HTML, CSS, and JavaScript',
           requirements: ['HTML5', 'CSS3', 'JavaScript basics', 'Responsive design'],
-          salaryRange: '$40,000 - $60,000',
-          location: 'Remote',
           company: 'TechCorp Solutions',
+          jobPostingLink: 'https://techcorp.com/careers/junior-frontend-developer',
           createdAt: '2024-01-15T10:30:00Z'
         },
         { 
@@ -661,9 +694,8 @@ const TopicManagement = () => {
           jobTitle: 'Frontend Developer',
           jobDescription: 'Mid-level frontend developer with React.js experience',
           requirements: ['React.js', 'JavaScript ES6+', 'CSS frameworks', 'Git'],
-          salaryRange: '$60,000 - $80,000',
-          location: 'New York, NY',
           company: 'Digital Innovations Inc',
+          jobPostingLink: 'https://digitalinnovations.com/jobs/frontend-developer',
           createdAt: '2024-01-16T14:20:00Z'
         },
 
@@ -676,9 +708,8 @@ const TopicManagement = () => {
           jobTitle: 'Full-Stack Developer',
           jobDescription: 'Full-stack development role with MERN stack expertise',
           requirements: ['React.js', 'Node.js', 'MongoDB', 'Express.js', 'Git'],
-          salaryRange: '$70,000 - $90,000',
-          location: 'San Francisco, CA',
           company: 'StartupXYZ',
+          jobPostingLink: 'https://startupxyz.com/careers/fullstack-developer',
           createdAt: '2024-01-17T09:15:00Z'
         },
         { 
@@ -689,9 +720,8 @@ const TopicManagement = () => {
           jobTitle: 'Senior Full-Stack Developer',
           jobDescription: 'Senior role leading full-stack development projects',
           requirements: ['5+ years experience', 'MERN/MEAN stack', 'AWS/Cloud', 'Team leadership'],
-          salaryRange: '$90,000 - $120,000',
-          location: 'Austin, TX',
           company: 'Enterprise Solutions Ltd',
+          jobPostingLink: 'https://enterprisesolutions.com/jobs/senior-fullstack',
           createdAt: '2024-01-18T16:45:00Z'
         },
 
@@ -704,9 +734,8 @@ const TopicManagement = () => {
           jobTitle: 'Junior Data Analyst',
           jobDescription: 'Entry-level data analysis role with Python and SQL',
           requirements: ['Python', 'SQL', 'Pandas', 'NumPy', 'Basic statistics'],
-          salaryRange: '$45,000 - $65,000',
-          location: 'Chicago, IL',
           company: 'DataInsights Corp',
+          jobPostingLink: 'https://datainsights.com/careers/junior-data-analyst',
           createdAt: '2024-01-19T11:30:00Z'
         },
         { 
@@ -717,9 +746,8 @@ const TopicManagement = () => {
           jobTitle: 'Machine Learning Engineer',
           jobDescription: 'ML engineer role focusing on model development and deployment',
           requirements: ['Python', 'Scikit-learn', 'TensorFlow', 'MLOps', 'Docker'],
-          salaryRange: '$80,000 - $110,000',
-          location: 'Seattle, WA',
           company: 'AI Innovations',
+          jobPostingLink: 'https://aiinnovations.com/jobs/ml-engineer',
           createdAt: '2024-01-20T13:20:00Z'
         },
 
@@ -732,9 +760,8 @@ const TopicManagement = () => {
           jobTitle: 'DevOps Engineer',
           jobDescription: 'DevOps role with Docker, Kubernetes, and CI/CD experience',
           requirements: ['Docker', 'Kubernetes', 'AWS/Azure', 'CI/CD', 'Linux'],
-          salaryRange: '$75,000 - $95,000',
-          location: 'Denver, CO',
           company: 'CloudTech Solutions',
+          jobPostingLink: 'https://cloudtechsolutions.com/careers/devops-engineer',
           createdAt: '2024-01-21T15:10:00Z'
         },
 
@@ -747,9 +774,8 @@ const TopicManagement = () => {
           jobTitle: 'React Native Developer',
           jobDescription: 'Cross-platform mobile development with React Native',
           requirements: ['React Native', 'JavaScript', 'Mobile UI/UX', 'App Store deployment'],
-          salaryRange: '$65,000 - $85,000',
-          location: 'Miami, FL',
           company: 'MobileFirst Inc',
+          jobPostingLink: 'https://mobilefirst.com/jobs/react-native-developer',
           createdAt: '2024-01-22T10:45:00Z'
         }
       ];
@@ -801,9 +827,14 @@ const TopicManagement = () => {
     setSelectedSubject(subjectId);
   };
 
-  const openTopicModal = (topic = null) => {
+  const openTopicModal = (topic = null, fromUnassignedSection = false) => {
     if (topic) {
       setEditingTopic(topic);
+      setIsEditingUnassignedTopic(fromUnassignedSection);
+      
+      // Find if this topic is assigned to a job
+      const topicJobAssignment = topicJobAssignments.find(a => a.topicId === topic._id);
+      
       setTopicFormData({
         title: topic.title,
         description: topic.description,
@@ -813,21 +844,22 @@ const TopicManagement = () => {
         sectionIds: topic.sectionIds || [],
         difficulty: topic.difficulty,
         estimatedTime: topic.estimatedTime,
+        jobId: topicJobAssignment?.jobId || '',
         isActive: topic.isActive
       });
     } else {
       setEditingTopic(null);
+      setIsEditingUnassignedTopic(false);
       setTopicFormData({
         title: '',
         description: '',
+        departmentId: selectedSubject || '',
         subjectId: selectedSubject || '',
         classId: selectedClass || '',
         sectionIds: selectedSection ? [selectedSection] : [],
         difficulty: 'medium',
         estimatedTime: '',
-        learningObjectives: '',
-        prerequisites: '',
-        resources: '',
+        jobId: '',
         isActive: true
       });
     }
@@ -837,15 +869,17 @@ const TopicManagement = () => {
   const closeTopicModal = () => {
     setIsTopicModalOpen(false);
     setEditingTopic(null);
+    setIsEditingUnassignedTopic(false);
     setTopicFormData({
       title: '',
       description: '',
-        departmentId: '',
+      departmentId: '',
       subjectId: '',
       classId: '',
       sectionIds: [],
       difficulty: 'medium',
       estimatedTime: '',
+      jobId: '',
       isActive: true
     });
   };
@@ -1003,6 +1037,31 @@ const TopicManagement = () => {
               : topic
           )
         );
+        
+        // Update job assignment - supports multiple jobs per topic
+        if (formData.jobId) {
+          // Check if this specific job assignment already exists
+          const assignmentExists = topicJobAssignments.some(
+            a => a.topicId === editingTopic._id && a.jobId === formData.jobId
+          );
+          
+          if (!assignmentExists) {
+            // Create new assignment (adds to existing assignments, doesn't replace)
+            const newAssignment = {
+              _id: `assign-${Date.now()}-${editingTopic._id}-${Math.random().toString(36).substr(2, 9)}`,
+              topicId: editingTopic._id,
+              jobId: formData.jobId,
+              createdAt: new Date().toISOString()
+            };
+            setTopicJobAssignments(prev => [...prev, newAssignment]);
+            
+            const job = departmentClassSectionJobs.find(j => j._id === formData.jobId);
+            toast.info(`Topic also assigned to "${job?.jobTitle || 'job'}"!`);
+          }
+        }
+        // Note: We don't remove assignments here - topics can be assigned to multiple jobs
+        // Assignments should be removed explicitly through the "Assign to Job" modal or job deletion
+        
         toast.success('Topic updated successfully!');
       } else {
         // Create new topic
@@ -1013,7 +1072,22 @@ const TopicManagement = () => {
           createdAt: new Date().toISOString()
         };
         setTopics(prev => [...prev, newTopic]);
-        toast.success('Topic created successfully!');
+        
+        // Create job assignment if a job is selected
+        if (formData.jobId) {
+          const newAssignment = {
+            _id: `assign-${Date.now()}-${newTopic._id}`,
+            topicId: newTopic._id,
+            jobId: formData.jobId,
+            createdAt: new Date().toISOString()
+          };
+          setTopicJobAssignments(prev => [...prev, newAssignment]);
+          
+          const job = departmentClassSectionJobs.find(j => j._id === formData.jobId);
+          toast.success(`Topic created and assigned to "${job?.jobTitle || 'job'}"!`);
+        } else {
+          toast.success('Topic created successfully!');
+        }
       }
       
       closeTopicModal();
@@ -1291,10 +1365,27 @@ const TopicManagement = () => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      // Step 1: Create the job first
+      const newJob = {
+        _id: `dcsj-${Date.now()}`,
+        jobTitle: newJobFormData.name,
+        jobDescription: newJobFormData.description,
+        company: newJobFormData.company,
+        departmentId: newJobFormData.departmentId,
+        classId: newJobFormData.classId,
+        sectionId: newJobFormData.sectionId,
+        requirements: [],
+        jobPostingLink: newJobFormData.jobPostingLink || '',
+        createdAt: new Date().toISOString(),
+        isAIGenerated: true
+      };
+      
+      setDepartmentClassSectionJobs(prev => [...prev, newJob]);
+      
       // Count new subjects being created (only those that have been confirmed/added)
       const newSubjectsCount = aiGeneratedSubjects.filter(s => s.isAdded).length;
       
-      // Create topics with their subject assignments
+      // Step 2: Create topics with their subject assignments AND job association
       const newTopics = selectedTopicsForSave.map(topic => {
         const aiSubject = aiGeneratedSubjects.find(s => s._id === topic.subjectId);
         const mapping = subjectMappings[topic.subjectId];
@@ -1315,6 +1406,7 @@ const TopicManagement = () => {
           subjectId: actualSubjectId,
           classId: newJobFormData.classId,
           sectionIds: newJobFormData.sectionId ? [newJobFormData.sectionId] : [],
+          // Note: No jobId here - topics can be assigned to multiple jobs via topicJobAssignments
           difficulty: topic.difficulty,
           estimatedTime: topic.estimatedTime,
           isActive: true,
@@ -1325,12 +1417,23 @@ const TopicManagement = () => {
       
       setTopics(prev => [...prev, ...newTopics]);
       
+      // Step 3: Create topic-job assignment records
+      const newAssignments = newTopics.map(topic => ({
+        _id: `assign-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        topicId: topic._id,
+        jobId: newJob._id,
+        createdAt: new Date().toISOString()
+      }));
+      
+      setTopicJobAssignments(prev => [...prev, ...newAssignments]);
+      
       // Show detailed success message
       const department = departments.find(d => d._id === newJobFormData.departmentId);
       const selectedClass = classes.find(c => c._id === newJobFormData.classId);
       const selectedSection = sections.find(s => s._id === newJobFormData.sectionId);
       
-      let successMessage = `✅ Successfully added:\n`;
+      let successMessage = `✅ Successfully created with AI:\n`;
+      successMessage += `• 1 Job: "${newJobFormData.name}"\n`;
       if (newSubjectsCount > 0) {
         successMessage += `• ${newSubjectsCount} new subject${newSubjectsCount !== 1 ? 's' : ''}\n`;
       }
@@ -1350,11 +1453,30 @@ const TopicManagement = () => {
         }
       });
       
-      // Close the modal and reset
+      // Navigate to the section where topics were saved
+      setJobViewDepartment(newJobFormData.departmentId);
+      setJobViewClass(newJobFormData.classId);
+      setJobViewSection(newJobFormData.sectionId);
+      
+      // Open the newly created job accordion to show the topics
+      setExpandedJobs(prev => new Set([...prev, newJob._id]));
+      
+      // Also open "No Jobs Assigned" if there are any unassigned topics
+      setIsNoJobsAccordionOpen(true);
+      
+      // Close the AI Generator accordion and reset
       closeAIGenerator();
       
+      // Scroll to the view section after a short delay
+      setTimeout(() => {
+        const viewSection = document.getElementById('view-jobs-topics-section');
+        if (viewSection) {
+          viewSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 300);
+      
     } catch (error) {
-      toast.error('Failed to save topics');
+      toast.error('Failed to save job and topics');
     } finally {
       setIsLoading(false);
     }
@@ -1371,10 +1493,234 @@ const TopicManagement = () => {
     setNewJobFormData({
       name: '',
       description: '',
+      company: '',
       departmentId: '',
       classId: '',
-      sectionId: ''
+      sectionId: '',
+      jobPostingLink: ''
     });
+  };
+
+  // Handlers for unassigned topics multi-select
+  const toggleUnassignedTopicSelection = (topicId) => {
+    setSelectedUnassignedTopics(prev => {
+      if (prev.includes(topicId)) {
+        return prev.filter(id => id !== topicId);
+      } else {
+        return [...prev, topicId];
+      }
+    });
+  };
+
+  const selectAllUnassignedTopics = (topicIds) => {
+    setSelectedUnassignedTopics(topicIds);
+  };
+
+  const clearUnassignedTopicSelection = () => {
+    setSelectedUnassignedTopics([]);
+  };
+
+  const handleAssignSelectedTopicsToJob = async (jobId) => {
+    try {
+      setIsLoading(true);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      const job = departmentClassSectionJobs.find(j => j._id === jobId);
+      if (!job) {
+        toast.error('Job not found');
+        return;
+      }
+      
+      // Create assignments for selected topics (only if they don't already exist)
+      const newAssignments = selectedUnassignedTopics
+        .filter(topicId => !topicJobAssignments.some(a => a.topicId === topicId && a.jobId === jobId))
+        .map(topicId => ({
+          _id: `assign-${Date.now()}-${topicId}-${Math.random().toString(36).substr(2, 9)}`,
+          topicId: topicId,
+          jobId: jobId,
+          createdAt: new Date().toISOString()
+        }));
+      
+      if (newAssignments.length === 0) {
+        toast.info(`All selected topics are already assigned to "${job.jobTitle}"`);
+      } else {
+        setTopicJobAssignments(prev => [...prev, ...newAssignments]);
+        toast.success(`Successfully assigned ${newAssignments.length} topic(s) to "${job.jobTitle}"`);
+      }
+      
+      // Clear selection and close modal
+      setSelectedUnassignedTopics([]);
+      setIsAssignToJobModalOpen(false);
+      
+    } catch (error) {
+      toast.error('Failed to assign topics to job');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Manual job creation handlers
+  const openManualJobModal = () => {
+    setManualJobFormData({
+      jobTitle: '',
+      jobDescription: '',
+      company: '',
+      jobPostingLink: '',
+      departmentId: jobViewDepartment || '',
+      classId: jobViewClass || '',
+      sectionId: jobViewSection || '',
+      requirements: []
+    });
+    setIsManualJobModalOpen(true);
+  };
+
+  const closeManualJobModal = () => {
+    setIsManualJobModalOpen(false);
+    setManualJobFormData({
+      jobTitle: '',
+      jobDescription: '',
+      company: '',
+      jobPostingLink: '',
+      departmentId: '',
+      classId: '',
+      sectionId: '',
+      requirements: []
+    });
+  };
+
+  const handleCreateManualJob = async () => {
+    if (!manualJobFormData.jobTitle.trim() || !manualJobFormData.company.trim() || 
+        !manualJobFormData.departmentId || !manualJobFormData.classId || !manualJobFormData.sectionId) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const newJob = {
+        _id: `dcsj-${Date.now()}`,
+        ...manualJobFormData,
+        createdAt: new Date().toISOString()
+      };
+      
+      setDepartmentClassSectionJobs(prev => [...prev, newJob]);
+      
+      toast.success(`Job "${manualJobFormData.jobTitle}" created successfully!`);
+      closeManualJobModal();
+      
+    } catch (error) {
+      toast.error('Failed to create job');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Quick Job creation handlers (non-AI)
+  const openQuickJobModal = () => {
+    setQuickJobFormData({
+      company: '',
+      jobTitle: '',
+      jobDescription: ''
+    });
+    setIsQuickJobModalOpen(true);
+  };
+
+  const closeQuickJobModal = () => {
+    setIsQuickJobModalOpen(false);
+    setQuickJobFormData({
+      company: '',
+      jobTitle: '',
+      jobDescription: ''
+    });
+  };
+
+  const handleCreateQuickJob = async () => {
+    if (!quickJobFormData.company.trim() || !quickJobFormData.jobTitle.trim() || 
+        !quickJobFormData.jobDescription.trim()) {
+      toast.error('Please fill in company name, job title, and job description');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const newJob = {
+        _id: `dcsj-${Date.now()}`,
+        jobTitle: quickJobFormData.jobTitle,
+        jobDescription: quickJobFormData.jobDescription,
+        company: quickJobFormData.company,
+        departmentId: jobViewDepartment,
+        classId: jobViewClass,
+        sectionId: jobViewSection,
+        requirements: [],
+        jobPostingLink: '',
+        createdAt: new Date().toISOString()
+      };
+      
+      setDepartmentClassSectionJobs(prev => [...prev, newJob]);
+      
+      toast.success(`Job "${quickJobFormData.jobTitle}" created successfully!`);
+      closeQuickJobModal();
+      
+    } catch (error) {
+      toast.error('Failed to create job');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // AI Topic Generation (opens the AI accordion)
+  const openAITopicGenerator = () => {
+    // Pre-fill the AI generator form with the selected filters
+    setNewJobFormData(prev => ({
+      ...prev,
+      departmentId: jobViewDepartment,
+      classId: jobViewClass,
+      sectionId: jobViewSection
+    }));
+    setIsAIGeneratorOpen(true);
+    
+    // Scroll to AI Generator section
+    setTimeout(() => {
+      const aiGeneratorElement = document.getElementById('ai-generator-section');
+      if (aiGeneratorElement) {
+        aiGeneratorElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
+
+  // Section toggle handlers
+  const openSectionToggleModal = (departmentId, classId) => {
+    setCurrentToggleDepartment(departmentId);
+    setCurrentToggleClass(classId);
+    setSectionToggleModalOpen(true);
+  };
+
+  const closeSectionToggleModal = () => {
+    setSectionToggleModalOpen(false);
+    setCurrentToggleDepartment(null);
+    setCurrentToggleClass(null);
+  };
+
+  const handleToggleToSection = (newSectionId) => {
+    if (!newSectionId) {
+      toast.error('Please select a section');
+      return;
+    }
+
+    // Update the view filters to show the selected section
+    setJobViewSection(newSectionId);
+    closeSectionToggleModal();
+    toast.success('View updated to show selected section');
   };
 
   const closeAIGenerator = () => {
@@ -1393,7 +1739,8 @@ const TopicManagement = () => {
       company: '',
       departmentId: '',
       classId: '',
-      sectionId: ''
+      sectionId: '',
+      jobPostingLink: ''
     });
   };
 
@@ -1498,8 +1845,8 @@ const TopicManagement = () => {
           {/* Header */}
           <header className="flex flex-col items-center justify-center">
             <div className="text-center">
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Job to Topic Mapping</h1>
-              <p className="text-slate-500 text-sm">Convert job descriptions to skills/topics</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Topic Generator</h1>
+              <p className="text-slate-500 text-sm">Add or refine topics to your subjects based on jobs</p>
             </div>
           </header>
 
@@ -1541,7 +1888,7 @@ const TopicManagement = () => {
 
           {/* AI Mapping Button */}
           {/* AI Generator Accordion */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+          <div id="ai-generator-section" className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
               <button
               onClick={() => setIsAIGeneratorOpen(!isAIGeneratorOpen)}
               className="w-full bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-bold px-4 md:px-6 py-3 md:py-4 flex items-center justify-between transition-all duration-200 relative"
@@ -1590,21 +1937,6 @@ const TopicManagement = () => {
                     {newJobFormData.departmentId && (
               <div>
                         <label className="block text-xs md:text-sm font-medium text-slate-700 mb-1.5">
-                          Company Name *
-                        </label>
-                        <input
-                          type="text"
-                          value={newJobFormData.company}
-                          onChange={(e) => setNewJobFormData(prev => ({ ...prev, company: e.target.value }))}
-                          placeholder="e.g., TechCorp Solutions, Google, Microsoft"
-                          className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
-                        />
-              </div>
-                    )}
-
-                    {newJobFormData.departmentId && (
-              <div>
-                        <label className="block text-xs md:text-sm font-medium text-slate-700 mb-1.5">
                           Class/Grade *
                         </label>
                 <select
@@ -1619,7 +1951,7 @@ const TopicManagement = () => {
                           <option value="">Select Class</option>
                           {classes.filter(c => c.departmentId === newJobFormData.departmentId).map(cls => (
                             <option key={cls._id} value={cls._id}>{cls.name}</option>
-                  ))}
+                          ))}
                 </select>
               </div>
                     )}
@@ -1642,36 +1974,88 @@ const TopicManagement = () => {
               </div>
                     )}
 
-              <div>
-                      <label className="block text-xs md:text-sm font-medium text-slate-700 mb-1.5">
-                        Job Title *
-                      </label>
-                <input
-                  type="text"
-                        value={newJobFormData.name}
-                        onChange={(e) => setNewJobFormData(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="e.g., Frontend Developer"
-                        className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
-                />
-              </div>
+                    {/* Job Details Section - Shows after section is selected */}
+                    {newJobFormData.sectionId && (
+                      <>
+                        <div className="col-span-full border-t border-slate-300 pt-4 mt-2">
+                          <h5 className="text-xs md:text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                            <i className="fas fa-briefcase text-purple-600"></i>
+                            <span>Job Details</span>
+                          </h5>
+                        </div>
 
-                    <div>
-                      <label className="block text-xs md:text-sm font-medium text-slate-700 mb-1.5">
-                        <i className="fas fa-file-alt text-purple-500 mr-2 text-xs"></i>
-                        <span>Job Description & Requirements *</span>
-                      </label>
-                      <textarea
-                        value={newJobFormData.description}
-                        onChange={(e) => setNewJobFormData(prev => ({ ...prev, description: e.target.value }))}
-                        placeholder="Paste the job description here..."
-                        className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none"
-                        rows={4}
-                      />
-                      <p className="text-xs text-slate-500 mt-2">
-                        <i className="fas fa-info-circle mr-1"></i>
-                        AI will analyze and generate relevant subjects with topics
-                      </p>
-            </div>
+                        <div>
+                          <label className="block text-xs md:text-sm font-medium text-slate-700 mb-1.5">
+                            Company Name *
+                          </label>
+                          <input
+                            type="text"
+                            value={newJobFormData.company}
+                            onChange={(e) => setNewJobFormData(prev => ({ ...prev, company: e.target.value }))}
+                            placeholder="e.g., TechCorp Solutions, Google, Microsoft"
+                            className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs md:text-sm font-medium text-slate-700 mb-1.5">
+                            Job Title *
+                          </label>
+                          <input
+                            type="text"
+                            value={newJobFormData.name}
+                            onChange={(e) => setNewJobFormData(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="e.g., Frontend Developer"
+                            className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs md:text-sm font-medium text-slate-700 mb-1.5">
+                            Link to Job Posting
+                          </label>
+                          <input
+                            type="url"
+                            value={newJobFormData.jobPostingLink}
+                            onChange={(e) => setNewJobFormData(prev => ({ ...prev, jobPostingLink: e.target.value }))}
+                            placeholder="e.g., https://company.com/careers/job-id"
+                            className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                          />
+                        </div>
+
+                        {/* AI-Highlighted Job Description */}
+                        <div className="col-span-full bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-300 rounded-lg p-4 shadow-sm">
+                          <div className="flex items-start gap-3 mb-3">
+                            <div className="bg-purple-600 text-white rounded-full p-2 flex-shrink-0">
+                              <i className="fas fa-robot text-sm"></i>
+                            </div>
+                            <div className="flex-1">
+                              <h5 className="text-xs md:text-sm font-bold text-purple-900 mb-1 flex items-center gap-2">
+                                <span>AI-Powered Analysis</span>
+                                <span className="bg-yellow-400 text-purple-900 text-[10px] font-bold px-2 py-0.5 rounded-full">AI</span>
+                              </h5>
+                              <p className="text-xs text-purple-700">
+                                Our AI will analyze this job description to generate relevant subjects and topics
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <label className="block text-xs md:text-sm font-semibold text-purple-900 mb-2">
+                              <i className="fas fa-file-alt mr-2 text-xs"></i>
+                              <span>Job Description & Requirements *</span>
+                            </label>
+                            <textarea
+                              value={newJobFormData.description}
+                              onChange={(e) => setNewJobFormData(prev => ({ ...prev, description: e.target.value }))}
+                              placeholder="Paste the complete job description here including responsibilities, requirements, and qualifications..."
+                              className="w-full p-3 bg-white border-2 border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none resize-none shadow-inner"
+                              rows={6}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
 
                     <div className="flex justify-center pt-2">
                 <button
@@ -1692,9 +2076,9 @@ const TopicManagement = () => {
                         )}
                 </button>
               </div>
-            </div>
               </div>
-              
+            </div>
+
                 {/* Step 2: AI Generated Subjects with Topics */}
                 {aiGeneratedSubjects.length > 0 && (
                   <div className="bg-gradient-to-r from-green-50 to-teal-50 rounded-lg p-4 md:p-6 border border-green-200">
@@ -1783,13 +2167,13 @@ const TopicManagement = () => {
                                         <p className="text-xs text-blue-800">
                                           Topics will be added to <span className="font-semibold">{existingSubjects.find(s => s._id === currentMapping)?.name}</span>
                                         </p>
-                    </div>
+              </div>
                                     )}
                             </div>
                                 )}
             </div>
-                          </div>
-                          
+          </div>
+
                             {/* Topics List */}
                             <div className="p-3 md:p-4">
                               <p className="text-xs text-slate-600 mb-3 font-medium">
@@ -1845,7 +2229,7 @@ const TopicManagement = () => {
                                           Choose subject mapping first
                                         </p>
                                       )}
-                          </div>
+                    </div>
                   );
                                 })}
                         </div>
@@ -1923,36 +2307,53 @@ const TopicManagement = () => {
             )}
                           </div>
                           
-          {/* Job View Section */}
+          {/* Action Buttons Section */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 md:p-6">
-            <div className="text-center mb-4">
-              <h2 className="text-base md:text-lg font-bold text-slate-900 mb-2">View Jobs & Topics</h2>
-              <p className="text-xs md:text-sm text-slate-600 mb-3">
-                Select department, class, and section to view all jobs and their associated topics
+            <div className="text-center">
+              <h2 className="text-base md:text-lg font-bold text-slate-900 mb-2">Quick Actions</h2>
+              <p className="text-xs md:text-sm text-slate-600 mb-4">
+                Manually create jobs and topics for your organization
               </p>
-              {jobViewDepartment && jobViewClass && jobViewSection && (
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-2 md:gap-3">
+                <button
+                  onClick={openManualJobModal}
+                  className="w-full sm:w-auto px-4 md:px-6 py-2.5 md:py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-lg transition-colors inline-flex items-center justify-center gap-2 text-xs md:text-sm shadow-md hover:shadow-lg"
+                >
+                  <i className="fas fa-briefcase"></i>
+                  <span>Add Job</span>
+                </button>
                 <button
                   onClick={() => {
-                    // Pre-fill the topic form with selected filters
+                    // Pre-fill the topic form with selected filters if available
                     setTopicFormData(prev => ({
                       ...prev,
-                      departmentId: jobViewDepartment,
-                      classId: jobViewClass,
-                      sectionIds: [jobViewSection]
+                      departmentId: jobViewDepartment || '',
+                      classId: jobViewClass || '',
+                      sectionIds: jobViewSection ? [jobViewSection] : []
                     }));
                     openTopicModal();
                   }}
-                  className="px-4 md:px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-lg transition-colors inline-flex items-center gap-2 text-xs md:text-sm"
+                  className="w-full sm:w-auto px-4 md:px-6 py-2.5 md:py-3 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-lg transition-colors inline-flex items-center justify-center gap-2 text-xs md:text-sm shadow-md hover:shadow-lg"
                 >
                   <i className="fas fa-plus"></i>
                   <span>Add Topic</span>
                 </button>
-              )}
               </div>
-            
+            </div>
+          </div>
+
+          {/* Job View Section */}
+          <div id="view-jobs-topics-section" className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 md:p-6">
+            <div className="text-center mb-6">
+              <h2 className="text-base md:text-lg font-bold text-slate-900 mb-2">View Jobs & Topics</h2>
+              <p className="text-xs md:text-sm text-slate-600">
+                Select department, class, and section to view all jobs and their associated topics
+              </p>
+                            </div>
+                            
             {/* Filters */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6">
-              <div>
+                            <div>
                 <label className="block text-xs md:text-sm font-medium text-slate-700 mb-2">Department *</label>
                 <select
                   value={jobViewDepartment}
@@ -1968,42 +2369,40 @@ const TopicManagement = () => {
                     <option key={dept._id} value={dept._id}>{dept.name}</option>
                   ))}
                 </select>
-            </div>
+                          </div>
+                          
+              <div>
+                <label className="block text-xs md:text-sm font-medium text-slate-700 mb-2">Class/Grade *</label>
+                <select
+                  value={jobViewClass}
+                  onChange={(e) => {
+                    setJobViewClass(e.target.value);
+                    setJobViewSection('');
+                  }}
+                  disabled={!jobViewDepartment}
+                  className="w-full p-2.5 md:p-3 bg-white border border-slate-200 rounded-lg text-xs md:text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
+                >
+                  <option value="">Select Class</option>
+                  {jobViewDepartment && classes.filter(c => c.departmentId === jobViewDepartment).map(cls => (
+                    <option key={cls._id} value={cls._id}>{cls.name}</option>
+                  ))}
+                </select>
+                          </div>
 
-              {jobViewDepartment && (
-                            <div>
-                  <label className="block text-xs md:text-sm font-medium text-slate-700 mb-2">Class/Grade *</label>
-                  <select
-                    value={jobViewClass}
-                    onChange={(e) => {
-                      setJobViewClass(e.target.value);
-                      setJobViewSection('');
-                    }}
-                    className="w-full p-2.5 md:p-3 bg-white border border-slate-200 rounded-lg text-xs md:text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
-                  >
-                    <option value="">Select Class</option>
-                    {classes.filter(c => c.departmentId === jobViewDepartment).map(cls => (
-                      <option key={cls._id} value={cls._id}>{cls.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {jobViewClass && (
-                <div>
-                  <label className="block text-xs md:text-sm font-medium text-slate-700 mb-2">Section/Batch *</label>
-                  <select
-                    value={jobViewSection}
-                    onChange={(e) => setJobViewSection(e.target.value)}
-                    className="w-full p-2.5 md:p-3 bg-white border border-slate-200 rounded-lg text-xs md:text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
-                  >
-                    <option value="">Select Section</option>
-                    {sections.filter(s => s.classId === jobViewClass).map(section => (
-                      <option key={section._id} value={section._id}>{section.name}</option>
-                    ))}
-                  </select>
+              <div>
+                <label className="block text-xs md:text-sm font-medium text-slate-700 mb-2">Section/Batch *</label>
+                <select
+                  value={jobViewSection}
+                  onChange={(e) => setJobViewSection(e.target.value)}
+                  disabled={!jobViewClass}
+                  className="w-full p-2.5 md:p-3 bg-white border border-slate-200 rounded-lg text-xs md:text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
+                >
+                  <option value="">Select Section</option>
+                  {jobViewClass && sections.filter(s => s.classId === jobViewClass).map(section => (
+                    <option key={section._id} value={section._id}>{section.name}</option>
+                  ))}
+                </select>
                     </div>
-              )}
                   </div>
 
             {/* Jobs Display */}
@@ -2039,8 +2438,25 @@ const TopicManagement = () => {
                       {filteredJobs.length === 0 ? (
                         <div className="text-center py-8 bg-slate-50 rounded-lg">
                           <i className="fas fa-briefcase text-4xl text-slate-300 mb-3"></i>
-                          <p className="text-slate-600 text-sm">No jobs found for this selection</p>
-              </div>
+                          <p className="text-slate-600 text-sm mb-4">No jobs found for this selection</p>
+                          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                            <button
+                              onClick={openQuickJobModal}
+                              className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all inline-flex items-center justify-center gap-2"
+                            >
+                              <i className="fas fa-plus-circle"></i>
+                              <span>Create Job</span>
+                            </button>
+                            <button
+                              onClick={openAITopicGenerator}
+                              className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all inline-flex items-center justify-center gap-2"
+                            >
+                              <i className="fas fa-robot"></i>
+                              <span>Create Job & Topics with AI</span>
+                              <span className="bg-yellow-400 text-purple-900 text-xs font-bold px-2 py-0.5 rounded-full">AI</span>
+                            </button>
+                          </div>
+            </div>
             ) : (
                         <div className="space-y-3">
                           {filteredJobs.map(job => {
@@ -2083,11 +2499,21 @@ const TopicManagement = () => {
                                       <h3 className="font-bold text-slate-900 text-sm md:text-base mb-1">{job.jobTitle}</h3>
                                       <p className="text-xs md:text-sm text-slate-600 mb-1">{job.company}</p>
                                       <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="text-xs text-slate-500 flex items-center gap-1">
-                                          <i className="fas fa-map-marker-alt text-[10px]"></i>
-                                          {job.location}
-                            </span>
-                                        <span className="text-slate-300">•</span>
+                                        {job.jobPostingLink && (
+                                          <>
+                                            <a
+                                              href={job.jobPostingLink}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              onClick={(e) => e.stopPropagation()}
+                                              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1 hover:underline"
+                                            >
+                                              <i className="fas fa-external-link-alt text-[10px]"></i>
+                                              Job Posting
+                                            </a>
+                                            <span className="text-slate-300">•</span>
+                                          </>
+                                        )}
                                         <span className="text-xs text-blue-600 font-medium flex items-center gap-1">
                                           <i className="fas fa-book-open text-[10px]"></i>
                                           {jobTopics.length} topic{jobTopics.length !== 1 ? 's' : ''}
@@ -2101,9 +2527,47 @@ const TopicManagement = () => {
                                 {/* Job Content */}
                                 {isExpanded && (
                                   <div className="p-4 bg-white space-y-4">
-                                    {/* Job Details */}
-                                    <div className="bg-slate-50 rounded-lg p-3">
-                                      <p className="text-xs md:text-sm text-slate-700"><span className="font-medium">Description:</span> {job.jobDescription}</p>
+                                    {/* Section/Batch Clickable Button */}
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs md:text-sm font-medium text-slate-700">Section/Batch:</span>
+                                      <button
+                                        onClick={() => openSectionToggleModal(job.departmentId, job.classId)}
+                                        className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs md:text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
+                                      >
+                                        <i className="fas fa-users text-xs"></i>
+                                        {sections.find(s => s._id === job.sectionId)?.name || 'Unknown'}
+                                        <i className="fas fa-exchange-alt text-xs ml-auto"></i>
+                                      </button>
+                                    </div>
+
+                                    {/* Job Description - Collapsible */}
+                                    <div className="border border-slate-200 rounded-lg overflow-hidden">
+                                      <button
+                                        onClick={() => {
+                                          const newExpanded = new Set(expandedJobDescriptions);
+                                          if (newExpanded.has(job._id)) {
+                                            newExpanded.delete(job._id);
+                                          } else {
+                                            newExpanded.add(job._id);
+                                          }
+                                          setExpandedJobDescriptions(newExpanded);
+                                        }}
+                                        className="w-full px-3 py-2 bg-white hover:bg-slate-50 transition-colors flex items-center justify-between text-left"
+                                      >
+                                        <span className="text-xs md:text-sm font-semibold text-slate-700">
+                                          <i className="fas fa-file-alt text-slate-500 mr-2"></i>
+                                          Job Description
+                                        </span>
+                                        <i className={`fas fa-chevron-${expandedJobDescriptions.has(job._id) ? 'up' : 'down'} text-slate-400 text-xs`}></i>
+                                      </button>
+                                      
+                                      {expandedJobDescriptions.has(job._id) && (
+                                        <div className="px-3 py-2 bg-slate-50 border-t border-slate-200">
+                                          <p className="text-[11px] md:text-xs text-slate-700 leading-relaxed text-left">
+                                            {job.jobDescription}
+                                          </p>
+                                        </div>
+                                      )}
               </div>
 
                                     {/* Subjects & Topics */}
@@ -2140,7 +2604,7 @@ const TopicManagement = () => {
                                                         <span className="text-xs text-slate-700 font-medium">{topic.estimatedTime}</span>
                         </div>
                                                       <div className="flex gap-2">
-                          <button
+                <button
                                                           onClick={() => {
                                                             setViewingTopic(topic);
                                                             setIsTopicViewModalOpen(true);
@@ -2149,19 +2613,19 @@ const TopicManagement = () => {
                                                         >
                                                           <i className="fas fa-eye text-[10px]"></i>
                                                           <span>View</span>
-                          </button>
-                          <button
+                </button>
+                <button
                             onClick={() => openTopicModal(topic)}
                                                           className="flex-1 px-2 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded transition-colors flex items-center justify-center gap-1"
-                                                        >
+                >
                                                           <i className="fas fa-edit text-[10px]"></i>
                                                           <span>Edit</span>
-                          </button>
-                        </div>
-                      </div>
+                </button>
+              </div>
+            </div>
                                                   ))}
-                        </div>
-                        </div>
+                </div>
+              </div>
                         </div>
                                           );
                                         })}
@@ -2184,22 +2648,72 @@ const TopicManagement = () => {
                           >
                             <div className="flex items-start gap-3 flex-1 text-left">
                               <i className="fas fa-exclamation-triangle text-orange-600 text-lg mt-0.5"></i>
-                              <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0">
                                 <h3 className="font-bold text-slate-900 text-sm md:text-base mb-1">No Jobs Assigned</h3>
                                 <p className="text-xs md:text-sm text-slate-600 mb-1">Topics not connected to any job</p>
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="text-xs text-orange-600 font-medium flex items-center gap-1">
                                     <i className="fas fa-book-open text-[10px]"></i>
                                     {topicsWithoutJobs.length} topic{topicsWithoutJobs.length !== 1 ? 's' : ''} need assignment
-                                  </span>
-                                </div>
-                              </div>
+                            </span>
+                          </div>
+                        </div>
                             </div>
                             <i className={`fas fa-chevron-${isNoJobsAccordionOpen ? 'up' : 'down'} text-slate-400 ml-3 flex-shrink-0`}></i>
                           </button>
 
                           {isNoJobsAccordionOpen && (
                             <div className="p-4 bg-white space-y-4">
+                              {/* Info Banner */}
+                              <div className="bg-gradient-to-r from-orange-100 to-amber-100 border-l-4 border-orange-500 rounded-lg p-4 shadow-sm">
+                                <div className="flex items-start gap-3">
+                                  <i className="fas fa-info-circle text-orange-600 text-xl mt-0.5 flex-shrink-0"></i>
+                                  <div className="flex-1">
+                                    <h4 className="text-sm md:text-base font-bold text-orange-900 mb-1">Action Required</h4>
+                                    <p className="text-xs md:text-sm text-orange-800 leading-relaxed">
+                                      Reverify your subjects and topics to assign them to a job. These topics are currently not connected to any job posting.
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Selection Controls */}
+                              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-slate-200">
+                                <div className="text-xs md:text-sm text-slate-600">
+                                  {selectedUnassignedTopics.length > 0 ? (
+                                    <span className="font-semibold text-orange-600">
+                                      {selectedUnassignedTopics.length} topic{selectedUnassignedTopics.length !== 1 ? 's' : ''} selected
+                                    </span>
+                                  ) : (
+                                    <span>Select topics to assign to a job</span>
+                                  )}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                          <button
+                                    onClick={() => selectAllUnassignedTopics(topicsWithoutJobs.map(t => t._id))}
+                                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition-colors"
+                          >
+                                    Select All
+                          </button>
+                          <button
+                                    onClick={clearUnassignedTopicSelection}
+                                    disabled={selectedUnassignedTopics.length === 0}
+                                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    Clear
+                          </button>
+                                  {selectedUnassignedTopics.length > 0 && (
+                          <button
+                                      onClick={() => setIsAssignToJobModalOpen(true)}
+                                      className="px-3 py-1.5 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5"
+                          >
+                                      <i className="fas fa-link"></i>
+                                      <span>Assign to Job</span>
+                          </button>
+                                  )}
+                        </div>
+                      </div>
+
                               {(() => {
                                 // Group topics by subject
                                 const topicsBySubject = topicsWithoutJobs.reduce((acc, topic) => {
@@ -2225,44 +2739,67 @@ const TopicManagement = () => {
                                         <span className="ml-auto bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs">
                                           {subjectTopics.length} topic{subjectTopics.length !== 1 ? 's' : ''}
                                         </span>
-                                      </div>
+                        </div>
                                       
                                       {/* Horizontal Scrollable Topics */}
                                       <div className="overflow-x-auto pb-2">
                                         <div className="flex gap-3 min-w-max">
-                                          {subjectTopics.map(topic => (
-                                            <div 
-                                              key={topic._id} 
-                                              className="bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-300 rounded-lg p-3 min-w-[180px] md:min-w-[200px] flex-shrink-0"
-                                            >
-                                              <h5 className="font-semibold text-slate-900 text-xs md:text-sm mb-2 line-clamp-2 min-h-[2.5rem]">
-                                                {topic.title}
-                                              </h5>
-                                              <div className="flex items-center gap-1 mb-3">
-                                                <i className="fas fa-clock text-orange-600 text-xs"></i>
-                                                <span className="text-xs text-slate-700 font-medium">{topic.estimatedTime}</span>
-                                              </div>
-                                              <div className="flex gap-2">
+                                          {subjectTopics.map(topic => {
+                                            const isSelected = selectedUnassignedTopics.includes(topic._id);
+                                            return (
+                                              <div 
+                                                key={topic._id} 
+                                                onClick={() => toggleUnassignedTopicSelection(topic._id)}
+                                                className={`relative rounded-lg p-3 min-w-[180px] md:min-w-[200px] flex-shrink-0 cursor-pointer transition-all ${
+                                                  isSelected 
+                                                    ? 'bg-gradient-to-br from-orange-100 to-red-100 border-2 border-orange-500 shadow-md' 
+                                                    : 'bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-300 hover:border-orange-400'
+                                                }`}
+                                              >
+                                                {/* Checkbox */}
+                                                <div className="absolute top-2 right-2">
+                                                  <input
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    onChange={() => toggleUnassignedTopicSelection(topic._id)}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="w-4 h-4 rounded border-slate-300 text-orange-600 focus:ring-orange-500 cursor-pointer"
+                                                  />
+                        </div>
+                                                
+                                                <h5 className="font-semibold text-slate-900 text-xs md:text-sm mb-2 line-clamp-2 min-h-[2.5rem] pr-6">
+                                                  {topic.title}
+                                                </h5>
+                                                <div className="flex items-center gap-1 mb-3">
+                                                  <i className="fas fa-clock text-orange-600 text-xs"></i>
+                                                  <span className="text-xs text-slate-700 font-medium">{topic.estimatedTime}</span>
+                        </div>
+                                                <div className="flex gap-2">
+                          <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setViewingTopic(topic);
+                                                      setIsTopicViewModalOpen(true);
+                                                    }}
+                                                    className="flex-1 px-2 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors flex items-center justify-center gap-1"
+                                                  >
+                                                    <i className="fas fa-eye text-[10px]"></i>
+                                                    <span>View</span>
+                                                  </button>
                                                 <button
-                                                  onClick={() => {
-                                                    setViewingTopic(topic);
-                                                    setIsTopicViewModalOpen(true);
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    openTopicModal(topic, true);
                                                   }}
-                                                  className="flex-1 px-2 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors flex items-center justify-center gap-1"
-                                                >
-                                                  <i className="fas fa-eye text-[10px]"></i>
-                                                  <span>View</span>
-                                                </button>
-                                                <button
-                                                  onClick={() => openTopicModal(topic)}
                                                   className="flex-1 px-2 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded transition-colors flex items-center justify-center gap-1"
                                                 >
                                                   <i className="fas fa-edit text-[10px]"></i>
                                                   <span>Edit</span>
-                          </button>
+                                                </button>
                         </div>
                       </div>
-                                          ))}
+                                            );
+                                          })}
                         </div>
                       </div>
                     </div>
@@ -2303,11 +2840,14 @@ const TopicManagement = () => {
           classes={classes}
           sections={sections}
           departments={departments}
+          jobs={departmentClassSectionJobs}
           editingTopic={editingTopic}
           isLoading={isLoading}
           inputBaseClass={inputBaseClass}
           btnIndigoClass={btnIndigoClass}
           btnSlateClass={btnSlateClass}
+          onDelete={handleDeleteTopic}
+          hideJobSelection={isEditingUnassignedTopic}
         />
       )}
 
@@ -2953,6 +3493,482 @@ const TopicManagement = () => {
                 className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold rounded-lg transition-colors"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Unassigned Topics to Job Modal */}
+      {isAssignToJobModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">Assign Topics to Job</h2>
+                  <p className="text-slate-500 text-sm mt-1">
+                    Assign {selectedUnassignedTopics.length} selected topic{selectedUnassignedTopics.length !== 1 ? 's' : ''} to a job
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsAssignToJobModalOpen(false)}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <i className="fas fa-times text-xl"></i>
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {/* Available Jobs */}
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Available Jobs</h3>
+                
+                {(() => {
+                  const availableJobs = departmentClassSectionJobs.filter(job => 
+                    job.departmentId === jobViewDepartment && 
+                    job.classId === jobViewClass && 
+                    job.sectionId === jobViewSection
+                  );
+                  
+                  if (availableJobs.length === 0) {
+                    return (
+                      <div className="text-center py-8 bg-slate-50 rounded-lg">
+                        <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <i className="fas fa-briefcase text-slate-400 text-xl"></i>
+                        </div>
+                        <p className="text-slate-600 mb-4">No jobs available for this selection</p>
+                        <button
+                          onClick={() => {
+                            setIsAssignToJobModalOpen(false);
+                            setIsAIGeneratorOpen(true);
+                          }}
+                          className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-lg transition-colors inline-flex items-center gap-2"
+                        >
+                          <i className="fas fa-plus"></i>
+                          Create New Job
+                        </button>
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {availableJobs.map(job => (
+                        <div key={job._id} className="border border-slate-200 rounded-lg p-4 hover:border-orange-400 hover:shadow-md transition-all">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-slate-900">{job.jobTitle}</h4>
+                              <p className="text-sm text-slate-600 mt-1 line-clamp-2">{job.jobDescription}</p>
+                              <div className="flex items-center gap-2 mt-2">
+                                <span className="text-xs text-slate-500 flex items-center gap-1">
+                                  <i className="fas fa-building text-[10px]"></i>
+                                  {job.company}
+                                </span>
+                                {job.jobPostingLink && (
+                                  <>
+                                    <span className="text-slate-300">•</span>
+                                    <a
+                                      href={job.jobPostingLink}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1 hover:underline"
+                                    >
+                                      <i className="fas fa-external-link-alt text-[10px]"></i>
+                                      Job Link
+                                    </a>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <button
+                            onClick={() => handleAssignSelectedTopicsToJob(job._id)}
+                            disabled={isLoading}
+                            className="w-full px-4 py-2 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 disabled:from-slate-400 disabled:to-slate-500 text-white text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+                          >
+                            {isLoading ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                <span>Assigning...</span>
+                              </>
+                            ) : (
+                              <>
+                                <i className="fas fa-link"></i>
+                                <span>Assign {selectedUnassignedTopics.length} Topic{selectedUnassignedTopics.length !== 1 ? 's' : ''}</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-slate-200 flex justify-end">
+              <button
+                onClick={() => setIsAssignToJobModalOpen(false)}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Job Creation Modal */}
+      {isManualJobModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">Create New Job</h2>
+                  <p className="text-slate-500 text-sm mt-1">Manually add a job to your organization</p>
+                </div>
+                <button
+                  onClick={closeManualJobModal}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <i className="fas fa-times text-xl"></i>
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Department */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Department *</label>
+                <select
+                  value={manualJobFormData.departmentId}
+                  onChange={(e) => setManualJobFormData(prev => ({ 
+                    ...prev, 
+                    departmentId: e.target.value,
+                    classId: '',
+                    sectionId: ''
+                  }))}
+                  className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                >
+                  <option value="">Select Department</option>
+                  {departments.map(dept => (
+                    <option key={dept._id} value={dept._id}>{dept.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Class */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Class/Grade *</label>
+                <select
+                  value={manualJobFormData.classId}
+                  onChange={(e) => setManualJobFormData(prev => ({ 
+                    ...prev, 
+                    classId: e.target.value,
+                    sectionId: ''
+                  }))}
+                  disabled={!manualJobFormData.departmentId}
+                  className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
+                >
+                  <option value="">Select Class</option>
+                  {manualJobFormData.departmentId && classes.filter(c => c.departmentId === manualJobFormData.departmentId).map(cls => (
+                    <option key={cls._id} value={cls._id}>{cls.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Section */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Section/Batch *</label>
+                <select
+                  value={manualJobFormData.sectionId}
+                  onChange={(e) => setManualJobFormData(prev => ({ ...prev, sectionId: e.target.value }))}
+                  disabled={!manualJobFormData.classId}
+                  className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
+                >
+                  <option value="">Select Section</option>
+                  {manualJobFormData.classId && sections.filter(s => s.classId === manualJobFormData.classId).map(section => (
+                    <option key={section._id} value={section._id}>{section.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Job Title */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Job Title *</label>
+                <input
+                  type="text"
+                  value={manualJobFormData.jobTitle}
+                  onChange={(e) => setManualJobFormData(prev => ({ ...prev, jobTitle: e.target.value }))}
+                  placeholder="e.g., Senior Frontend Developer"
+                  className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+              </div>
+
+              {/* Company */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Company Name *</label>
+                <input
+                  type="text"
+                  value={manualJobFormData.company}
+                  onChange={(e) => setManualJobFormData(prev => ({ ...prev, company: e.target.value }))}
+                  placeholder="e.g., TechCorp Solutions"
+                  className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+              </div>
+
+              {/* Job Posting Link */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Link to Job Posting</label>
+                <input
+                  type="url"
+                  value={manualJobFormData.jobPostingLink}
+                  onChange={(e) => setManualJobFormData(prev => ({ ...prev, jobPostingLink: e.target.value }))}
+                  placeholder="e.g., https://company.com/careers/job-123"
+                  className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+              </div>
+
+              {/* Job Description */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Job Description</label>
+                <textarea
+                  value={manualJobFormData.jobDescription}
+                  onChange={(e) => setManualJobFormData(prev => ({ ...prev, jobDescription: e.target.value }))}
+                  placeholder="Describe the job role and responsibilities..."
+                  rows={4}
+                  className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
+              <button
+                onClick={closeManualJobModal}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateManualJob}
+                disabled={isLoading}
+                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-slate-400 disabled:to-slate-500 text-white font-semibold rounded-lg transition-colors flex items-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Creating...</span>
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-check"></i>
+                    <span>Create Job</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Job Creation Modal (Non-AI) */}
+      {isQuickJobModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-blue-600 to-indigo-600">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <i className="fas fa-briefcase"></i>
+                    Create Job
+                  </h2>
+                  <p className="text-blue-100 text-sm mt-1">Manually create a job posting for this section</p>
+                </div>
+                <button
+                  onClick={closeQuickJobModal}
+                  className="p-2 text-white hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
+                >
+                  <i className="fas fa-times text-xl"></i>
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Info Banner */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <i className="fas fa-info-circle mr-2"></i>
+                  This job will be created for <span className="font-semibold">{departments.find(d => d._id === jobViewDepartment)?.name}</span> → <span className="font-semibold">{classes.find(c => c._id === jobViewClass)?.name}</span> → <span className="font-semibold">{sections.find(s => s._id === jobViewSection)?.name}</span>
+                </p>
+              </div>
+
+              {/* Company Name */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Company Name *</label>
+                <input
+                  type="text"
+                  value={quickJobFormData.company}
+                  onChange={(e) => setQuickJobFormData(prev => ({ ...prev, company: e.target.value }))}
+                  placeholder="e.g., Google, Microsoft, Amazon"
+                  className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+              </div>
+
+              {/* Job Title */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Job Title *</label>
+                <input
+                  type="text"
+                  value={quickJobFormData.jobTitle}
+                  onChange={(e) => setQuickJobFormData(prev => ({ ...prev, jobTitle: e.target.value }))}
+                  placeholder="e.g., Senior Full-Stack Developer"
+                  className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+              </div>
+
+              {/* Job Description */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Job Description *</label>
+                <textarea
+                  value={quickJobFormData.jobDescription}
+                  onChange={(e) => setQuickJobFormData(prev => ({ ...prev, jobDescription: e.target.value }))}
+                  placeholder="Paste or describe the job responsibilities, qualifications, and expectations..."
+                  rows={5}
+                  className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
+              <button
+                onClick={closeQuickJobModal}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold rounded-lg transition-colors"
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateQuickJob}
+                disabled={isLoading}
+                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-slate-400 disabled:to-slate-500 text-white font-semibold rounded-lg transition-colors flex items-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Creating...</span>
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-check"></i>
+                    <span>Create Job</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Section Toggle Modal */}
+      {sectionToggleModalOpen && currentToggleDepartment && currentToggleClass && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">Toggle to Different Section</h2>
+                  <p className="text-slate-500 text-sm mt-1">View jobs from different sections/batches</p>
+                </div>
+                <button
+                  onClick={closeSectionToggleModal}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <i className="fas fa-times text-xl"></i>
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Current Department and Class Info */}
+              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 space-y-2">
+                <p className="text-sm">
+                  <span className="font-semibold text-indigo-600">Department: </span>
+                  <span className="font-medium text-slate-900">{departments.find(d => d._id === currentToggleDepartment)?.name || 'Unknown'}</span>
+                </p>
+                <div className="flex items-center justify-center">
+                  <i className="fas fa-arrow-down text-indigo-400 text-xs"></i>
+                </div>
+                <p className="text-sm">
+                  <span className="font-semibold text-indigo-600">Class: </span>
+                  <span className="font-medium text-slate-900">{classes.find(c => c._id === currentToggleClass)?.name || 'Unknown'}</span>
+                </p>
+              </div>
+
+              {/* Section Selection */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <i className="fas fa-exchange-alt mr-1.5"></i>
+                  Select Section to View *
+                </label>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {sections
+                    .filter(s => s.classId === currentToggleClass)
+                    .map(section => {
+                      const jobCount = departmentClassSectionJobs.filter(
+                        job => job.departmentId === currentToggleDepartment && 
+                               job.classId === currentToggleClass && 
+                               job.sectionId === section._id
+                      ).length;
+                      
+                      const isCurrentSection = section._id === jobViewSection;
+                      
+                      return (
+                        <button
+                          key={section._id}
+                          onClick={() => handleToggleToSection(section._id)}
+                          className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
+                            isCurrentSection
+                              ? 'border-indigo-500 bg-indigo-50'
+                              : 'border-slate-200 hover:border-indigo-300 bg-white hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <i className={`fas fa-users ${isCurrentSection ? 'text-indigo-600' : 'text-slate-400'}`}></i>
+                              <span className={`font-semibold text-sm ${isCurrentSection ? 'text-indigo-900' : 'text-slate-900'}`}>
+                                {section.name}
+                              </span>
+                              {isCurrentSection && (
+                                <span className="px-2 py-0.5 bg-indigo-600 text-white text-xs rounded-full">
+                                  Current
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded">
+                              {jobCount} job{jobCount !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                </div>
+                <p className="text-xs text-slate-500 mt-2">
+                  <i className="fas fa-info-circle mr-1"></i>
+                  Click on any section to view its jobs
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-slate-200 flex justify-end">
+              <button
+                onClick={closeSectionToggleModal}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold rounded-lg transition-colors"
+              >
+                Close
               </button>
             </div>
           </div>
