@@ -3,6 +3,7 @@ import OrgMenuNavigation from '../../../components/org-admin-components/org-admi
 import TopicModal from '../../../components/org-admin-components/skills-academics-components/TopicModal';
 import LoaderOverlay from '../../../components/loader/LoaderOverlay';
 import toast, { Toaster } from 'react-hot-toast';
+import { postRequest } from '../../../api/apiRequests';
 
 const TopicManagement = () => {
   // State for global entities
@@ -836,7 +837,7 @@ const TopicManagement = () => {
       const topicJobAssignment = topicJobAssignments.find(a => a.topicId === topic._id);
       
       setTopicFormData({
-        title: topic.title,
+        title: topic.name || topic.title,
         description: topic.description,
         departmentId: topic.departmentId,
         subjectId: topic.subjectId,
@@ -957,7 +958,7 @@ const TopicManagement = () => {
             _id: `assignment-${Date.now()}-${topic._id}`,
             topicId: topic._id,
             jobId: jobId,
-            topicTitle: topic.title,
+            topicTitle: topic.name || topic.title,
             jobName: job.name,
             createdAt: new Date().toISOString()
           };
@@ -1002,7 +1003,7 @@ const TopicManagement = () => {
           _id: `assignment-${Date.now()}`,
           topicId: selectedTopicForJob._id,
           jobId: jobId,
-          topicTitle: selectedTopicForJob.title,
+          topicTitle: selectedTopicForJob.name || selectedTopicForJob.title,
           jobName: job.name,
           createdAt: new Date().toISOString()
         };
@@ -1010,7 +1011,7 @@ const TopicManagement = () => {
         // Add to assignments
         setTopicJobAssignments(prev => [...prev, newAssignment]);
         
-        toast.success(`Topic "${selectedTopicForJob.title}" assigned to job "${job.name}"`);
+        toast.success(`Topic "${selectedTopicForJob.name || selectedTopicForJob.title}" assigned to job "${job.name}"`);
       }
       
       closeJobAssignmentModal();
@@ -1025,74 +1026,60 @@ const TopicManagement = () => {
     try {
       setIsLoading(true);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       if (editingTopic) {
-        // Update existing topic
+        // Update existing topic - using PUT request
+        const updateData = {
+          name: formData.title,
+          description: formData.description,
+          subjectId: formData.subjectId,
+          difficultyLevel: formData.difficulty.charAt(0).toUpperCase() + formData.difficulty.slice(1)
+        };
+        
+        const response = await postRequest(`/topics/${editingTopic._id}`, updateData);
+        
+        if (response.data.success) {
+          // Update local state with the response data
         setTopics(prev => 
           prev.map(topic => 
             topic._id === editingTopic._id
-              ? { ...topic, ...formData, updatedAt: new Date().toISOString() }
+                ? { ...topic, ...response.data.data, updatedAt: new Date().toISOString() }
               : topic
           )
         );
         
-        // Update job assignment - supports multiple jobs per topic
-        if (formData.jobId) {
-          // Check if this specific job assignment already exists
-          const assignmentExists = topicJobAssignments.some(
-            a => a.topicId === editingTopic._id && a.jobId === formData.jobId
-          );
-          
-          if (!assignmentExists) {
-            // Create new assignment (adds to existing assignments, doesn't replace)
-            const newAssignment = {
-              _id: `assign-${Date.now()}-${editingTopic._id}-${Math.random().toString(36).substr(2, 9)}`,
-              topicId: editingTopic._id,
-              jobId: formData.jobId,
-              createdAt: new Date().toISOString()
-            };
-            setTopicJobAssignments(prev => [...prev, newAssignment]);
-            
-            const job = departmentClassSectionJobs.find(j => j._id === formData.jobId);
-            toast.info(`Topic also assigned to "${job?.jobTitle || 'job'}"!`);
-          }
+          toast.success('Topic updated successfully!');
+        } else {
+          throw new Error(response.data.message || 'Failed to update topic');
         }
-        // Note: We don't remove assignments here - topics can be assigned to multiple jobs
-        // Assignments should be removed explicitly through the "Assign to Job" modal or job deletion
-        
-        toast.success('Topic updated successfully!');
       } else {
-        // Create new topic
+        // Create new topic using the specified API format
+        const topicData = {
+          name: formData.title,
+          description: formData.description,
+          subjectId: formData.subjectId,
+          difficultyLevel: formData.difficulty.charAt(0).toUpperCase() + formData.difficulty.slice(1)
+        };
+        
+        const response = await postRequest("/topics", topicData);
+        
+        if (response.data.success) {
+          // Add the new topic to local state
         const newTopic = {
-          _id: `topic-${Date.now()}`,
-          ...formData,
-          organizationId: currentOrganizationId,
+            ...response.data.data,
           createdAt: new Date().toISOString()
         };
         setTopics(prev => [...prev, newTopic]);
         
-        // Create job assignment if a job is selected
-        if (formData.jobId) {
-          const newAssignment = {
-            _id: `assign-${Date.now()}-${newTopic._id}`,
-            topicId: newTopic._id,
-            jobId: formData.jobId,
-            createdAt: new Date().toISOString()
-          };
-          setTopicJobAssignments(prev => [...prev, newAssignment]);
-          
-          const job = departmentClassSectionJobs.find(j => j._id === formData.jobId);
-          toast.success(`Topic created and assigned to "${job?.jobTitle || 'job'}"!`);
-        } else {
           toast.success('Topic created successfully!');
+        } else {
+          throw new Error(response.data.message || 'Failed to create topic');
         }
       }
       
       closeTopicModal();
     } catch (error) {
-      toast.error('Failed to save topic');
+      console.error('Error saving topic:', error);
+      toast.error(error.message || 'Failed to save topic');
     } finally {
       setIsLoading(false);
     }
@@ -1255,10 +1242,10 @@ const TopicManagement = () => {
     const newJob = jobs.find(j => j.name === newJobFormData.name);
     if (newJob) {
       const newAssignment = {
-        _id: `assignment-${Date.now()}-${topic.title.replace(/\s+/g, '-')}`,
+        _id: `assignment-${Date.now()}-${(topic.name || topic.title || '').replace(/\s+/g, '-')}`,
         topicId: newTopic._id,
         jobId: newJob._id,
-        topicTitle: newTopic.title,
+        topicTitle: newTopic.name || newTopic.title,
         jobName: newJob.name,
         createdAt: new Date().toISOString()
       };
@@ -1400,7 +1387,7 @@ const TopicManagement = () => {
         
         return {
           _id: topic._id,
-          title: topic.title,
+          title: topic.name || topic.title,
           description: topic.description,
           departmentId: newJobFormData.departmentId,
           subjectId: actualSubjectId,
@@ -1780,8 +1767,8 @@ const TopicManagement = () => {
     }
     if (searchTerm) {
       filtered = filtered.filter(topic => 
-        topic.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        topic.description.toLowerCase().includes(searchTerm.toLowerCase())
+        (topic.name || topic.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (topic.description || '').toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
     
@@ -1793,7 +1780,7 @@ const TopicManagement = () => {
     
     switch (sortBy) {
       case 'title':
-        return sorted.sort((a, b) => a.title.localeCompare(b.title));
+        return sorted.sort((a, b) => (a.name || a.title || '').localeCompare(b.name || b.title || ''));
       case 'subject':
         return sorted.sort((a, b) => {
           const subjectA = subjects.find(s => s._id === a.subjectId);
@@ -2206,7 +2193,7 @@ const TopicManagement = () => {
                                           className="mt-1 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer disabled:cursor-not-allowed flex-shrink-0"
                                         />
                                         <div className="flex-1 min-w-0">
-                                          <h6 className="font-semibold text-slate-900 text-xs md:text-sm mb-1 leading-tight">{topic.title}</h6>
+                                          <h6 className="font-semibold text-slate-900 text-xs md:text-sm mb-1 leading-tight">{topic.name || topic.title}</h6>
                                           <p className="text-xs text-slate-600 mb-2 line-clamp-2">{topic.description}</p>
                                           <div className="flex flex-wrap gap-2 text-xs">
                                             <span className={`px-2 py-1 rounded-full ${
@@ -2267,7 +2254,7 @@ const TopicManagement = () => {
                 return (
                           <div key={topic._id} className="bg-white p-3 rounded border border-purple-200 flex items-center justify-between gap-2">
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-xs md:text-sm text-slate-900 truncate leading-tight">{topic.title}</p>
+                              <p className="font-medium text-xs md:text-sm text-slate-900 truncate leading-tight">{topic.name || topic.title}</p>
                               <p className="text-xs text-slate-600 flex items-center gap-1 truncate mt-0.5">
                                 <i className={`fas fa-${subjectIcon} text-purple-600 flex-shrink-0 text-xs`}></i>
                                 <span className="truncate">{displaySubjectName}</span>
@@ -2597,7 +2584,7 @@ const TopicManagement = () => {
                                                       className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-3 min-w-[180px] md:min-w-[200px] flex-shrink-0"
                                                     >
                                                       <h5 className="font-semibold text-slate-900 text-xs md:text-sm mb-2 line-clamp-2 min-h-[2.5rem]">
-                                                        {topic.title}
+                                                        {topic.name || topic.title}
                                                       </h5>
                                                       <div className="flex items-center gap-1 mb-3">
                                                         <i className="fas fa-clock text-blue-600 text-xs"></i>
@@ -2768,7 +2755,7 @@ const TopicManagement = () => {
                         </div>
                                                 
                                                 <h5 className="font-semibold text-slate-900 text-xs md:text-sm mb-2 line-clamp-2 min-h-[2.5rem] pr-6">
-                                                  {topic.title}
+                                                  {topic.name || topic.title}
                                                 </h5>
                                                 <div className="flex items-center gap-1 mb-3">
                                                   <i className="fas fa-clock text-orange-600 text-xs"></i>
@@ -2858,7 +2845,7 @@ const TopicManagement = () => {
             <div className="sticky top-0 bg-white z-10 px-4 md:px-6 py-4 border-b border-slate-200 shadow-sm">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1">
-                  <h3 className="text-lg md:text-xl font-bold text-slate-900">{viewingTopic.title}</h3>
+                  <h3 className="text-lg md:text-xl font-bold text-slate-900">{viewingTopic.name || viewingTopic.title}</h3>
                   <div className="flex items-center gap-2 mt-1">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       viewingTopic.difficulty === 'beginner' ? 'bg-green-100 text-green-800' :
@@ -3044,13 +3031,13 @@ const TopicManagement = () => {
 
       {/* Job Assignment Modal */}
       {isJobAssignmentModalOpen && selectedTopicForJob && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-slate-200">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-bold text-slate-900">Assign Skill/Topic to Job</h2>
-                  <p className="text-slate-500 text-sm mt-1">Select a job to assign "{selectedTopicForJob.title}" to</p>
+                  <p className="text-slate-500 text-sm mt-1">Select a job to assign "{selectedTopicForJob.name || selectedTopicForJob.title}" to</p>
                 </div>
                 <button
                   onClick={closeJobAssignmentModal}
@@ -3068,7 +3055,7 @@ const TopicManagement = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-slate-600">Title:</span>
-                    <span className="ml-2 font-medium">{selectedTopicForJob.title}</span>
+                    <span className="ml-2 font-medium">{selectedTopicForJob.name || selectedTopicForJob.title}</span>
                   </div>
                   <div>
                     <span className="text-slate-600">Difficulty:</span>
@@ -3175,13 +3162,13 @@ const TopicManagement = () => {
 
       {/* Job View Modal */}
       {isJobViewModalOpen && selectedTopicForJobView && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-slate-200">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-bold text-slate-900">Connected Jobs</h2>
-                  <p className="text-slate-500 text-sm mt-1">Jobs assigned to "{selectedTopicForJobView.title}"</p>
+                  <p className="text-slate-500 text-sm mt-1">Jobs assigned to "{selectedTopicForJobView.name || selectedTopicForJobView.title}"</p>
                 </div>
                 <button
                   onClick={closeJobViewModal}
@@ -3199,7 +3186,7 @@ const TopicManagement = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-slate-600">Title:</span>
-                    <span className="ml-2 font-medium">{selectedTopicForJobView.title}</span>
+                    <span className="ml-2 font-medium">{selectedTopicForJobView.name || selectedTopicForJobView.title}</span>
                   </div>
                   <div>
                     <span className="text-slate-600">Difficulty:</span>
@@ -3320,7 +3307,7 @@ const TopicManagement = () => {
 
       {/* Bulk Job Assignment Modal */}
       {isBulkJobAssignmentModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-slate-200">
               <div className="flex items-center justify-between">
@@ -3387,7 +3374,7 @@ const TopicManagement = () => {
                           className="mt-1 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                         />
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-slate-900 text-sm leading-tight mb-1">{topic.title}</h4>
+                          <h4 className="font-semibold text-slate-900 text-sm leading-tight mb-1">{topic.name || topic.title}</h4>
                           <div className="flex items-center gap-2 mb-2">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                               topic.difficulty === 'beginner' ? 'bg-green-100 text-green-800' :
@@ -3501,7 +3488,7 @@ const TopicManagement = () => {
 
       {/* Assign Unassigned Topics to Job Modal */}
       {isAssignToJobModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-slate-200">
               <div className="flex items-center justify-between">
@@ -3623,7 +3610,7 @@ const TopicManagement = () => {
 
       {/* Manual Job Creation Modal */}
       {isManualJobModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-slate-200">
               <div className="flex items-center justify-between">

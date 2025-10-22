@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
+import { getRequest } from '../../../api/apiRequests';
+import { toast } from 'react-hot-toast';
 
 const TopicModal = ({
   isOpen,
@@ -6,10 +9,8 @@ const TopicModal = ({
   onSubmit,
   formData,
   setFormData,
-  subjects,
   classes,
   sections,
-  departments,
   jobs,
   editingTopic,
   isLoading,
@@ -20,12 +21,63 @@ const TopicModal = ({
   hideJobSelection
 }) => {
   const [errors, setErrors] = useState({});
+  const [departments, setDepartments] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+  const [isLoadingDepartments, setIsLoadingDepartments] = useState(false);
+  const [isLoadingSubjects, setIsLoadingSubjects] = useState(false);
+  
+  // Get organization from Redux
+  const organization = useSelector((state) => state.organization);
+
+  const fetchDepartments = async () => {
+    if (!organization?._id) return;
+    
+    try {
+      setIsLoadingDepartments(true);
+      const response = await getRequest(
+        `/organization-setup/departments/${organization._id}`
+      );
+
+      if (response.data.success) {
+        setDepartments(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+      toast.error('Failed to fetch departments');
+    } finally {
+      setIsLoadingDepartments(false);
+    }
+  };
+
+  const fetchSubjects = async (departmentId = null) => {
+    if (!organization?._id) return;
+    
+    try {
+      setIsLoadingSubjects(true);
+      if (departmentId) {
+        const response = await getRequest(
+          `/organization-setup/subjects/${organization._id}/${departmentId}`
+        );
+        if (response.data.success) {
+          setSubjects(response.data.data);
+        }
+      } else {
+        setSubjects([]);
+      }
+    } catch (error) {
+      console.error('Error fetching subjects:', error);
+      toast.error('Failed to fetch subjects');
+    } finally {
+      setIsLoadingSubjects(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
       setErrors({});
+      fetchDepartments();
     }
-  }, [isOpen]);
+  }, [isOpen, organization?._id]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -34,28 +86,12 @@ const TopicModal = ({
       newErrors.title = 'Topic title is required';
     }
 
-    if (!formData.description.trim()) {
-      newErrors.description = 'Topic description is required';
-    }
-
     if (!formData.departmentId) {
       newErrors.departmentId = 'Please select a department';
     }
 
     if (!formData.subjectId) {
       newErrors.subjectId = 'Please select a subject';
-    }
-
-    if (!formData.classId) {
-      newErrors.classId = 'Please select a class';
-    }
-
-    if (!formData.sectionIds || formData.sectionIds.length === 0) {
-      newErrors.sectionIds = 'Please select at least one section';
-    }
-
-    if (!formData.estimatedTime.trim()) {
-      newErrors.estimatedTime = 'Estimated time is required';
     }
 
     setErrors(newErrors);
@@ -76,36 +112,19 @@ const TopicModal = ({
     }
   };
 
-  const handleSectionToggle = (sectionId) => {
-    const currentSections = formData.sectionIds || [];
-    const newSections = currentSections.includes(sectionId)
-      ? currentSections.filter(id => id !== sectionId)
-      : [...currentSections, sectionId];
-    
-    setFormData(prev => ({ ...prev, sectionIds: newSections }));
-    if (errors.sectionIds) {
-      setErrors(prev => ({ ...prev, sectionIds: '' }));
-    }
-  };
-
   const handleDepartmentChange = (departmentId) => {
-    setFormData(prev => ({ ...prev, departmentId, classId: '', sectionIds: [] }));
+    setFormData(prev => ({ ...prev, departmentId, subjectId: '' }));
     if (errors.departmentId) {
       setErrors(prev => ({ ...prev, departmentId: '' }));
     }
-  };
-
-  const handleClassChange = (classId) => {
-    setFormData(prev => ({ ...prev, classId, sectionIds: [] }));
-    if (errors.classId) {
-      setErrors(prev => ({ ...prev, classId: '' }));
-    }
+    // Fetch subjects for the selected department
+    fetchSubjects(departmentId);
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-slate-200">
           <div className="flex items-center justify-between">
@@ -114,7 +133,7 @@ const TopicModal = ({
                 {editingTopic ? 'Edit Topic' : 'Create New Topic'}
               </h2>
               <p className="text-slate-500 text-sm mt-1">
-                {editingTopic ? 'Update topic information' : 'Define a new topic by selecting class, subject, and multiple sections'}
+                {editingTopic ? 'Update topic information' : 'Create a topic by selecting department and subject, then setting difficulty'}
               </p>
             </div>
             <button
@@ -145,68 +164,102 @@ const TopicModal = ({
 
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Description *
+                Description
               </label>
               <textarea
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 className={`${inputBaseClass} h-20 resize-none ${errors.description ? 'border-red-300 focus:ring-red-500' : ''}`}
-                placeholder="Describe what this topic covers"
+                placeholder="Describe what this topic covers (optional)"
               />
               {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Department *
-              </label>
-              <select
-                value={formData.departmentId}
-                onChange={(e) => handleDepartmentChange(e.target.value)}
-                className={`${inputBaseClass} ${errors.departmentId ? 'border-red-300 focus:ring-red-500' : ''}`}
-              >
-                <option value="">Select Department</option>
-                {departments.map(dept => (
-                  <option key={dept._id} value={dept._id}>{dept.name}</option>
-                ))}
-              </select>
-              {errors.departmentId && <p className="text-red-500 text-xs mt-1">{errors.departmentId}</p>}
-            </div>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Class *
-              </label>
-              <select
-                value={formData.classId}
-                onChange={(e) => handleClassChange(e.target.value)}
-                className={`${inputBaseClass} ${errors.classId ? 'border-red-300 focus:ring-red-500' : ''}`}
-                disabled={!formData.departmentId}
-              >
-                <option value="">Select Class</option>
-                {classes.map(cls => (
-                  <option key={cls._id} value={cls._id}>{cls.name}</option>
-                ))}
-              </select>
-              {errors.classId && <p className="text-red-500 text-xs mt-1">{errors.classId}</p>}
+          {/* Subject Selection Section */}
+          <div className="bg-slate-50 rounded-lg p-6 border border-slate-200">
+            <div className="flex items-center mb-4">
+              <div className="flex items-center justify-center w-8 h-8 bg-indigo-100 rounded-full mr-3">
+                <i className="fas fa-book text-indigo-600 text-sm"></i>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Subject Selection</h3>
+                <p className="text-sm text-slate-500">First select a department, then choose the subject for this topic</p>
+              </div>
             </div>
+            
+            <div className="space-y-4">
+              {/* Department Selection */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Department *
+                </label>
+                <select
+                  value={formData.departmentId}
+                  onChange={(e) => handleDepartmentChange(e.target.value)}
+                  className={`${inputBaseClass} ${errors.departmentId ? 'border-red-300 focus:ring-red-500' : ''}`}
+                  disabled={isLoadingDepartments}
+                >
+                  <option value="">
+                    {isLoadingDepartments ? 'Loading departments...' : 'Select Department'}
+                  </option>
+                  {departments.map(dept => (
+                    <option key={dept._id} value={dept._id}>{dept.name}</option>
+                  ))}
+                </select>
+                {errors.departmentId && <p className="text-red-500 text-xs mt-1">{errors.departmentId}</p>}
+                
+                <div className="mt-2 p-3 bg-amber-50 rounded-lg">
+                  <p className="text-sm text-amber-800">
+                    <i className="fas fa-lightbulb mr-2"></i>
+                    <strong>Step 1:</strong> Choose the department that manages this subject area
+                  </p>
+                </div>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Subject *
-              </label>
-              <select
-                value={formData.subjectId}
-                onChange={(e) => handleInputChange('subjectId', e.target.value)}
-                className={`${inputBaseClass} ${errors.subjectId ? 'border-red-300 focus:ring-red-500' : ''}`}
-              >
-                <option value="">Select Subject</option>
-                {subjects.map(subject => (
-                  <option key={subject._id} value={subject._id}>{subject.name}</option>
-                ))}
-              </select>
-              {errors.subjectId && <p className="text-red-500 text-xs mt-1">{errors.subjectId}</p>}
+              {/* Subject Selection */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Subject *
+                </label>
+                <select
+                  value={formData.subjectId}
+                  onChange={(e) => handleInputChange('subjectId', e.target.value)}
+                  className={`${inputBaseClass} ${errors.subjectId ? 'border-red-300 focus:ring-red-500' : ''}`}
+                  disabled={!formData.departmentId || isLoadingSubjects}
+                >
+                  <option value="">
+                    {!formData.departmentId 
+                      ? 'Please select a department first'
+                      : isLoadingSubjects 
+                        ? 'Loading subjects...' 
+                        : 'Select Subject'
+                    }
+                  </option>
+                  {subjects.map(subject => (
+                    <option key={subject._id} value={subject._id}>{subject.name}</option>
+                  ))}
+                </select>
+                {errors.subjectId && <p className="text-red-500 text-xs mt-1">{errors.subjectId}</p>}
+                
+                {formData.departmentId && (
+                  <div className="mt-2 p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <i className="fas fa-check-circle mr-2"></i>
+                      <strong>Step 2:</strong> {isLoadingSubjects 
+                        ? 'Loading subjects...' 
+                        : `Now select the specific subject from the ${departments.find(d => d._id === formData.departmentId)?.name} department`
+                      }
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
+          </div>
+
+          {/* Basic Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -222,104 +275,6 @@ const TopicModal = ({
                 <option value="hard">Hard</option>
               </select>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Estimated Time *
-              </label>
-              <input
-                type="text"
-                value={formData.estimatedTime}
-                onChange={(e) => handleInputChange('estimatedTime', e.target.value)}
-                className={`${inputBaseClass} ${errors.estimatedTime ? 'border-red-300 focus:ring-red-500' : ''}`}
-                placeholder="e.g., 2 hours, 90 minutes"
-              />
-              {errors.estimatedTime && <p className="text-red-500 text-xs mt-1">{errors.estimatedTime}</p>}
-            </div>
-          </div>
-
-          {/* Job Selection - Hidden for unassigned topics */}
-          {!hideJobSelection && formData.departmentId && formData.classId && formData.sectionIds && formData.sectionIds.length > 0 && (() => {
-            const availableJobs = jobs?.filter(job => 
-              job.departmentId === formData.departmentId && 
-              job.classId === formData.classId && 
-              formData.sectionIds.some(sectionId => job.sectionId === sectionId)
-            ) || [];
-            
-            return availableJobs.length > 0 ? (
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Job (Optional)
-                </label>
-                <select
-                  value={formData.jobId || ''}
-                  onChange={(e) => handleInputChange('jobId', e.target.value)}
-                  className={inputBaseClass}
-                >
-                  <option value="">Select a job (optional)</option>
-                  {availableJobs.map(job => (
-                    <option key={job._id} value={job._id}>
-                      {job.jobTitle} - {job.company}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : null;
-          })()}
-
-          {/* Section Selection */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-3">
-              Sections *
-            </label>
-            {errors.sectionIds && <p className="text-red-500 text-xs mb-2">{errors.sectionIds}</p>}
-            
-            {formData.departmentId && formData.classId && (
-              <>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {sections.map(section => (
-                    <label key={section._id} className="flex items-center space-x-2 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.sectionIds?.includes(section._id) || false}
-                        onChange={() => handleSectionToggle(section._id)}
-                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                      />
-                      <span className="text-sm text-slate-700">{section.name}</span>
-                    </label>
-                  ))}
-                </div>
-                
-                {formData.sectionIds && formData.sectionIds.length > 0 && (
-                  <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                    <p className="text-sm text-blue-800">
-                      <i className="fas fa-check-circle mr-2"></i>
-                      {formData.sectionIds.length} selected: {
-                        formData.sectionIds.map(sectionId => {
-                          const section = sections.find(s => s._id === sectionId);
-                          return section?.name;
-                        }).join(', ')
-                      }
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-
-
-          {/* Status */}
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="isActive"
-              checked={formData.isActive}
-              onChange={(e) => handleInputChange('isActive', e.target.checked)}
-              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-            />
-            <label htmlFor="isActive" className="text-sm font-medium text-slate-700">
-              Active (topic is available for use)
-            </label>
           </div>
 
           {/* Form Actions */}
