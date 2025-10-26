@@ -1,7 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { getRequest } from '../../../api/apiRequests';
-import { toast } from 'react-hot-toast';
 
 const TopicModal = ({
   isOpen,
@@ -9,81 +6,29 @@ const TopicModal = ({
   onSubmit,
   formData,
   setFormData,
-  classes,
-  sections,
-  jobs,
-  editingTopic,
   isLoading,
   inputBaseClass,
   btnIndigoClass,
   btnSlateClass,
-  onDelete,
-  hideJobSelection
+  departments = [],
+  subjects = [],
+  fetchSubjects,
+  isLoadingDepartments = false,
+  isLoadingSubjects = false
 }) => {
   const [errors, setErrors] = useState({});
-  const [departments, setDepartments] = useState([]);
-  const [subjects, setSubjects] = useState([]);
-  const [isLoadingDepartments, setIsLoadingDepartments] = useState(false);
-  const [isLoadingSubjects, setIsLoadingSubjects] = useState(false);
-  
-  // Get organization from Redux
-  const organization = useSelector((state) => state.organization);
-
-  const fetchDepartments = async () => {
-    if (!organization?._id) return;
-    
-    try {
-      setIsLoadingDepartments(true);
-      const response = await getRequest(
-        `/organization-setup/departments/${organization._id}`
-      );
-
-      if (response.data.success) {
-        setDepartments(response.data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching departments:', error);
-      toast.error('Failed to fetch departments');
-    } finally {
-      setIsLoadingDepartments(false);
-    }
-  };
-
-  const fetchSubjects = async (departmentId = null) => {
-    if (!organization?._id) return;
-    
-    try {
-      setIsLoadingSubjects(true);
-      if (departmentId) {
-        const response = await getRequest(
-          `/organization-setup/subjects/${organization._id}/${departmentId}`
-        );
-        if (response.data.success) {
-          setSubjects(response.data.data);
-        }
-      } else {
-        setSubjects([]);
-      }
-    } catch (error) {
-      console.error('Error fetching subjects:', error);
-      toast.error('Failed to fetch subjects');
-    } finally {
-      setIsLoadingSubjects(false);
-    }
-  };
 
   useEffect(() => {
     if (isOpen) {
       setErrors({});
-      fetchDepartments();
     }
-  }, [isOpen, organization?._id]);
+  }, [isOpen]);
 
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.title.trim()) {
-      newErrors.title = 'Topic title is required';
+    if (!formData.name.trim()) {
+      newErrors.name = 'Topic name is required';
     }
 
     if (!formData.departmentId) {
@@ -118,7 +63,9 @@ const TopicModal = ({
       setErrors(prev => ({ ...prev, departmentId: '' }));
     }
     // Fetch subjects for the selected department
-    fetchSubjects(departmentId);
+    if (fetchSubjects) {
+      fetchSubjects(departmentId);
+    }
   };
 
   if (!isOpen) return null;
@@ -130,10 +77,10 @@ const TopicModal = ({
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold text-slate-900">
-                {editingTopic ? 'Edit Topic' : 'Create New Topic'}
+                Add New Topic
               </h2>
               <p className="text-slate-500 text-sm mt-1">
-                {editingTopic ? 'Update topic information' : 'Create a topic by selecting department and subject, then setting difficulty'}
+                Create a topic by selecting department and subject, then setting difficulty
               </p>
             </div>
             <button
@@ -150,16 +97,16 @@ const TopicModal = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Topic Title *
+                Topic Name *
               </label>
               <input
                 type="text"
-                value={formData.title}
-                onChange={(e) => handleInputChange('title', e.target.value)}
-                className={`${inputBaseClass} ${errors.title ? 'border-red-300 focus:ring-red-500' : ''}`}
-                placeholder="Enter topic title"
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                className={`${inputBaseClass} ${errors.name ? 'border-red-300 focus:ring-red-500' : ''}`}
+                placeholder="Enter topic name"
               />
-              {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
+              {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
             </div>
 
             <div className="md:col-span-2">
@@ -266,38 +213,19 @@ const TopicModal = ({
                 Difficulty Level
               </label>
               <select
-                value={formData.difficulty}
-                onChange={(e) => handleInputChange('difficulty', e.target.value)}
+                value={formData.difficultyLevel}
+                onChange={(e) => handleInputChange('difficultyLevel', e.target.value)}
                 className={inputBaseClass}
               >
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
+                <option value="Easy">Easy</option>
+                <option value="Medium">Medium</option>
+                <option value="Hard">Hard</option>
               </select>
             </div>
           </div>
 
           {/* Form Actions */}
-          <div className="flex justify-between items-center pt-6 border-t border-slate-200">
-            {/* Delete button - only shown when editing */}
-            <div>
-              {editingTopic && onDelete && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (window.confirm('⚠️ Are you sure you want to delete this topic?\n\nThis action cannot be undone and will remove the topic from all associated sections.')) {
-                      onDelete(editingTopic._id);
-                    }
-                  }}
-                  className="font-semibold px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors transform active:scale-95 bg-red-500 hover:bg-red-600 text-white"
-                  disabled={isLoading}
-                >
-                  <i className="fas fa-times"></i>
-                  Delete Topic
-                </button>
-              )}
-            </div>
-            
+          <div className="flex justify-end items-center pt-6 border-t border-slate-200">
             {/* Save/Cancel buttons */}
             <div className="flex space-x-3">
               <button
@@ -316,12 +244,12 @@ const TopicModal = ({
                 {isLoading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    {editingTopic ? 'Updating...' : 'Creating...'}
+                    Creating...
                   </>
                 ) : (
                   <>
                     <i className="fas fa-save"></i>
-                    {editingTopic ? 'Update Topic' : 'Create Topic'}
+                    Add Topic
                   </>
                 )}
               </button>
