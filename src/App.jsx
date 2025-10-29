@@ -11,6 +11,7 @@ import TeacherAssignments from './org_admin/teacher_management/teacher_assignmen
 import AdminAccessManage from './org_admin/access_management/admin_access_manage.jsx';
 import TopicManagement from './org_admin/skills_and_academics/topics/topic_management.jsx';
 import ClassroomSessions from './org_admin/skills_and_academics/sessions/classroom_sessions.jsx';
+import JobsPlacements from './org_admin/skills_and_academics/jobs_placements/jobs_placements.jsx';
 import TestManagement from './org_admin/tests/test_management.jsx';
 import MasterOrganizationSetup from './master/master-organization-setup/master-organization-setup.jsx';
 import OrganizationLoginManager from './master/master-login-create/organization_login_manager.jsx';
@@ -46,6 +47,7 @@ function App() {
           <Route path="/admin/access/manage" element={<AdminAccessManage />} />
           <Route path="/admin/skills/topics" element={<TopicManagement />} />
           <Route path="/admin/skills/sessions" element={<ClassroomSessions />} />
+          <Route path="/admin/skills/jobs-placements" element={<JobsPlacements />} />
           <Route path="/admin/tests/manage" element={<TestManagement />} />
           <Route path="/abc" element={<Azy />} />
         </Route>
