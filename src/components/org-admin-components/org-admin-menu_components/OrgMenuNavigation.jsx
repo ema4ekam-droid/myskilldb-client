@@ -39,7 +39,7 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
           label: "Test Management",
           icon: "fas fa-clipboard-check",
         },
-        { id: "test-topics", label: "Test & Topics", icon: "fas fa-link" },
+        { id: "jobs-placements", label: "Jobs & Placements", icon: "fas fa-briefcase" },
       ],
     },
     {
@@ -120,7 +120,7 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
       "topic-management": "/admin/skills/topics",
       "classroom-sessions": "/admin/skills/sessions",
       "test-management": "/admin/tests/manage",
-      "test-topics": "/admin/skills/test-topics",
+      "jobs-placements": "/admin/skills/jobs-placements",
       "school-reports": "/admin/reports/organization",
       "student-ratings": "/admin/reports/student-ratings",
       "student-profiles": "/admin/students/profile",

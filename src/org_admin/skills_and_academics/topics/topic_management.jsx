@@ -3,7 +3,7 @@ import OrgMenuNavigation from "../../../components/org-admin-components/org-admi
 import {
   TopicModal,
   HierarchicalTopicList,
-} from "../../../components/org-admin-components/skills-academics-components";
+} from "../../../components/org-admin-components/topic-management-components";
 import LoaderOverlay from "../../../components/loader/LoaderOverlay";
 import toast, { Toaster } from "react-hot-toast";
 import {
