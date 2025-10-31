@@ -3,6 +3,7 @@ import { toast } from 'react-hot-toast';
 
 const ManualTestModal = ({ isOpen, onClose, context, onSave, topics, editingTest }) => {
   const [testTitle, setTestTitle] = useState('');
+  const [testDescription, setTestDescription] = useState('');
   const [difficulty, setDifficulty] = useState('medium');
   const [selectedTopicId, setSelectedTopicId] = useState('');
   const [questions, setQuestions] = useState([]);
@@ -12,13 +13,23 @@ const ManualTestModal = ({ isOpen, onClose, context, onSave, topics, editingTest
     if (isOpen) {
       if (editingTest) {
         setTestTitle(editingTest.title || '');
+        setTestDescription(editingTest.description || '');
         setDifficulty(editingTest.difficulty || 'medium');
         setQuestions(editingTest.questions || []);
+        // Preselect topic for topic-level if present
+        if (context?.type === 'topic' && Array.isArray(context?.topicIds) && context.topicIds.length > 0) {
+          setSelectedTopicId(context.topicIds[0]);
+        }
       } else {
         // Reset for new test
         setTestTitle('');
+        setTestDescription('');
         setDifficulty('medium');
-        setSelectedTopicId('');
+        setSelectedTopicId(
+          context?.type === 'topic' && Array.isArray(context?.topicIds) && context.topicIds.length > 0
+            ? context.topicIds[0]
+            : ''
+        );
         setQuestions([]);
       }
     }
@@ -26,10 +37,12 @@ const ManualTestModal = ({ isOpen, onClose, context, onSave, topics, editingTest
 
   if (!isOpen) return null;
 
-  // Get topics for this subject
-  const availableTopics = context?.topicIds?.map(topicId => 
-    topics?.find(t => t._id === topicId)
-  ).filter(Boolean) || [];
+  // Get all available topics - show all fetched topics, not just context.topicIds
+  const availableTopics = topics && Array.isArray(topics) && topics.length > 0 
+    ? topics 
+    : (context?.topicIds?.map(topicId => 
+        topics?.find(t => t._id === topicId)
+      ).filter(Boolean) || []);
 
   const addQuestion = () => {
     if (!selectedTopicId) {
@@ -99,6 +112,11 @@ const ManualTestModal = ({ isOpen, onClose, context, onSave, topics, editingTest
       return;
     }
 
+    if (!testDescription.trim()) {
+      toast.error('Please enter a description for the test');
+      return;
+    }
+
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
       if (!q.question.trim()) {
@@ -114,6 +132,7 @@ const ManualTestModal = ({ isOpen, onClose, context, onSave, topics, editingTest
     const testData = {
       _id: editingTest?._id || `test-${Date.now()}`,
       title: testTitle,
+      description: testDescription,
       subjectId: context.subjectId,
       topicIds: context.topicIds,
       difficulty,
@@ -142,7 +161,7 @@ const ManualTestModal = ({ isOpen, onClose, context, onSave, topics, editingTest
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-md backdrop-saturate-150 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-blue-600 to-indigo-600">
@@ -162,6 +181,17 @@ const ManualTestModal = ({ isOpen, onClose, context, onSave, topics, editingTest
             >
               <i className="fas fa-times text-xl"></i>
             </button>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Description *</label>
+            <textarea
+              value={testDescription}
+              onChange={(e) => setTestDescription(e.target.value)}
+              placeholder="Briefly describe this assessment"
+              rows={3}
+              className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+            />
           </div>
         </div>
 
@@ -207,29 +237,31 @@ const ManualTestModal = ({ isOpen, onClose, context, onSave, topics, editingTest
             </div>
           </div>
 
-          {/* Topic Selection */}
-          <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-            <label className="block text-sm font-semibold text-indigo-900 mb-2">
-              <i className="fas fa-lightbulb mr-2"></i>
-              Select Topic to Create Questions
-            </label>
-            <select
-              value={selectedTopicId}
-              onChange={(e) => setSelectedTopicId(e.target.value)}
-              className="w-full p-2.5 bg-white border border-indigo-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-            >
-              <option value="">-- Choose a topic to add questions --</option>
-              {availableTopics.map(topic => (
-                <option key={topic._id} value={topic._id}>
-                  {topic.title} ({questions.filter(q => q.topicId === topic._id).length} question{questions.filter(q => q.topicId === topic._id).length !== 1 ? 's' : ''})
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-indigo-700 mt-2">
-              <i className="fas fa-info-circle mr-1"></i>
-              You can switch between topics to create different cohorts of questions
-            </p>
-          </div>
+          {/* Topic Selection - hidden for topic-level since topic is predetermined */}
+          {context?.type !== 'topic' && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+              <label className="block text-sm font-semibold text-indigo-900 mb-2">
+                <i className="fas fa-lightbulb mr-2"></i>
+                Select Topic to Create Questions
+              </label>
+              <select
+                value={selectedTopicId}
+                onChange={(e) => setSelectedTopicId(e.target.value)}
+                className="w-full p-2.5 bg-white border border-indigo-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              >
+                <option value="">-- Choose a topic to add questions --</option>
+                {availableTopics.map(topic => (
+                  <option key={topic._id} value={topic._id}>
+                    {topic.title || topic.name} ({questions.filter(q => q.topicId === topic._id).length} question{questions.filter(q => q.topicId === topic._id).length !== 1 ? 's' : ''})
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-indigo-700 mt-2">
+                <i className="fas fa-info-circle mr-1"></i>
+                You can switch between topics to create different cohorts of questions
+              </p>
+            </div>
+          )}
 
           {/* Questions Summary by Topic */}
           {questions.length > 0 && (
@@ -248,7 +280,7 @@ const ManualTestModal = ({ isOpen, onClose, context, onSave, topics, editingTest
                       className="px-3 py-1.5 bg-white border border-green-300 rounded-full text-xs font-medium text-green-800 inline-flex items-center gap-1.5"
                     >
                       <i className="fas fa-lightbulb"></i>
-                      {topic.title}: {count} question{count !== 1 ? 's' : ''}
+                      {topic.title || topic.name}: {count} question{count !== 1 ? 's' : ''}
                     </span>
                   );
                 })}

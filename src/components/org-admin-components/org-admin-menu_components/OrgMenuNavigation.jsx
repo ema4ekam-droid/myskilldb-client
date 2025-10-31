@@ -26,7 +26,7 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
       subItems: [
         {
           id: "topic-management",
-          label: "Topic Generator",
+          label: "Topic Management",
           icon: "fas fa-tags",
         },
         {
@@ -39,7 +39,7 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
           label: "Test Management",
           icon: "fas fa-clipboard-check",
         },
-        { id: "test-topics", label: "Test & Topics", icon: "fas fa-link" },
+        { id: "jobs-placements", label: "Jobs & Placements", icon: "fas fa-briefcase" },
       ],
     },
     {
@@ -120,7 +120,7 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
       "topic-management": "/admin/skills/topics",
       "classroom-sessions": "/admin/skills/sessions",
       "test-management": "/admin/tests/manage",
-      "test-topics": "/admin/skills/test-topics",
+      "jobs-placements": "/admin/skills/jobs-placements",
       "school-reports": "/admin/reports/organization",
       "student-ratings": "/admin/reports/student-ratings",
       "student-profiles": "/admin/students/profile",
@@ -336,7 +336,7 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
                             <i className={`${subItem.icon} text-sm`}></i>
                           </div>
                           <span className="font-medium flex-1">{subItem.label}</span>
-                          {(subItem.id === 'topic-management' || subItem.id === 'test-management') && (
+                          {subItem.id === 'test-management' && (
                             <span className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
                               <i className="fas fa-robot text-[8px]"></i>
                               <span>AI</span>
