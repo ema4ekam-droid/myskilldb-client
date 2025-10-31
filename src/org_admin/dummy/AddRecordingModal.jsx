@@ -166,7 +166,7 @@ const AddRecordingModal = ({ onClose, onSubmit, selectedSubject, availableTopics
             >
               <option value="">Select a topic</option>
               {availableTopics && availableTopics.map((topic) => (
-                <option key={topic._id || topic.id} value={topic._id || topic.id}>
+                <option key={topic.id} value={topic.id}>
                   {topic.name}
                 </option>
               ))}

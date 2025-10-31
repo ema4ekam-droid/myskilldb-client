@@ -17,7 +17,7 @@ import MasterOrganizationSetup from './master/master-organization-setup/master-o
 import OrganizationLoginManager from './master/master-login-create/organization_login_manager.jsx';
 import AuthWrapper from './wrappers/AuthWrapper.jsx';
 import ProtectedWrapper from './wrappers/ProtectedWrapper.jsx';
-import Azy from './org_admin/subject_assign/Azy.jsx';
+import Azy from './org_admin/dummy/Azy.jsx';
 
 function App() {
   return (
