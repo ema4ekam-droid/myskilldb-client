@@ -12,7 +12,7 @@ import AdminAccessManage from './org_admin/access_management/admin_access_manage
 import TopicManagement from './org_admin/skills_and_academics/topics/topic_management.jsx';
 import ClassroomSessions from './org_admin/skills_and_academics/sessions/classroom_sessions.jsx';
 import JobsPlacements from './org_admin/skills_and_academics/jobs_placements/jobs_placements.jsx';
-import TestManagement from './org_admin/tests/test_management.jsx';
+import TestManagement from './org_admin/skills_and_academics/tests/test_management.jsx';
 import MasterOrganizationSetup from './master/master-organization-setup/master-organization-setup.jsx';
 import OrganizationLoginManager from './master/master-login-create/organization_login_manager.jsx';
 import AuthWrapper from './wrappers/AuthWrapper.jsx';
