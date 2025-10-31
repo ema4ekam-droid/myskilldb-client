@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { logoutRequest } from '../../../api/apiRequests';
 
 const StudentMenuNavigation = ({ currentPage, onPageChange }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -163,9 +164,9 @@ const StudentMenuNavigation = ({ currentPage, onPageChange }) => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await logoutRequest('/auth/logout');
     navigate('/login');
-    toast.success('Logged out successfully');
   };
 
   return (
