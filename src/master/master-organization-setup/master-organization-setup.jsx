@@ -1,19 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Navigation from "../../components/master-user-components/common/master-navigation/Navigation";
 import {
   DepartmentModal,
   ClassModal,
   SectionModal,
   SubjectModal,
-  DeleteConfirmationModal,
-  OrganizationSelection,
-  AssignmentManagement,
   AssignmentModal,
   ViewModal,
-  EditListModal,
-  SectionsViewModal,
   HeaderSection,
-  QuickEditSection,
+  QuickEditSection
+} from "../../components/common/org_setup";
+import ConfirmModal from "../../components/common/ConfirmModal";
+import {
+  OrganizationSelection,
+  AssignmentManagement,
   EntityManagement
 } from "../../components/master-user-components/master-class-setup-components";
 import axios from "axios";
@@ -38,8 +38,6 @@ const MasterOrganizationSetup = () => {
     countries: [],
     states: [],
     districts: [],
-    filterStates: [],
-    filterDistricts: [],
   });
   const [organizations, setOrganizations] = useState([]);
   const [selectedCountry, setSelectedCountry] = useState("");
@@ -47,8 +45,6 @@ const MasterOrganizationSetup = () => {
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedOrganization, setSelectedOrganization] = useState("");
 
-  // Junction table for section-class assignments
-  const [sectionClassAssignments, setSectionClassAssignments] = useState([]);
 
   // Modal states
   const [isDepartmentModalOpen, setIsDepartmentModalOpen] = useState(false);
@@ -61,17 +57,6 @@ const MasterOrganizationSetup = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewModalType, setViewModalType] = useState("");
   const [viewingItem, setViewingItem] = useState(null);
-
-  // Sections view modal state
-  const [isSectionsViewModalOpen, setIsSectionsViewModalOpen] = useState(false);
-  const [viewingSections, setViewingSections] = useState([]);
-  const [viewingDepartment, setViewingDepartment] = useState(null);
-  const [viewingClass, setViewingClass] = useState(null);
-
-  // Edit list modal states
-  const [isEditListModalOpen, setIsEditListModalOpen] = useState(false);
-  const [editListType, setEditListType] = useState("");
-  const [editListItems, setEditListItems] = useState([]);
 
   // Form data states
   const [departmentFormData, setDepartmentFormData] = useState({
@@ -104,15 +89,6 @@ const MasterOrganizationSetup = () => {
   const [editingSection, setEditingSection] = useState(null);
   const [editingSubject, setEditingSubject] = useState(null);
 
-  // Filter states for assignments
-  const [assignmentFilters, setAssignmentFilters] = useState({
-    departmentId: "",
-    classId: "",
-  });
-  const [appliedFilters, setAppliedFilters] = useState({
-    departmentId: "",
-    classId: "",
-  });
 
   // Confirmation modal states
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -129,14 +105,15 @@ const MasterOrganizationSetup = () => {
     assignments: false,
   });
 
-  // State to track expanded departments in assignment view
-  const [expandedDepartments, setExpandedDepartments] = useState({});
 
   // State for quick edit dropdowns
   const [selectedDepartmentEdit, setSelectedDepartmentEdit] = useState("");
   const [selectedClassEdit, setSelectedClassEdit] = useState("");
   const [selectedSectionEdit, setSelectedSectionEdit] = useState("");
   const [selectedSubjectEdit, setSelectedSubjectEdit] = useState("");
+
+  // Ref to store assignment delete promise resolver
+  const assignmentDeleteResolverRef = useRef(null);
 
   // --- API CALLS FOR LOCATIONS ---
   const fetchCountries = async () => {
@@ -152,17 +129,11 @@ const MasterOrganizationSetup = () => {
     }
   };
 
-  const fetchStates = async (countryCode, forFilter = false) => {
+  const fetchStates = async (countryCode) => {
     try {
       const response = await getRequest(`/locations/states/${countryCode}`);
-
       if (response.data.success) {
-        const states = response.data.data;
-        if (forFilter) {
-          setLocations((prev) => ({ ...prev, filterStates: states }));
-        } else {
-          setLocations((prev) => ({ ...prev, states }));
-        }
+        setLocations((prev) => ({ ...prev, states: response.data.data }));
       }
     } catch (error) {
       console.error("Error fetching states:", error);
@@ -170,19 +141,11 @@ const MasterOrganizationSetup = () => {
     }
   };
 
-  const fetchDistricts = async (stateCode, forFilter = false) => {
+  const fetchDistricts = async (stateCode) => {
     try {
-      const response = await getRequest(
-        `/locations/districts/state/${stateCode}`
-      );
-
+      const response = await getRequest(`/locations/districts/state/${stateCode}`);
       if (response.data.success) {
-        const districts = response.data.data;
-        if (forFilter) {
-          setLocations((prev) => ({ ...prev, filterDistricts: districts }));
-        } else {
-          setLocations((prev) => ({ ...prev, districts }));
-        }
+        setLocations((prev) => ({ ...prev, districts: response.data.data }));
       }
     } catch (error) {
       console.error("Error fetching districts:", error);
@@ -201,7 +164,6 @@ const MasterOrganizationSetup = () => {
         }
       });
       params.append("status", "active");
-
       const response = await getRequest(`/organization?${params}`);
 
       if (response.data.success) {
@@ -492,32 +454,40 @@ const MasterOrganizationSetup = () => {
   };
 
   // Assignment API calls
-  const fetchAssignments = async (organizationId, filterParams = {}) => {
-    if (!organizationId) return;
+  const fetchClassesByDepartment = async (organizationId, departmentId) => {
+    if (!organizationId || !departmentId) return [];
 
     try {
-      setLoadingEntities((prev) => ({ ...prev, assignments: true }));
-
-      const params = new URLSearchParams();
-
-      Object.entries(filterParams).forEach(([key, value]) => {
-        if (value && value.trim()) {
-          params.append(key, value);
-        }
-      });
-
       const response = await getRequest(
-        `/organization-setup/assignments/${organizationId}?${params}`
+        `/organization-setup/classes/${organizationId}/${departmentId}`
       );
 
       if (response.data.success) {
-        setSectionClassAssignments(response.data.data);
+        return response.data.data || [];
       }
+      return [];
     } catch (error) {
-      console.error("Error fetching assignments:", error);
-      toast.error("Failed to fetch assignments");
-    } finally {
-      setLoadingEntities((prev) => ({ ...prev, assignments: false }));
+      console.error("Error fetching classes by department:", error);
+      toast.error("Failed to fetch classes");
+      return [];
+    }
+  };
+
+  const fetchSectionsByAssignment = async (organizationId, departmentId, classId) => {
+    if (!organizationId || !departmentId || !classId) return [];
+
+    try {
+      const response = await getRequest(
+        `/organization-setup/assignments/${organizationId}/${departmentId}/${classId}`
+      );
+      if (response.data.success) {
+        return response.data.data || [];
+      }
+      return [];
+    } catch (error) {
+      console.error("Error fetching sections by assignment:", error);
+      toast.error("Failed to fetch sections");
+      return [];
     }
   };
 
@@ -575,7 +545,7 @@ const MasterOrganizationSetup = () => {
         (c) => c.name === countryName
       );
       if (selectedCountryObj) {
-        await fetchStates(selectedCountryObj.code, false);
+        await fetchStates(selectedCountryObj.code);
       }
     }
   };
@@ -592,7 +562,7 @@ const MasterOrganizationSetup = () => {
         (s) => s.name === stateName
       );
       if (selectedStateObj) {
-        await fetchDistricts(selectedStateObj.code, false);
+        await fetchDistricts(selectedStateObj.code);
       }
     }
   };
@@ -614,8 +584,6 @@ const MasterOrganizationSetup = () => {
   const handleOrganizationChange = async (orgId) => {
     setSelectedOrganization(orgId);
     clearAllEntities();
-    setAssignmentFilters({ departmentId: "", classId: "" });
-    setAppliedFilters({ departmentId: "", classId: "" });
 
     if (orgId) {
       await Promise.all([
@@ -623,7 +591,6 @@ const MasterOrganizationSetup = () => {
         fetchClasses(orgId),
         fetchSections(orgId),
         fetchSubjects(orgId),
-        fetchAssignments(orgId),
       ]);
     }
   };
@@ -633,7 +600,6 @@ const MasterOrganizationSetup = () => {
     setClasses([]);
     setSections([]);
     setSubjects([]);
-    setSectionClassAssignments([]);
   };
 
   // Get selected organization info
@@ -651,104 +617,45 @@ const MasterOrganizationSetup = () => {
   };
 
   // Get already assigned sections for a specific department and class
+  // Note: With new structure, this is simplified since AssignmentModal handles section selection
+  // The API will prevent duplicate assignments
   const getAssignedSectionIds = (departmentId, classId) => {
-    return sectionClassAssignments
-      .filter(
-        (assignment) =>
-          (assignment.departmentId === departmentId ||
-            assignment.department?._id === departmentId) &&
-          (assignment.classId === classId || assignment.class?._id === classId)
-      )
-      .map((assignment) => assignment.sectionId || assignment.section?._id);
-  };
-
-  // Helper function to group assignments by department and class
-  const getGroupedAssignments = () => {
-    const grouped = {};
-
-    sectionClassAssignments.forEach((assignment) => {
-      const departmentId =
-        assignment.departmentId || assignment.department?._id;
-      const departmentName = getEntityDisplayValue(assignment, "department");
-      const classId = assignment.classId || assignment.class?._id;
-      const className = getEntityDisplayValue(assignment, "class");
-      const sectionName = getEntityDisplayValue(assignment, "section");
-
-      if (!grouped[departmentId]) {
-        grouped[departmentId] = {
-          name: departmentName,
-          classes: {},
-        };
-      }
-
-      if (!grouped[departmentId].classes[classId]) {
-        grouped[departmentId].classes[classId] = {
-          name: className,
-          sections: [],
-        };
-      }
-
-      grouped[departmentId].classes[classId].sections.push({
-        id: assignment._id,
-        name: sectionName,
-        assignmentData: assignment,
-      });
-    });
-
-    return grouped;
-  };
-
-  // Toggle department expansion
-  const toggleDepartment = (departmentId) => {
-    setExpandedDepartments((prev) => ({
-      ...prev,
-      [departmentId]: !prev[departmentId],
-    }));
-  };
-
-  // Handler to view sections for a department-class combination
-  const handleViewSections = (departmentId, classId) => {
-    const groupedAssignments = getGroupedAssignments();
-    const sections =
-      groupedAssignments[departmentId]?.classes[classId]?.sections || [];
-
-    setViewingSections(sections);
-    setViewingDepartment(departments.find((d) => d._id === departmentId));
-    setViewingClass(classes.find((c) => c._id === classId));
-    setIsSectionsViewModalOpen(true);
+    // Return empty array - AssignmentModal will work with all available sections
+    // Duplicate assignments will be handled by the API validation
+    return [];
   };
 
   // Quick Edit Handlers
-  const handleQuickEditDepartment = () => {
-    if (!selectedDepartmentEdit) return;
-    const department = departments.find(d => d._id === selectedDepartmentEdit);
+  const handleQuickEditDepartment = (departmentId) => {
+    if (!departmentId) return;
+    const department = departments.find(d => d._id === departmentId);
     if (department) {
       handleEditDepartment(department);
     }
     setSelectedDepartmentEdit("");
   };
 
-  const handleQuickEditClass = () => {
-    if (!selectedClassEdit) return;
-    const classItem = classes.find(c => c._id === selectedClassEdit);
+  const handleQuickEditClass = (classId) => {
+    if (!classId) return;
+    const classItem = classes.find(c => c._id === classId);
     if (classItem) {
       handleEditClass(classItem);
     }
     setSelectedClassEdit("");
   };
 
-  const handleQuickEditSection = () => {
-    if (!selectedSectionEdit) return;
-    const section = sections.find(s => s._id === selectedSectionEdit);
+  const handleQuickEditSection = (sectionId) => {
+    if (!sectionId) return;
+    const section = sections.find(s => s._id === sectionId);
     if (section) {
       handleEditSection(section);
     }
     setSelectedSectionEdit("");
   };
 
-  const handleQuickEditSubject = () => {
-    if (!selectedSubjectEdit) return;
-    const subject = subjects.find(s => s._id === selectedSubjectEdit);
+  const handleQuickEditSubject = (subjectId) => {
+    if (!subjectId) return;
+    const subject = subjects.find(s => s._id === subjectId);
     if (subject) {
       handleEditSubject(subject);
     }
@@ -782,13 +689,14 @@ const MasterOrganizationSetup = () => {
   };
 
   const confirmDeleteDepartment = async () => {
+    if (!itemToDelete) return;
+    const deleteId = itemToDelete._id;
     try {
-      await deleteDepartment(itemToDelete._id);
+      await deleteDepartment(deleteId);
+      setDepartments(prev => prev.filter(dept => dept._id !== deleteId));
       setShowDeleteConfirm(false);
       setItemToDelete(null);
       setDeleteType("");
-      await fetchDepartments(selectedOrganization);
-      await fetchAssignments(selectedOrganization, appliedFilters);
     } catch (error) {
       // Error already handled in deleteDepartment
     }
@@ -834,13 +742,14 @@ const MasterOrganizationSetup = () => {
   };
 
   const confirmDeleteClass = async () => {
+    if (!itemToDelete) return;
+    const deleteId = itemToDelete._id;
     try {
-      await deleteClass(itemToDelete._id);
+      await deleteClass(deleteId);
+      setClasses(prev => prev.filter(cls => cls._id !== deleteId));
       setShowDeleteConfirm(false);
       setItemToDelete(null);
       setDeleteType("");
-      await fetchClasses(selectedOrganization);
-      await fetchAssignments(selectedOrganization, appliedFilters);
     } catch (error) {
       // Error already handled
     }
@@ -886,13 +795,14 @@ const MasterOrganizationSetup = () => {
   };
 
   const confirmDeleteSection = async () => {
+    if (!itemToDelete) return;
+    const deleteId = itemToDelete._id;
     try {
-      await deleteSection(itemToDelete._id);
+      await deleteSection(deleteId);
+      setSections(prev => prev.filter(sec => sec._id !== deleteId));
       setShowDeleteConfirm(false);
       setItemToDelete(null);
       setDeleteType("");
-      await fetchSections(selectedOrganization);
-      await fetchAssignments(selectedOrganization, appliedFilters);
     } catch (error) {
       // Error already handled
     }
@@ -921,23 +831,6 @@ const MasterOrganizationSetup = () => {
     setIsAssignmentModalOpen(true);
   };
 
-  const handleDeleteAssignment = (assignment) => {
-    setItemToDelete(assignment);
-    setDeleteType("assignment");
-    setShowDeleteConfirm(true);
-  };
-
-  const confirmDeleteAssignment = async () => {
-    try {
-      await deleteAssignment(itemToDelete._id);
-      setShowDeleteConfirm(false);
-      setItemToDelete(null);
-      setDeleteType("");
-      await fetchAssignments(selectedOrganization, appliedFilters);
-    } catch (error) {
-      // Error already handled
-    }
-  };
 
   const handleAssignmentSubmit = async (e) => {
     e.preventDefault();
@@ -945,7 +838,7 @@ const MasterOrganizationSetup = () => {
       await createAssignment(assignmentFormData);
       setIsAssignmentModalOpen(false);
       setAssignmentFormData({ sectionIds: [], classId: "", departmentId: "" });
-      await fetchAssignments(selectedOrganization, appliedFilters);
+      // The AssignmentManagement component will handle refreshing if needed
     } catch (error) {
       // Error already handled in API functions
     }
@@ -981,12 +874,14 @@ const MasterOrganizationSetup = () => {
   };
 
   const confirmDeleteSubject = async () => {
+    if (!itemToDelete) return;
+    const deleteId = itemToDelete._id;
     try {
-      await deleteSubject(itemToDelete._id);
+      await deleteSubject(deleteId);
+      setSubjects(prev => prev.filter(sub => sub._id !== deleteId));
       setShowDeleteConfirm(false);
       setItemToDelete(null);
       setDeleteType("");
-      await fetchSubjects(selectedOrganization);
     } catch (error) {
       // Error already handled
     }
@@ -1027,58 +922,12 @@ const MasterOrganizationSetup = () => {
     window.URL.revokeObjectURL(url);
   };
 
-  // Assignment filter handlers
-  const handleApplyFilters = async () => {
-    if (!selectedOrganization) return;
 
-    setAppliedFilters(assignmentFilters);
-    await fetchAssignments(selectedOrganization, assignmentFilters);
-  };
-
-  const handleClearFilters = async () => {
-    if (!selectedOrganization) return;
-
-    const emptyFilters = { departmentId: "", classId: "" };
-    setAssignmentFilters(emptyFilters);
-    setAppliedFilters(emptyFilters);
-    await fetchAssignments(selectedOrganization, emptyFilters);
-  };
-
-  // View handlers
-  const handleViewEntity = (type, item) => {
+  // View handler
+  const handleViewEntity = (type, items) => {
     setViewModalType(type);
-    setViewingItem(item);
+    setViewingItem(items);
     setIsViewModalOpen(true);
-  };
-
-  const handleEditEntity = (type, items) => {
-    setEditListType(type);
-    setEditListItems(items);
-    setIsEditListModalOpen(true);
-  };
-
-  const handleDeleteEntity = (type, item) => {
-    switch (type) {
-      case "department":
-        handleDeleteDepartment(item);
-        break;
-      case "class":
-        handleDeleteClass(item);
-        break;
-      case "section":
-        handleDeleteSection(item);
-        break;
-      case "subject":
-        handleDeleteSubject(item);
-        break;
-      default:
-        break;
-    }
-  };
-
-  // Navigation handler
-  const handlePageChange = (pageId) => {
-    console.log(`Navigating to: ${pageId}`);
   };
 
   // Base styles
@@ -1098,24 +947,15 @@ const MasterOrganizationSetup = () => {
     isSectionModalOpen ||
     isSubjectModalOpen ||
     isAssignmentModalOpen ||
-    isViewModalOpen ||
-    isEditListModalOpen ||
-    isSectionsViewModalOpen;
+    isViewModalOpen;
 
-  // Get grouped assignments for display
-  const groupedAssignments = getGroupedAssignments();
 
   return (
     <div className="bg-slate-50 text-slate-800 font-sans min-h-screen">
       <Toaster position="top-right" />
 
       {/* Navigation Component - hidden when modal is open */}
-      {!isAnyModalOpen && (
-        <Navigation
-          currentPage="organization-setup"
-          onPageChange={handlePageChange}
-        />
-      )}
+      {!isAnyModalOpen && <Navigation currentPage="organization-setup" />}
 
       {/* Main Content */}
       <div className={isAnyModalOpen ? "" : "lg:ml-72"}>
@@ -1184,20 +1024,19 @@ const MasterOrganizationSetup = () => {
           {selectedOrganization && (
             <AssignmentManagement
               departments={departments}
-              classes={classes}
-              sections={sections}
+              organizationId={selectedOrganization}
               loadingEntities={loadingEntities}
-              assignmentFilters={assignmentFilters}
-              appliedFilters={appliedFilters}
-              groupedAssignments={groupedAssignments}
-              expandedDepartments={expandedDepartments}
               onAddAssignment={handleAddAssignment}
-              onApplyFilters={handleApplyFilters}
-              onClearFilters={handleClearFilters}
-              onFilterChange={setAssignmentFilters}
-              onToggleDepartment={toggleDepartment}
-              onViewSections={handleViewSections}
-              onDeleteAssignment={handleDeleteAssignment}
+              onDeleteAssignment={async (assignmentId) => {
+                return new Promise((resolve, reject) => {
+                  assignmentDeleteResolverRef.current = { resolve, reject, assignmentId };
+                  setItemToDelete({ _id: assignmentId });
+                  setDeleteType("assignment");
+                  setShowDeleteConfirm(true);
+                });
+              }}
+              onFetchClassesByDepartment={fetchClassesByDepartment}
+              onFetchSectionsByAssignment={fetchSectionsByAssignment}
               getSelectedOrganizationInfo={getSelectedOrganizationInfo}
               inputBaseClass={inputBaseClass}
             />
@@ -1282,52 +1121,51 @@ const MasterOrganizationSetup = () => {
         getEntityDisplayValue={getEntityDisplayValue}
       />
 
-      {/* Edit List Modal */}
-      <EditListModal
-        isOpen={isEditListModalOpen}
-        editListType={editListType}
-        editListItems={editListItems}
-        onClose={() => setIsEditListModalOpen(false)}
-        onEditDepartment={handleEditDepartment}
-        onEditClass={handleEditClass}
-        onEditSection={handleEditSection}
-        onEditSubject={handleEditSubject}
-        onDeleteDepartment={handleDeleteDepartment}
-        onDeleteClass={handleDeleteClass}
-        onDeleteSection={handleDeleteSection}
-        onDeleteSubject={handleDeleteSubject}
-        btnSlateClass={btnSlateClass}
-      />
-
-      {/* Sections View Modal */}
-      <SectionsViewModal
-        isOpen={isSectionsViewModalOpen}
-        viewingSections={viewingSections}
-        viewingDepartment={viewingDepartment}
-        viewingClass={viewingClass}
-        onClose={() => setIsSectionsViewModalOpen(false)}
-        onAddAssignment={handleAddAssignment}
-        onDeleteAssignment={handleDeleteAssignment}
-        btnSlateClass={btnSlateClass}
-        btnIndigoClass={btnIndigoClass}
-      />
-
-      <DeleteConfirmationModal
+      <ConfirmModal
         isOpen={showDeleteConfirm}
-        itemToDelete={itemToDelete}
-        deleteType={deleteType}
-        onConfirm={() => {
-          if (deleteType === "department") confirmDeleteDepartment();
-          if (deleteType === "class") confirmDeleteClass();
-          if (deleteType === "section") confirmDeleteSection();
-          if (deleteType === "subject") confirmDeleteSubject();
-          if (deleteType === "assignment") confirmDeleteAssignment();
+        title="Confirm Deletion"
+        message={
+          deleteType === "assignment"
+            ? "Are you sure you want to delete this assignment?"
+            : `Are you sure you want to delete this ${deleteType}? ${itemToDelete?.name ? `(${itemToDelete.name})` : ""}`
+        }
+        onConfirm={async () => {
+          if (deleteType === "department") {
+            await confirmDeleteDepartment();
+          } else if (deleteType === "class") {
+            await confirmDeleteClass();
+          } else if (deleteType === "section") {
+            await confirmDeleteSection();
+          } else if (deleteType === "subject") {
+            await confirmDeleteSubject();
+          } else if (deleteType === "assignment") {
+            if (assignmentDeleteResolverRef.current) {
+              const { resolve, reject, assignmentId } = assignmentDeleteResolverRef.current;
+              try {
+                await deleteAssignment(assignmentId);
+                setShowDeleteConfirm(false);
+                setItemToDelete(null);
+                setDeleteType("");
+                assignmentDeleteResolverRef.current = null;
+                resolve();
+              } catch (error) {
+                assignmentDeleteResolverRef.current = null;
+                reject(error);
+              }
+            }
+          }
         }}
-        onCancel={() => {
+        onClose={() => {
+          if (assignmentDeleteResolverRef.current) {
+            assignmentDeleteResolverRef.current.reject(new Error("Deletion cancelled"));
+            assignmentDeleteResolverRef.current = null;
+          }
           setShowDeleteConfirm(false);
           setItemToDelete(null);
           setDeleteType("");
         }}
+        btnSlateClass={btnSlateClass}
+        btnRoseClass={btnRoseClass}
       />
     </div>
   );
