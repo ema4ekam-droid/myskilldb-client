@@ -1,14 +1,11 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
-import OrganizationModal from "../../components/master-user-components/master-dashboard-components/master-modal/OrganizationModal";
 import Navigation from "../../components/master-user-components/common/master-navigation/Navigation";
-import ConfirmModal from "../../components/common/ConfirmModal";
+import { ConfirmModal, Pagination } from "../../components/common";
 import FilterOrganizations from "../../components/master-user-components/common/FilterOrganizations";
-import OrganizationTable from "../../components/master-user-components/master-dashboard-components/OrganizationTable";
-import Pagination from "../../components/common/Pagination";
+import { OrganizationModal, OrganizationTable } from "../../components/master-user-components/master-dashboard-components";
 import {
-  deleteRequest,
   getRequest,
   patchRequest,
   postRequest,
@@ -18,12 +15,6 @@ import {
 function MasterDashboard() {
 
   // --- STATE MANAGEMENT ---
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [stats, setStats] = useState({
-    totalOrganizations: 0,
-    pendingOrganizations: 0,
-  });
-
   const [organizations, setOrganizations] = useState([]);
   const [pendingOrganizations, setPendingOrganizations] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -95,39 +86,12 @@ function MasterDashboard() {
     onConfirm: null,
   });
 
-  const [selectedOrganizationIds, setSelectedOrganizationIds] = useState([]);
-
-  const fetchOrganizationsCount = async () => {
-    try {
-      const [pendingRes, notPendingRes] = await Promise.all([
-        getRequest(`/organization/counts?status=pending`),
-        getRequest(`/organization/counts?status=not-pending`),
-      ]);
-
-      if (pendingRes.data.success && notPendingRes.data.success) {
-        const pendingCount =
-          pendingRes.data.count || pendingRes.data.data?.count;
-        const notPendingCount =
-          notPendingRes.data.count || notPendingRes.data.data?.count;
-
-        setStats((prev) => ({
-          ...prev,
-          totalOrganizations: notPendingCount,
-          pendingOrganizations: pendingCount,
-        }));
-      }
-    } catch (error) {
-      toast.error("Error fetching organization counts");
-    }
-  };
-
   // --- API CALLS ---
   const fetchData = async () => {
     await Promise.all([
       fetchOrganizations({}, 1, false), // Fetch approved organizations
       fetchOrganizations({}, 1, true), // Fetch pending organizations
       fetchCountries(),
-      fetchOrganizationsCount(),
     ]);
   };
 
@@ -172,7 +136,7 @@ function MasterDashboard() {
       } else {
         // Fetch active (non-pending) organizations with pagination
         const activeResponse = await getRequest(
-          `/organization?${buildParams({ status: "not-pending" })}`
+          `/organization?${buildParams({ status: "active" })}`
         );
 
         if (activeResponse.data.success) {
@@ -304,24 +268,7 @@ function MasterDashboard() {
 
   useEffect(() => {
     fetchData();
-
-    const onWindowClick = (e) => {
-      const menuButton = document.getElementById("profile-button");
-      const menu = document.getElementById("profile-menu");
-      if (
-        isUserMenuOpen &&
-        menuButton &&
-        menu &&
-        !menuButton.contains(e.target) &&
-        !menu.contains(e.target)
-      ) {
-        setIsUserMenuOpen(false);
-      }
-    };
-
-    window.addEventListener("click", onWindowClick);
-    return () => window.removeEventListener("click", onWindowClick);
-  }, [isUserMenuOpen]);
+  }, []);
 
   // --- EVENT HANDLERS ---
   const handleFilterSubmit = () => {
@@ -354,20 +301,6 @@ function MasterDashboard() {
   // Pagination handlers
   const handlePageChange = (page, isPending = false) => {
     fetchOrganizations(filters, page, isPending);
-  };
-
-  const toggleSelectAll = (checked) => {
-    setSelectedOrganizationIds(
-      checked ? organizations.map((org) => org._id) : []
-    );
-  };
-
-  const toggleSelectOne = (orgId, checked) => {
-    setSelectedOrganizationIds((prev) =>
-      checked
-        ? [...new Set([...prev, orgId])]
-        : prev.filter((id) => id !== orgId)
-    );
   };
 
   // --- FORM VALIDATION & HANDLERS ---
@@ -453,7 +386,6 @@ function MasterDashboard() {
         // Refresh both tables after successful operation
         await fetchOrganizations(filters, pagination.currentPage, false);
         await fetchOrganizations(filters, pendingPagination.currentPage, true);
-        await fetchOrganizationsCount();
       }
     } catch (error) {
       handleApiError(error);
@@ -523,25 +455,6 @@ function MasterDashboard() {
     }
   };
 
-  const handleDeleteOrganization = async (orgId) => {
-    try {
-      setIsLoading(true);
-      const response = await deleteRequest(`/organization/${orgId}`);
-
-      if (response.data.success) {
-        toast.success(response.data.message);
-        // Refresh both tables after deletion
-        await fetchOrganizations(filters, pagination.currentPage, false);
-        await fetchOrganizations(filters, pendingPagination.currentPage, true);
-        await fetchOrganizationsCount();
-      }
-    } catch (error) {
-      handleApiError(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleChangeStatus = async (orgId, action) => {
     try {
       setIsLoading(true);
@@ -554,7 +467,6 @@ function MasterDashboard() {
         // Refresh both tables after status change
         await fetchOrganizations(filters, pagination.currentPage, false);
         await fetchOrganizations(filters, pendingPagination.currentPage, true);
-        await fetchOrganizationsCount();
       }
     } catch (error) {
       handleApiError(error);
@@ -566,40 +478,6 @@ function MasterDashboard() {
   const openConfirm = (title, message, onConfirm) => {
     setConfirmConfig({ title, message, onConfirm });
     setIsConfirmOpen(true);
-  };
-
-  const bulkDelete = () => {
-    if (selectedOrganizationIds.length > 0) {
-      openConfirm(
-        "Bulk Delete Organizations",
-        `Are you sure you want to delete ${selectedOrganizationIds.length} selected organizations?`,
-        async () => {
-          try {
-            setIsLoading(true);
-            await Promise.all(
-              selectedOrganizationIds.map((id) =>
-                deleteRequest(`/organization/${id}`)
-              )
-            );
-
-            toast.success("Organizations deleted successfully");
-            setSelectedOrganizationIds([]);
-            // Refresh both tables after bulk deletion
-            await fetchOrganizations(filters, pagination.currentPage, false);
-            await fetchOrganizations(
-              filters,
-              pendingPagination.currentPage,
-              true
-            );
-            await fetchOrganizationsCount();
-          } catch (error) {
-            handleApiError(error);
-          } finally {
-            setIsLoading(false);
-          }
-        }
-      );
-    }
   };
 
   // Navigation handler
@@ -636,76 +514,7 @@ function MasterDashboard() {
                 System Overview & Management
               </p>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <button
-                  id="profile-button"
-                  onClick={() => setIsUserMenuOpen((v) => !v)}
-                >
-                  <img
-                    src="https://api.dicebear.com/8.x/initials/svg?seed=Master+Admin"
-                    className="w-14 h-14 rounded-full border-2 border-white object-cover shadow-md hover:ring-2 hover:ring-indigo-400 transition-all"
-                    alt="Admin Profile"
-                  />
-                </button>
-                {isUserMenuOpen && (
-                  <div
-                    id="profile-menu"
-                    className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-lg shadow-xl z-20"
-                  >
-                    <a
-                      href="#"
-                      className="flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-100"
-                    >
-                      <i className="fas fa-plus w-4 text-slate-500"></i>
-                      Organization Sign Up Page
-                    </a>
-                    <a
-                      href="#"
-                      className="flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-slate-100 border-t border-slate-200"
-                    >
-                      <i className="fas fa-sign-out-alt w-4 text-red-500"></i>
-                      Logout
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
           </header>
-          <section>
-            <h2 className="text-xl font-bold mb-4 text-slate-900">
-              Platform Overview
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center gap-6">
-                <div className="bg-indigo-100 p-4 rounded-full">
-                  <i className="fas fa-building fa-2x text-indigo-500"></i>
-                </div>
-                <div>
-                  <p className="text-slate-500 text-sm">
-                    Total Approved Organizations
-                  </p>
-                  <p className="text-3xl font-bold text-slate-900">
-                    {stats.totalOrganizations}
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center gap-6">
-                <div className="bg-amber-100 p-4 rounded-full">
-                  <i className="fas fa-bell fa-2x text-amber-500"></i>
-                </div>
-                <div>
-                  <p className="text-slate-500 text-sm">
-                    Pending Organization Approvals
-                  </p>
-                  <p className="text-3xl font-bold text-slate-900">
-                    {stats.pendingOrganizations}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
           {/* Reusable Filter Component */}
           <FilterOrganizations
             filters={filters}
@@ -726,25 +535,13 @@ function MasterDashboard() {
               <h2 className="text-xl font-bold text-slate-900">
                 Approved Organization Logins
               </h2>
-              <div className="flex items-center gap-3">
-                {selectedOrganizationIds.length > 0 && (
-                  <button
-                    onClick={bulkDelete}
-                    className={btnRoseClass}
-                    disabled={isLoading}
-                  >
-                    <i className="fas fa-trash-alt"></i>
-                    Delete ({selectedOrganizationIds.length})
-                  </button>
-                )}
-                <button
-                  onClick={openCreateOrganization}
-                  className={btnTealClass}
-                >
-                  <i className="fas fa-plus"></i>
-                  Create New Organization
-                </button>
-              </div>
+              <button
+                onClick={openCreateOrganization}
+                className={btnTealClass}
+              >
+                <i className="fas fa-plus"></i>
+                Create New Organization
+              </button>
             </div>
 
             <OrganizationTable
@@ -753,18 +550,8 @@ function MasterDashboard() {
               isLoading={isLoading}
               onView={(orgId) => openEditOrViewOrganization(orgId, "view")}
               onEdit={(orgId) => openEditOrViewOrganization(orgId, "edit")}
-              onDelete={(orgId) =>
-                openConfirm(
-                  "Delete Organization",
-                  "Are you sure you want to delete this organization?",
-                  () => handleDeleteOrganization(orgId)
-                )
-              }
               showActions={true}
-              showCheckboxes={true}
-              selectedIds={selectedOrganizationIds}
-              onToggleSelect={toggleSelectOne}
-              onToggleSelectAll={toggleSelectAll}
+              showCheckboxes={false}
             />
 
             {/* Pagination for Approved Organizations */}
@@ -792,13 +579,6 @@ function MasterDashboard() {
                     "Approve Organization",
                     "Are you sure you want to approve this organization?",
                     () => handleChangeStatus(orgId, "accept")
-                  )
-                }
-                onDelete={(orgId) =>
-                  openConfirm(
-                    "Delete Organization",
-                    "Are you sure you want to delete this organization?",
-                    () => handleDeleteOrganization(orgId)
                   )
                 }
                 showActions={true}
