@@ -27,10 +27,16 @@
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Department Quick Edit */}
           <div className="space-y-3">
-            <h3 className="font-semibold text-slate-700">View/Edit Department</h3>
+            <h3 className="font-semibold text-blue-600">View/Edit Department</h3>
             <select
               value={selectedDepartmentEdit}
-              onChange={(e) => setSelectedDepartmentEdit(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSelectedDepartmentEdit(value);
+                if (value) {
+                  onQuickEditDepartment(value);
+                }
+              }}
               className={`${inputBaseClass}`}
             >
               <option value="">Select Department</option>
@@ -42,10 +48,16 @@
 
           {/* Class Quick Edit */}
           <div className="space-y-3">
-            <h3 className="font-semibold text-slate-700">View/Edit Class</h3>
+            <h3 className="font-semibold text-green-600">View/Edit Class</h3>
             <select
               value={selectedClassEdit}
-              onChange={(e) => setSelectedClassEdit(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSelectedClassEdit(value);
+                if (value) {
+                  onQuickEditClass(value);
+                }
+              }}
               className={`${inputBaseClass}`}
             >
               <option value="">Select Class</option>
@@ -57,10 +69,16 @@
 
           {/* Section Quick Edit */}
           <div className="space-y-3">
-            <h3 className="font-semibold text-slate-700">View/Edit Section</h3>
+            <h3 className="font-semibold text-purple-600">View/Edit Section</h3>
             <select
               value={selectedSectionEdit}
-              onChange={(e) => setSelectedSectionEdit(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSelectedSectionEdit(value);
+                if (value) {
+                  onQuickEditSection(value);
+                }
+              }}
               className={`${inputBaseClass}`}
             >
               <option value="">Select Section</option>
@@ -72,10 +90,16 @@
 
           {/* Subject Quick Edit */}
           <div className="space-y-3">
-            <h3 className="font-semibold text-slate-700">View/Edit Subject</h3>
+            <h3 className="font-semibold text-orange-600">View/Edit Subject</h3>
             <select
               value={selectedSubjectEdit}
-              onChange={(e) => setSelectedSubjectEdit(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSelectedSubjectEdit(value);
+                if (value) {
+                  onQuickEditSubject(value);
+                }
+              }}
               className={`${inputBaseClass}`}
             >
               <option value="">Select Subject</option>
@@ -84,38 +108,6 @@
               ))}
             </select>
           </div>
-        </div>
-
-        {/* Quick Edit Actions */}
-        <div className="flex justify-end gap-3 mt-6">
-          <button
-            onClick={onQuickEditDepartment}
-            disabled={!selectedDepartmentEdit}
-            className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed"
-          >
-            Edit Department
-          </button>
-          <button
-            onClick={onQuickEditClass}
-            disabled={!selectedClassEdit}
-            className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed"
-          >
-            Edit Class
-          </button>
-          <button
-            onClick={onQuickEditSection}
-            disabled={!selectedSectionEdit}
-            className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed"
-          >
-            Edit Section
-          </button>
-          <button
-            onClick={onQuickEditSubject}
-            disabled={!selectedSubjectEdit}
-            className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed"
-          >
-            Edit Subject
-          </button>
         </div>
       </div>
     );

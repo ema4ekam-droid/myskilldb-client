@@ -30,9 +30,8 @@ const ConfirmModal = ({
             Cancel
           </button>
           <button 
-            onClick={() => {
-              onConfirm();
-              onClose();
+            onClick={async () => {
+              await onConfirm();
             }} 
             className={`${btnRoseClass} ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             disabled={isLoading}
