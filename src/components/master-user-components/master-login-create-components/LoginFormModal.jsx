@@ -32,12 +32,6 @@ const LoginFormModal = ({
 
   const roles = [
     {
-      key: "principal",
-      label: "Principal",
-      icon: "fas fa-user-tie",
-      description: "Organization principal login",
-    },
-    {
       key: "hod",
       label: "Head of Department",
       icon: "fas fa-user-graduate",
