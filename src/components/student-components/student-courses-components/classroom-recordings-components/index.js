@@ -1,3 +1,3 @@
-// Export all classroom recordings components
-export { default as VideoPlayerModal } from './VideoPlayerModal';
+export { default as VideoPlayer } from './VideoPlayer';
+export { default as RecordingsList } from './RecordingsList';
 
