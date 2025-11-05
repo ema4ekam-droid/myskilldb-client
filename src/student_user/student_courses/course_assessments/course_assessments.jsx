@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import StudentMenuNavigation from '../../../components/student-components/student-menu-components/StudentMenuNavigation';
 import LoaderOverlay from '../../../components/loader/LoaderOverlay';
 import toast from 'react-hot-toast';
-import { VideoPlayerModal } from '../../../components/student-components/student-courses-components/classroom-recordings-components';
+import { VideoPlayerModal } from '../../../components/student-components/student-courses-components/course-assessments-components';
 
 const CourseAssessments = () => {
   const [currentPage, setCurrentPage] = useState('course-assessments');

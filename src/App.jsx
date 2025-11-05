@@ -25,6 +25,7 @@ import JobBoard from './student_user/student_job_management/job_board/job_board.
 import SkillPlanner from './student_user/student_job_management/skill_planner/skill_planner.jsx';
 import JobAssessments from './student_user/student_job_management/job_assessments/job_assessments.jsx';
 import JobCV from './student_user/student_job_management/job_cv/job_cv.jsx';
+import Abc from './student_user/dummy/Abc.jsx';
 
 function App() {
   return (
@@ -73,6 +74,7 @@ function App() {
           <Route path="/student/contacts/founders" element={<StudentDashboard />} />
           <Route path="/student/settings" element={<StudentDashboard />} />
         </Route>
+        <Route path="/abc" element={<Abc />} />
       </Routes>
     </BrowserRouter>
   );
