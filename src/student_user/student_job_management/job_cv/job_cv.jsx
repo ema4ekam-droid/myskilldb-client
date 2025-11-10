@@ -4,10 +4,11 @@ import StudentMenuNavigation from '../../../components/student-components/studen
 import LoaderOverlay from '../../../components/loader/LoaderOverlay';
 
 const JobCV = () => {
-  const [currentPage, setCurrentPage] = useState('cv');
+  const [currentPage, setCurrentPage] = useState('job-cv');
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState('jobs'); // 'jobs', 'profile', 'preview'
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
   
   // Profile data (saved once, used for all CVs)
   const [profile, setProfile] = useState({
@@ -1383,11 +1384,18 @@ const JobCV = () => {
       
       <div className="min-h-screen bg-slate-50 lg:ml-72 p-4 lg:p-6">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-6 pt-12 lg:pt-0">
           <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 mb-2">Job-Specific CVs</h1>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-slate-600 mb-3">
             Generate professional CVs automatically based on completed skill assessments
           </p>
+          <button
+            onClick={() => setShowInfoModal(true)}
+            className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg text-xs font-medium transition-colors inline-flex items-center gap-1.5"
+          >
+            <i className="fas fa-info-circle"></i>
+            How this works
+          </button>
         </div>
 
         {/* Profile Settings Card */}
@@ -1407,20 +1415,6 @@ const JobCV = () => {
               Update Profile
             </button>
           </div>
-        </div>
-
-        {/* How it Works */}
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-          <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
-            <i className="fas fa-info-circle"></i>
-            How Job-Specific CVs Work
-          </h3>
-          <ol className="text-sm text-blue-800 space-y-1 ml-6 list-decimal">
-            <li>Complete skill assessments for the job you're interested in</li>
-            <li>Add testimonials, certificates, and learning resources in Skill Planner</li>
-            <li>Once all assessments are completed, generate your CV automatically</li>
-            <li>Your CV will include only verified skills with proof (scores, certificates, testimonials)</li>
-          </ol>
         </div>
 
         {/* Jobs List */}
@@ -1563,6 +1557,117 @@ const JobCV = () => {
             );
           })}
         </div>
+
+        {/* Info Modal */}
+        {showInfoModal && (
+          <>
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-[9998]"
+              onClick={() => setShowInfoModal(false)}
+            ></div>
+
+            {/* Modal */}
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                {/* Header */}
+                <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 rounded-t-2xl flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                      <i className="fas fa-info text-xl"></i>
+                    </div>
+                    <h2 className="text-xl font-bold">How Job-Specific CVs Work</h2>
+                  </div>
+                  <button
+                    onClick={() => setShowInfoModal(false)}
+                    className="w-8 h-8 rounded-full bg-white bg-opacity-20 hover:bg-opacity-30 flex items-center justify-center transition-colors"
+                  >
+                    <i className="fas fa-times"></i>
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="p-6">
+                  <p className="text-slate-600 mb-4">
+                    Our intelligent CV generation system helps you create professional, job-specific CVs automatically based on your verified skills and achievements.
+                  </p>
+
+                  <div className="space-y-4">
+                    <div className="flex gap-4">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-blue-600 font-bold">1</span>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-slate-900 mb-1">Complete Skill Assessments</h3>
+                        <p className="text-sm text-slate-600">
+                          Take assessments for all skills required for the job you're interested in. Each assessment verifies your knowledge and competency.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4">
+                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-purple-600 font-bold">2</span>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-slate-900 mb-1">Build Your Evidence</h3>
+                        <p className="text-sm text-slate-600">
+                          Add testimonials, certificates, and learning resources in Skill Planner to strengthen your CV with proof of expertise.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-green-600 font-bold">3</span>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-slate-900 mb-1">Generate Your CV</h3>
+                        <p className="text-sm text-slate-600">
+                          Once all assessments are completed (100% readiness), generate your CV automatically with one click.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4">
+                      <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-indigo-600 font-bold">4</span>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-slate-900 mb-1">Get Verified Results</h3>
+                        <p className="text-sm text-slate-600">
+                          Your CV will include only verified skills with proof: assessment scores, certificates, video demonstrations, and professional testimonials.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <i className="fas fa-lightbulb text-green-600 text-xl mt-1"></i>
+                      <div>
+                        <h4 className="font-semibold text-green-900 mb-1">Pro Tip</h4>
+                        <p className="text-sm text-green-800">
+                          The more evidence you add (testimonials, certificates, videos), the stronger your CV becomes. Employers love seeing verified proof of your skills!
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="px-6 py-4 bg-slate-50 rounded-b-2xl flex justify-end">
+                  <button
+                    onClick={() => setShowInfoModal(false)}
+                    className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition-colors"
+                  >
+                    Got it!
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </>
   );
