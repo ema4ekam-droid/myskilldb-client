@@ -6,7 +6,6 @@ import { logoutRequest } from '../../../api/apiRequests';
 const StudentMenuNavigation = ({ currentPage, onPageChange }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState({});
-  const [pendingAssessmentsCount, setPendingAssessmentsCount] = useState(2); // Mock count - will be fetched from API
   const navigate = useNavigate();
 
   const menuItems = [
@@ -313,7 +312,6 @@ const StudentMenuNavigation = ({ currentPage, onPageChange }) => {
                   <div className="ml-6 mt-2 space-y-1">
                     {item.subItems.map((subItem) => {
                       const isSubActive = currentPage === subItem.id;
-                      const showBadge = subItem.id === 'course-assessments' && pendingAssessmentsCount > 0;
                       return (
                         <button
                           key={subItem.id}
@@ -340,11 +338,6 @@ const StudentMenuNavigation = ({ currentPage, onPageChange }) => {
                             <i className={`${subItem.icon} text-sm`}></i>
                           </div>
                           <span className="font-medium flex-1">{subItem.label}</span>
-                          {showBadge && (
-                            <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse">
-                              {pendingAssessmentsCount}
-                            </span>
-                          )}
                         </button>
                       );
                     })}
