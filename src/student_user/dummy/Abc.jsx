@@ -1,233 +1,1518 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import StudentMenuNavigation from '../../components/student-components/student-menu-components/StudentMenuNavigation';
 import LoaderOverlay from '../../components/loader/LoaderOverlay';
+import toast from 'react-hot-toast';
+import { VideoPlayerModal } from '../../components/student-components/student-courses-components/course-assessments-components';
 
-const Abc = () => {
-  const [currentPage, setCurrentPage] = useState('classroom-recordings');
+const CourseAssessments = () => {
+  const [currentPage, setCurrentPage] = useState('course-assessments');
   const [isLoading, setIsLoading] = useState(true);
-  const [expandedSubjects, setExpandedSubjects] = useState(new Set([1])); // First subject expanded by default
-  const [expandedTopics, setExpandedTopics] = useState(new Set());
+  const [assessments, setAssessments] = useState([]);
+  const [activeAssessment, setActiveAssessment] = useState(null);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [timeRemaining, setTimeRemaining] = useState(0);
+  const [isAssessmentStarted, setIsAssessmentStarted] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [assessmentResults, setAssessmentResults] = useState(null);
+  const [viewingCompletedAssessment, setViewingCompletedAssessment] = useState(null);
+  const [studyPlanModal, setStudyPlanModal] = useState(null);
+  const [focusAreas, setFocusAreas] = useState({});
+  const [currentNote, setCurrentNote] = useState('');
+  const [editingNoteId, setEditingNoteId] = useState(null);
   const [playingVideo, setPlayingVideo] = useState(null);
-  const [activeRecording, setActiveRecording] = useState(null);
+  const timerRef = useRef(null);
+  const visibilityRef = useRef(true);
+  const [selectedSubject, setSelectedSubject] = useState('');
+  const [selectedTopic, setSelectedTopic] = useState('');
 
-  // Dummy data - subjects with topics and recordings
-  const [subjects, setSubjects] = useState([
+  // Dummy data structure
+  const dummySubjects = [
     {
-      id: 1,
+      _id: 'sub1',
       name: 'Amazon Ads Fundamentals',
       code: 'ADS101',
       color: 'blue',
-      instructor: 'Sarah Johnson',
       topics: [
+        { _id: 'topic1', name: 'Campaign Setup', title: 'Campaign Setup' },
+        { _id: 'topic2', name: 'Bidding Strategies', title: 'Bidding Strategies' },
+        { _id: 'topic3', name: 'Performance Analysis', title: 'Performance Analysis' }
+      ]
+    },
+    {
+      _id: 'sub2',
+      name: 'Amazon Search & SEO',
+      code: 'SEO201',
+      color: 'green',
+      topics: [
+        { _id: 'topic4', name: 'A9 Algorithm', title: 'A9 Algorithm' },
+        { _id: 'topic5', name: 'Keyword Tools', title: 'Keyword Tools' },
+        { _id: 'topic6', name: 'Listing Optimization', title: 'Listing Optimization' }
+      ]
+    },
+    {
+      _id: 'sub3',
+      name: 'Amazon DSP (Demand-Side Platform)',
+      code: 'DSP301',
+      color: 'purple',
+      topics: [
+        { _id: 'topic7', name: 'Programmatic Advertising', title: 'Programmatic Advertising' },
+        { _id: 'topic8', name: 'Audience Targeting', title: 'Audience Targeting' },
+        { _id: 'topic9', name: 'Campaign Analytics', title: 'Campaign Analytics' }
+      ]
+    }
+  ];
+
+  // Dummy assessment data - Subject level tests
+  const dummySubjectTests = [
+    {
+      id: 1,
+      _id: 'test1',
+      title: 'Amazon Ads Campaign Optimization Quiz',
+      subject: 'Amazon Ads Fundamentals',
+      subjectId: 'sub1',
+      subjectCode: 'ADS101',
+      subjectColor: 'blue',
+      teacher: 'Sarah Johnson',
+      assignedDate: '2024-10-20',
+      dueDate: '2024-10-28',
+      duration: 30, // minutes
+      totalQuestions: 15,
+      passingScore: 70,
+      status: 'pending', // pending, in-progress, completed
+      difficulty: 'medium',
+      type: 'subject',
+      topics: ['Campaign Setup', 'Bidding Strategies', 'Performance Analysis'],
+      questions: [
         {
-          id: 101,
-          title: 'Introduction to Amazon Advertising',
-          recordings: [
-            {
-              id: 1001,
-              title: 'Amazon Ads Overview & Ecosystem',
-              videoId: 'OdXwlCElS_c',
-              duration: '15:32',
-              addedBy: 'Sarah Johnson',
-              addedDate: '2024-10-10'
-            },
-            {
-              id: 1002,
-              title: 'Types of Amazon Ads Explained',
-              videoId: 'REscpOYqGII',
-              duration: '12:45',
-              addedBy: 'Sarah Johnson',
-              addedDate: '2024-10-12'
-            },
-            {
-              id: 1003,
-              title: 'Setting Up Your First Campaign',
-              videoId: 'OdXwlCElS_c',
-              duration: '18:20',
-              addedBy: 'Sarah Johnson',
-              addedDate: '2024-10-15'
-            }
-          ]
+          id: 'q1',
+          question: 'What is the primary goal of Amazon Sponsored Products?',
+          options: [
+            'Increase brand awareness',
+            'Drive product sales directly',
+            'Gather customer data',
+            'Reduce advertising costs'
+          ],
+          correctAnswer: 1,
+          topic: 'Campaign Setup'
         },
         {
-          id: 102,
-          title: 'Sponsored Products Campaigns',
-          recordings: [
-            {
-              id: 1004,
-              title: 'Automatic vs Manual Targeting',
-              videoId: 'REscpOYqGII',
-              duration: '20:15',
-              addedBy: 'Sarah Johnson',
-              addedDate: '2024-10-18'
-            },
-            {
-              id: 1005,
-              title: 'Keyword Research for Sponsored Products',
-              videoId: 'OdXwlCElS_c',
-              duration: '22:30',
-              addedBy: 'Sarah Johnson',
-              addedDate: '2024-10-20'
-            }
-          ]
+          id: 'q2',
+          question: 'Which bidding strategy is best for new campaigns with limited data?',
+          options: [
+            'Manual bidding',
+            'Dynamic bids - down only',
+            'Dynamic bids - up and down',
+            'Fixed bids'
+          ],
+          correctAnswer: 2,
+          topic: 'Bidding Strategies'
         },
         {
-          id: 103,
-          title: 'Sponsored Brands Strategy',
-          recordings: [
-            {
-              id: 1006,
-              title: 'Building Brand Awareness',
-              videoId: 'REscpOYqGII',
-              duration: '16:45',
-              addedBy: 'Sarah Johnson',
-              addedDate: '2024-10-22'
-            }
-          ]
+          id: 'q3',
+          question: 'What does ACOS stand for in Amazon advertising?',
+          options: [
+            'Average Cost of Sales',
+            'Advertising Cost of Sales',
+            'Annual Cost of Service',
+            'Automated Cost Optimization System'
+          ],
+          correctAnswer: 1,
+          topic: 'Performance Analysis'
+        },
+        {
+          id: 'q4',
+          question: 'What is the recommended minimum daily budget for a new Sponsored Products campaign?',
+          options: [
+            '$5',
+            '$10',
+            '$25',
+            '$50'
+          ],
+          correctAnswer: 1,
+          topic: 'Campaign Setup'
+        },
+        {
+          id: 'q5',
+          question: 'Which metric indicates the effectiveness of your ad spend?',
+          options: [
+            'Impressions',
+            'Click-through rate',
+            'Return on Ad Spend (ROAS)',
+            'Total sales'
+          ],
+          correctAnswer: 2,
+          topic: 'Performance Analysis'
         }
       ]
     },
     {
       id: 2,
-      name: 'Amazon Search & SEO',
-      code: 'SEO201',
-      color: 'green',
-      instructor: 'Michael Chen',
-      topics: [
+      _id: 'test2',
+      title: 'SEO Keyword Research Assessment',
+      subject: 'Amazon Search & SEO',
+      subjectId: 'sub2',
+      subjectCode: 'SEO201',
+      subjectColor: 'green',
+      teacher: 'Michael Chen',
+      assignedDate: '2024-10-22',
+      dueDate: '2024-10-30',
+      duration: 25,
+      totalQuestions: 12,
+      passingScore: 75,
+      status: 'pending',
+      difficulty: 'hard',
+      type: 'subject',
+      topics: ['A9 Algorithm', 'Keyword Tools', 'Listing Optimization'],
+      questions: [
         {
-          id: 201,
-          title: 'Amazon A9 Algorithm Basics',
-          recordings: [
-            {
-              id: 2001,
-              title: 'Understanding A9 Algorithm',
-              videoId: 'OdXwlCElS_c',
-              duration: '14:30',
-              addedBy: 'Michael Chen',
-              addedDate: '2024-10-08'
-            },
-            {
-              id: 2002,
-              title: 'Ranking Factors Deep Dive',
-              videoId: 'REscpOYqGII',
-              duration: '19:15',
-              addedBy: 'Michael Chen',
-              addedDate: '2024-10-10'
-            }
-          ]
+          id: 'q1',
+          question: 'What is the primary ranking factor in Amazon\'s A9 algorithm?',
+          options: [
+            'Price',
+            'Sales velocity',
+            'Review count',
+            'Seller rating'
+          ],
+          correctAnswer: 1,
+          topic: 'A9 Algorithm'
         },
         {
-          id: 202,
-          title: 'Keyword Research & Strategy',
-          recordings: [
-            {
-              id: 2003,
-              title: 'Keyword Tools & Techniques',
-              videoId: 'OdXwlCElS_c',
-              duration: '17:40',
-              addedBy: 'Michael Chen',
-              addedDate: '2024-10-14'
-            }
-          ]
+          id: 'q2',
+          question: 'Which tool is NOT commonly used for Amazon keyword research?',
+          options: [
+            'Helium 10',
+            'Jungle Scout',
+            'Google Keyword Planner',
+            'Merchant Words'
+          ],
+          correctAnswer: 2,
+          topic: 'Keyword Tools'
+        },
+        {
+          id: 'q3',
+          question: 'Where should your most important keywords be placed in a product listing?',
+          options: [
+            'In bullet points only',
+            'In the description only',
+            'In the title and first bullet point',
+            'In backend search terms only'
+          ],
+          correctAnswer: 2,
+          topic: 'Listing Optimization'
         }
       ]
     },
     {
       id: 3,
-      name: 'Amazon DSP (Demand-Side Platform)',
-      code: 'DSP301',
-      color: 'purple',
-      instructor: 'Emily Rodriguez',
-      topics: [
+      _id: 'test3',
+      title: 'DSP Campaign Strategy Test',
+      subject: 'Amazon DSP (Demand-Side Platform)',
+      subjectId: 'sub3',
+      subjectCode: 'DSP301',
+      subjectColor: 'purple',
+      teacher: 'Emily Rodriguez',
+      assignedDate: '2024-10-18',
+      dueDate: '2024-10-26',
+      duration: 40,
+      totalQuestions: 5,
+      passingScore: 80,
+      status: 'completed',
+      difficulty: 'hard',
+      type: 'subject',
+      score: 60,
+      completedDate: '2024-10-24',
+      topics: ['Programmatic Advertising', 'Audience Targeting', 'Campaign Analytics'],
+      userAnswers: {
+        'q1': 1,  // Correct
+        'q2': 1,  // Wrong - answered "Demographic audiences" instead of "In-market audiences"
+        'q3': 2,  // Correct
+        'q4': 0,  // Wrong - answered "7 days" instead of "14 days"
+        'q5': 2   // Correct
+      },
+      questions: [
         {
-          id: 301,
-          title: 'Introduction to Programmatic Advertising',
-          recordings: [
-            {
-              id: 3001,
-              title: 'What is DSP?',
-              videoId: 'REscpOYqGII',
-              duration: '13:25',
-              addedBy: 'Emily Rodriguez',
-              addedDate: '2024-10-05'
-            },
-            {
-              id: 3002,
-              title: 'DSP vs Traditional Advertising',
-              videoId: 'OdXwlCElS_c',
-              duration: '15:50',
-              addedBy: 'Emily Rodriguez',
-              addedDate: '2024-10-07'
-            }
-          ]
+          id: 'q1',
+          question: 'What is the primary benefit of using Amazon DSP?',
+          options: [
+            'Lower advertising costs',
+            'Access to Amazon and third-party inventory',
+            'Easier campaign setup',
+            'Automatic bidding'
+          ],
+          correctAnswer: 1,
+          topic: 'Programmatic Advertising'
+        },
+        {
+          id: 'q2',
+          question: 'Which audience type is unique to Amazon DSP?',
+          options: [
+            'In-market audiences',
+            'Demographic audiences',
+            'Location-based audiences',
+            'Interest-based audiences'
+          ],
+          correctAnswer: 0,
+          topic: 'Audience Targeting'
+        },
+        {
+          id: 'q3',
+          question: 'What does viewable CPM mean in DSP campaigns?',
+          options: [
+            'Cost per thousand clicks',
+            'Cost per million views',
+            'Cost per thousand viewable impressions',
+            'Cost per mille conversions'
+          ],
+          correctAnswer: 2,
+          topic: 'Campaign Analytics'
+        },
+        {
+          id: 'q4',
+          question: 'How long is the Amazon attribution window for DSP campaigns?',
+          options: [
+            '7 days',
+            '14 days',
+            '30 days',
+            '90 days'
+          ],
+          correctAnswer: 1,
+          topic: 'Campaign Analytics'
+        },
+        {
+          id: 'q5',
+          question: 'Which is NOT a valid DSP campaign goal?',
+          options: [
+            'Brand awareness',
+            'Product consideration',
+            'Direct product sales',
+            'Retargeting'
+          ],
+          correctAnswer: 2,
+          topic: 'Programmatic Advertising'
+        }
+      ],
+      relatedVideos: [
+        {
+          id: 'v1',
+          title: 'Introduction to Amazon DSP',
+          videoId: 'y9Dk6wMc8UM',
+          duration: '18:30',
+          topic: 'Programmatic Advertising'
+        },
+        {
+          id: 'v2',
+          title: 'Advanced Audience Targeting Strategies',
+          videoId: 'dQw4w9WgXcQ',
+          duration: '22:15',
+          topic: 'Audience Targeting'
+        },
+        {
+          id: 'v3',
+          title: 'Understanding DSP Analytics',
+          videoId: 'y9Dk6wMc8UM',
+          duration: '15:45',
+          topic: 'Campaign Analytics'
         }
       ]
     }
-  ]);
+  ];
+
+  // Dummy topic-level tests
+  const dummyTopicTests = [
+    {
+      id: 4,
+      _id: 'test4',
+      title: 'Campaign Setup Basics',
+      subject: 'Amazon Ads Fundamentals',
+      subjectId: 'sub1',
+      topicId: 'topic1',
+      topicName: 'Campaign Setup',
+      subjectCode: 'ADS101',
+      subjectColor: 'blue',
+      teacher: 'Sarah Johnson',
+      assignedDate: '2024-10-21',
+      dueDate: '2024-10-29',
+      duration: 20,
+      totalQuestions: 10,
+      passingScore: 70,
+      status: 'pending',
+      difficulty: 'easy',
+      type: 'topic',
+      questions: [
+        {
+          id: 'q1',
+          question: 'What is the primary goal of Amazon Sponsored Products?',
+          options: [
+            'Increase brand awareness',
+            'Drive product sales directly',
+            'Gather customer data',
+            'Reduce advertising costs'
+          ],
+          correctAnswer: 1,
+          topic: 'Campaign Setup'
+        }
+      ]
+    },
+    {
+      id: 5,
+      _id: 'test5',
+      title: 'Bidding Strategies Advanced',
+      subject: 'Amazon Ads Fundamentals',
+      subjectId: 'sub1',
+      topicId: 'topic2',
+      topicName: 'Bidding Strategies',
+      subjectCode: 'ADS101',
+      subjectColor: 'blue',
+      teacher: 'Sarah Johnson',
+      assignedDate: '2024-10-22',
+      dueDate: '2024-10-30',
+      duration: 25,
+      totalQuestions: 12,
+      passingScore: 75,
+      status: 'completed',
+      difficulty: 'hard',
+      type: 'topic',
+      score: 83,
+      completedDate: '2024-10-25',
+      questions: [
+        {
+          id: 'q1',
+          question: 'Which bidding strategy is best for new campaigns with limited data?',
+          options: [
+            'Manual bidding',
+            'Dynamic bids - down only',
+            'Dynamic bids - up and down',
+            'Fixed bids'
+          ],
+          correctAnswer: 2,
+          topic: 'Bidding Strategies'
+        }
+      ]
+    },
+    {
+      id: 6,
+      _id: 'test6',
+      title: 'A9 Algorithm Fundamentals',
+      subject: 'Amazon Search & SEO',
+      subjectId: 'sub2',
+      topicId: 'topic4',
+      topicName: 'A9 Algorithm',
+      subjectCode: 'SEO201',
+      subjectColor: 'green',
+      teacher: 'Michael Chen',
+      assignedDate: '2024-10-23',
+      dueDate: '2024-10-31',
+      duration: 15,
+      totalQuestions: 8,
+      passingScore: 70,
+      status: 'pending',
+      difficulty: 'medium',
+      type: 'topic',
+      questions: [
+        {
+          id: 'q1',
+          question: 'What is the primary ranking factor in Amazon\'s A9 algorithm?',
+          options: [
+            'Price',
+            'Sales velocity',
+            'Review count',
+            'Seller rating'
+          ],
+          correctAnswer: 1,
+          topic: 'A9 Algorithm'
+        }
+      ]
+    }
+  ];
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
   };
 
-  const toggleSubject = (subjectId) => {
-    setExpandedSubjects(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(subjectId)) {
-        newSet.delete(subjectId);
-      } else {
-        newSet.add(subjectId);
-      }
-      return newSet;
-    });
-  };
-
-  const toggleTopic = (topicId) => {
-    setExpandedTopics(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(topicId)) {
-        newSet.delete(topicId);
-      } else {
-        newSet.add(topicId);
-      }
-      return newSet;
-    });
-  };
-
-  const handlePlayVideo = (recording, subject, topic) => {
-    setActiveRecording({ 
-      ...recording, 
-      subjectColor: subject.color, 
-      subjectName: subject.name,
-      topicTitle: topic.title
-    });
-  };
-
-  // Simulate loading and set first video as default
+  // Initialize dummy data
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-      // Set first recording as default active recording
-      if (subjects.length > 0 && subjects[0].topics.length > 0 && subjects[0].topics[0].recordings.length > 0) {
-        setActiveRecording({
-          ...subjects[0].topics[0].recordings[0],
-          subjectColor: subjects[0].color,
-          subjectName: subjects[0].name,
-          topicTitle: subjects[0].topics[0].title
-        });
-      }
     }, 1000);
-
     return () => clearTimeout(timer);
   }, []);
 
-  // Calculate total recordings for a subject
-  const getSubjectRecordingsCount = (subject) => {
-    return subject.topics.reduce((sum, topic) => sum + topic.recordings.length, 0);
+  // Tab visibility detection
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && isAssessmentStarted && !showResults) {
+        // User left the tab/page during assessment
+        setShowWarning(true);
+        handleRestartAssessment();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isAssessmentStarted, showResults]);
+
+  // Timer countdown
+  useEffect(() => {
+    if (isAssessmentStarted && timeRemaining > 0 && !showResults) {
+      timerRef.current = setInterval(() => {
+        setTimeRemaining(prev => {
+          if (prev <= 1) {
+            handleSubmitAssessment();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => {
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+        }
+      };
+    }
+  }, [isAssessmentStarted, timeRemaining, showResults]);
+
+  const handleStartAssessment = (assessment) => {
+    setActiveAssessment(assessment);
+    setCurrentQuestionIndex(0);
+    setAnswers({});
+    setTimeRemaining(assessment.duration * 60); // Convert minutes to seconds
+    setIsAssessmentStarted(true);
+    setShowResults(false);
+    setShowWarning(false);
   };
 
+  const handleRestartAssessment = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    setCurrentQuestionIndex(0);
+    setAnswers({});
+    setTimeRemaining(activeAssessment.duration * 60);
+    setShowWarning(false);
+  };
+
+  const handleAnswerSelect = (questionId, answerIndex) => {
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: answerIndex
+    }));
+  };
+
+  const handleNextQuestion = () => {
+    if (currentQuestionIndex < activeAssessment.questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+    }
+  };
+
+  const handlePreviousQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(prev => prev - 1);
+    }
+  };
+
+  const handleSubmitAssessment = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+
+    // Calculate results
+    let correctAnswers = 0;
+    activeAssessment.questions.forEach(question => {
+      if (answers[question.id] === question.correctAnswer) {
+        correctAnswers++;
+      }
+    });
+
+    const score = Math.round((correctAnswers / activeAssessment.questions.length) * 100);
+    const passed = score >= activeAssessment.passingScore;
+
+    setAssessmentResults({
+      score,
+      correctAnswers,
+      totalQuestions: activeAssessment.questions.length,
+      passed,
+      answers: answers
+    });
+
+    setShowResults(true);
+    setIsAssessmentStarted(false);
+
+    // Update assessment status
+    setAssessments(prev => prev.map(a => 
+      a.id === activeAssessment.id 
+        ? { ...a, status: 'completed', score, completedDate: new Date().toISOString().split('T')[0] }
+        : a
+    ));
+  };
+
+  const handleBackToList = () => {
+    setActiveAssessment(null);
+    setIsAssessmentStarted(false);
+    setShowResults(false);
+    setAnswers({});
+    setCurrentQuestionIndex(0);
+    setViewingCompletedAssessment(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleViewCompletedAssessment = (assessment) => {
+    setViewingCompletedAssessment(assessment);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleRequestRetake = () => {
+    toast.error('Please contact your teacher to request permission to retake this assessment.', {
+      duration: 5000,
+      icon: '📧'
+    });
+  };
+
+  const handleCreateStudyPlan = () => {
+    setStudyPlanModal(viewingCompletedAssessment);
+    setCurrentNote('');
+    setEditingNoteId(null);
+    if (!focusAreas[viewingCompletedAssessment.id]) {
+      setFocusAreas(prev => ({
+        ...prev,
+        [viewingCompletedAssessment.id]: []
+      }));
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCloseStudyPlan = () => {
+    setStudyPlanModal(null);
+    setCurrentNote('');
+    setEditingNoteId(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleAddNote = (assessmentId) => {
+    if (currentNote.trim().length === 0) {
+      toast.error('Please enter a note');
+      return;
+    }
+
+    const newNote = {
+      id: Date.now(),
+      text: currentNote.trim(),
+      createdAt: new Date().toISOString()
+    };
+
+    setFocusAreas(prev => ({
+      ...prev,
+      [assessmentId]: [...(prev[assessmentId] || []), newNote]
+    }));
+
+    setCurrentNote('');
+    toast.success('Note added successfully');
+  };
+
+  const handleEditNote = (assessmentId, noteId) => {
+    const note = focusAreas[assessmentId]?.find(n => n.id === noteId);
+    if (note) {
+      setCurrentNote(note.text);
+      setEditingNoteId(noteId);
+    }
+  };
+
+  const handleUpdateNote = (assessmentId) => {
+    if (currentNote.trim().length === 0) {
+      toast.error('Please enter a note');
+      return;
+    }
+
+    setFocusAreas(prev => ({
+      ...prev,
+      [assessmentId]: prev[assessmentId].map(note =>
+        note.id === editingNoteId
+          ? { ...note, text: currentNote.trim(), updatedAt: new Date().toISOString() }
+          : note
+      )
+    }));
+
+    setCurrentNote('');
+    setEditingNoteId(null);
+    toast.success('Note updated successfully');
+  };
+
+  const handleDeleteNote = (assessmentId, noteId) => {
+    if (confirm('Are you sure you want to delete this note?')) {
+      setFocusAreas(prev => ({
+        ...prev,
+        [assessmentId]: prev[assessmentId].filter(note => note.id !== noteId)
+      }));
+      toast.success('Note deleted');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setCurrentNote('');
+    setEditingNoteId(null);
+  };
+
+  const handlePlayVideo = (video) => {
+    setPlayingVideo(video);
+  };
+
+  const handleCloseVideo = () => {
+    setPlayingVideo(null);
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getDaysRemaining = (dueDate) => {
+    const today = new Date();
+    const due = new Date(dueDate);
+    const diffTime = due - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const getDifficultyColor = (difficulty) => {
+    switch (difficulty) {
+      case 'easy': return 'green';
+      case 'medium': return 'yellow';
+      case 'hard': return 'red';
+      default: return 'slate';
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'pending': return 'blue';
+      case 'in-progress': return 'orange';
+      case 'completed': return 'green';
+      default: return 'slate';
+    }
+  };
+
+  // Get selected subject data
+  const selectedSubjectData = dummySubjects.find(s => s._id === selectedSubject);
+  
+  // Get topics for selected subject
+  const currentTopics = selectedSubjectData?.topics || [];
+  
+  // Filter subject-level tests by selected subject
+  const displayedSubjectTests = selectedSubject 
+    ? dummySubjectTests.filter(t => t.subjectId === selectedSubject)
+    : [];
+  
+  // Filter topic-level tests by selected topic
+  const displayedTopicTests = selectedTopic
+    ? dummyTopicTests.filter(t => t.topicId === selectedTopic)
+    : [];
+
+  // Render test card component
+  const renderTestCard = (assessment) => {
+    const isPending = assessment.status === 'pending';
+    const isCompleted = assessment.status === 'completed';
+    
+    if (isPending) {
+      const daysRemaining = getDaysRemaining(assessment.dueDate);
+      const isUrgent = daysRemaining <= 2;
+      
+      return (
+        <div
+          key={assessment.id || assessment._id}
+          className={`bg-white rounded-xl shadow-sm border-2 overflow-hidden hover:shadow-lg transition-all ${
+            isUrgent ? 'border-red-300' : 'border-slate-200'
+          }`}
+        >
+          {isUrgent && (
+            <div className="bg-red-500 text-white text-xs font-bold px-4 py-1 text-center">
+              <i className="fas fa-exclamation-triangle mr-1"></i>
+              DUE SOON!
+            </div>
+          )}
+          <div className="p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className={`w-12 h-12 bg-gradient-to-br from-${assessment.subjectColor}-500 to-${assessment.subjectColor}-600 rounded-lg flex items-center justify-center flex-shrink-0`}>
+                <span className="text-white font-bold text-xs">{assessment.subjectCode}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-slate-900 text-lg mb-1">{assessment.title}</h3>
+                <p className="text-sm text-slate-600">{assessment.subject}</p>
+              </div>
+            </div>
+            <div className="space-y-2 mb-4 text-sm">
+              <div className="flex items-center gap-2 text-slate-600">
+                <i className="fas fa-user-tie w-4"></i>
+                <span>{assessment.teacher}</span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-600">
+                <i className="fas fa-clock w-4"></i>
+                <span>{assessment.duration} minutes</span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-600">
+                <i className="fas fa-question-circle w-4"></i>
+                <span>{assessment.totalQuestions} questions</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <i className={`fas fa-calendar w-4 ${isUrgent ? 'text-red-600' : 'text-slate-600'}`}></i>
+                <span className={isUrgent ? 'text-red-600 font-semibold' : 'text-slate-600'}>
+                  Due: {new Date(assessment.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {daysRemaining >= 0 && ` (${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} left)`}
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 mb-4">
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold bg-${getDifficultyColor(assessment.difficulty)}-100 text-${getDifficultyColor(assessment.difficulty)}-700 capitalize`}>
+                {assessment.difficulty}
+              </span>
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
+                Passing: {assessment.passingScore}%
+              </span>
+            </div>
+            <button
+              onClick={() => handleStartAssessment(assessment)}
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+            >
+              <i className="fas fa-play-circle"></i>
+              Start Assessment
+            </button>
+          </div>
+        </div>
+      );
+    } else if (isCompleted) {
+      return (
+        <div
+          key={assessment.id || assessment._id}
+          className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-all"
+        >
+          <div className="p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className={`w-12 h-12 bg-gradient-to-br from-${assessment.subjectColor}-500 to-${assessment.subjectColor}-600 rounded-lg flex items-center justify-center flex-shrink-0`}>
+                <span className="text-white font-bold text-xs">{assessment.subjectCode}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-slate-900 text-lg mb-1">{assessment.title}</h3>
+                <p className="text-sm text-slate-600">{assessment.subject}</p>
+              </div>
+              <div className="text-right">
+                <div className={`text-2xl font-bold ${assessment.score >= assessment.passingScore ? 'text-green-600' : 'text-red-600'}`}>
+                  {assessment.score}%
+                </div>
+              </div>
+            </div>
+            <div className="space-y-2 mb-4 text-sm">
+              <div className="flex items-center gap-2 text-slate-600">
+                <i className="fas fa-calendar-check w-4"></i>
+                <span>Completed: {new Date(assessment.completedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <i className={`fas ${assessment.score >= assessment.passingScore ? 'fa-check-circle text-green-600' : 'fa-times-circle text-red-600'} w-4`}></i>
+                <span className={assessment.score >= assessment.passingScore ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
+                  {assessment.score >= assessment.passingScore ? 'Passed' : 'Failed'}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => handleViewCompletedAssessment(assessment)}
+              className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition-all flex items-center justify-center gap-2"
+            >
+              <i className="fas fa-eye"></i>
+              View Details
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  if (activeAssessment && isAssessmentStarted && !showResults) {
+    // Assessment Taking View
+    const currentQuestion = activeAssessment.questions[currentQuestionIndex];
+    const progress = ((currentQuestionIndex + 1) / activeAssessment.questions.length) * 100;
+    const isTimeLow = timeRemaining <= 300; // 5 minutes
+
+    return (
+      <>
+        <div className="min-h-screen bg-slate-50 flex flex-col">
+          {/* Header with Timer */}
+          <div className="bg-white shadow-md border-b-2 border-slate-200 sticky top-0 z-50">
+            <div className="max-w-4xl mx-auto px-4 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <h2 className="text-lg font-bold text-slate-900">{activeAssessment.title}</h2>
+                  <p className="text-sm text-slate-600">
+                    Question {currentQuestionIndex + 1} of {activeAssessment.questions.length}
+                  </p>
+                </div>
+                <div className={`text-right ${isTimeLow ? 'animate-pulse' : ''}`}>
+                  <div className={`text-2xl font-bold ${isTimeLow ? 'text-red-600' : 'text-blue-600'}`}>
+                    <i className="fas fa-clock mr-2"></i>
+                    {formatTime(timeRemaining)}
+                  </div>
+                  <p className="text-xs text-slate-600">Time Remaining</p>
+                </div>
+              </div>
+              {/* Progress Bar */}
+              <div className="mt-3 bg-slate-200 rounded-full h-2 overflow-hidden">
+                <div 
+                  className="bg-blue-600 h-full transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Warning Message */}
+          {showWarning && (
+            <div className="bg-red-50 border-l-4 border-red-500 p-4 m-4">
+              <div className="flex items-center">
+                <i className="fas fa-exclamation-triangle text-red-600 text-xl mr-3"></i>
+                <div>
+                  <p className="text-red-800 font-semibold">Assessment Restarted</p>
+                  <p className="text-red-700 text-sm">You left the page. Your assessment has been restarted for integrity purposes.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Question Content */}
+          <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-8">
+            <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6 lg:p-8">
+              {/* Topic Badge */}
+              <div className="mb-4">
+                <span className="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                  <i className="fas fa-tag mr-1"></i>
+                  {currentQuestion.topic}
+                </span>
+              </div>
+
+              {/* Question */}
+              <h3 className="text-xl lg:text-2xl font-bold text-slate-900 mb-6">
+                {currentQuestion.question}
+              </h3>
+
+              {/* Options */}
+              <div className="space-y-3">
+                {currentQuestion.options.map((option, index) => {
+                  const isSelected = answers[currentQuestion.id] === index;
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => handleAnswerSelect(currentQuestion.id, index)}
+                      className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
+                        isSelected
+                          ? 'border-blue-500 bg-blue-50 shadow-md'
+                          : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                          isSelected
+                            ? 'border-blue-500 bg-blue-500'
+                            : 'border-slate-300'
+                        }`}>
+                          {isSelected && <i className="fas fa-check text-white text-xs"></i>}
+                        </div>
+                        <span className={`text-sm lg:text-base ${isSelected ? 'text-blue-900 font-medium' : 'text-slate-700'}`}>
+                          {option}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Navigation Buttons */}
+            <div className="flex items-center justify-between mt-6 gap-4">
+              <button
+                onClick={handlePreviousQuestion}
+                disabled={currentQuestionIndex === 0}
+                className={`px-6 py-3 rounded-lg font-medium transition-all ${
+                  currentQuestionIndex === 0
+                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                    : 'bg-white border-2 border-slate-300 text-slate-700 hover:border-slate-400 hover:shadow-md'
+                }`}
+              >
+                <i className="fas fa-arrow-left mr-2"></i>
+                Previous
+              </button>
+
+              {currentQuestionIndex === activeAssessment.questions.length - 1 ? (
+                <button
+                  onClick={handleSubmitAssessment}
+                  className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
+                >
+                  Submit Assessment
+                  <i className="fas fa-check ml-2"></i>
+                </button>
+              ) : (
+                <button
+                  onClick={handleNextQuestion}
+                  className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
+                >
+                  Next
+                  <i className="fas fa-arrow-right ml-2"></i>
+                </button>
+              )}
+            </div>
+
+            {/* Question Navigator */}
+            <div className="mt-8 bg-white rounded-xl shadow-lg border border-slate-200 p-6">
+              <h4 className="text-sm font-semibold text-slate-700 mb-3">Question Navigator</h4>
+              <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+                {activeAssessment.questions.map((q, index) => {
+                  const isAnswered = answers[q.id] !== undefined;
+                  const isCurrent = index === currentQuestionIndex;
+                  return (
+                    <button
+                      key={q.id}
+                      onClick={() => setCurrentQuestionIndex(index)}
+                      className={`aspect-square rounded-lg font-semibold text-sm transition-all ${
+                        isCurrent
+                          ? 'bg-blue-600 text-white shadow-md scale-110'
+                          : isAnswered
+                          ? 'bg-green-100 text-green-700 border-2 border-green-300 hover:bg-green-200'
+                          : 'bg-slate-100 text-slate-600 border-2 border-slate-200 hover:bg-slate-200'
+                      }`}
+                    >
+                      {index + 1}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex items-center gap-4 mt-4 text-xs text-slate-600">
+                <div className="flex items-center gap-1">
+                  <div className="w-4 h-4 bg-green-100 border-2 border-green-300 rounded"></div>
+                  <span>Answered</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-4 h-4 bg-slate-100 border-2 border-slate-200 rounded"></div>
+                  <span>Not Answered</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-4 h-4 bg-blue-600 rounded"></div>
+                  <span>Current</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (showResults && assessmentResults) {
+    // Results View
+    return (
+      <>
+        <StudentMenuNavigation currentPage={currentPage} onPageChange={handlePageChange} />
+        <div className="min-h-screen bg-slate-50 lg:ml-72">
+          <div className="max-w-4xl mx-auto px-4 py-8 pt-20 lg:pt-8">
+            <div className="text-center mb-8">
+              {/* Score Circle */}
+              <div className="inline-block relative">
+                <svg className="w-48 h-48">
+                  <circle
+                    cx="96"
+                    cy="96"
+                    r="88"
+                    fill="none"
+                    stroke="#e2e8f0"
+                    strokeWidth="12"
+                  />
+                  <circle
+                    cx="96"
+                    cy="96"
+                    r="88"
+                    fill="none"
+                    stroke={assessmentResults.passed ? '#10b981' : '#ef4444'}
+                    strokeWidth="12"
+                    strokeDasharray={`${(assessmentResults.score / 100) * 553} 553`}
+                    strokeLinecap="round"
+                    transform="rotate(-90 96 96)"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className={`text-5xl font-bold ${assessmentResults.passed ? 'text-green-600' : 'text-red-600'}`}>
+                    {assessmentResults.score}%
+                  </span>
+                  <span className="text-sm text-slate-600 mt-1">Your Score</span>
+                </div>
+              </div>
+
+              {/* Result Message */}
+              <div className="mt-6">
+                {assessmentResults.passed ? (
+                  <div className="inline-flex items-center gap-2 px-6 py-3 bg-green-100 text-green-800 rounded-full font-semibold">
+                    <i className="fas fa-check-circle text-xl"></i>
+                    Congratulations! You Passed
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-2 px-6 py-3 bg-red-100 text-red-800 rounded-full font-semibold">
+                    <i className="fas fa-times-circle text-xl"></i>
+                    You Did Not Pass
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-center">
+                <i className="fas fa-check-circle text-green-600 text-3xl mb-2"></i>
+                <p className="text-3xl font-bold text-slate-900">{assessmentResults.correctAnswers}</p>
+                <p className="text-sm text-slate-600">Correct Answers</p>
+              </div>
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-center">
+                <i className="fas fa-times-circle text-red-600 text-3xl mb-2"></i>
+                <p className="text-3xl font-bold text-slate-900">
+                  {assessmentResults.totalQuestions - assessmentResults.correctAnswers}
+                </p>
+                <p className="text-sm text-slate-600">Incorrect Answers</p>
+              </div>
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-center">
+                <i className="fas fa-clipboard-check text-blue-600 text-3xl mb-2"></i>
+                <p className="text-3xl font-bold text-slate-900">{assessmentResults.totalQuestions}</p>
+                <p className="text-sm text-slate-600">Total Questions</p>
+              </div>
+            </div>
+
+            {/* Detailed Review */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i className="fas fa-list-check text-blue-600"></i>
+                Detailed Review
+              </h3>
+              <div className="space-y-4">
+                {activeAssessment.questions.map((question, index) => {
+                  const userAnswer = assessmentResults.answers[question.id];
+                  const isCorrect = userAnswer === question.correctAnswer;
+                  
+                  return (
+                    <div key={question.id} className={`p-4 rounded-lg border-2 ${isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+                      <div className="flex items-start gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          isCorrect ? 'bg-green-500' : 'bg-red-500'
+                        }`}>
+                          <i className={`fas ${isCorrect ? 'fa-check' : 'fa-times'} text-white`}></i>
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900 mb-2">Q{index + 1}. {question.question}</p>
+                          <div className="space-y-1 text-sm">
+                            <p className={userAnswer !== undefined ? (isCorrect ? 'text-green-700' : 'text-red-700') : 'text-slate-600'}>
+                              <strong>Your Answer:</strong> {userAnswer !== undefined ? question.options[userAnswer] : 'Not answered'}
+                            </p>
+                            {!isCorrect && (
+                              <p className="text-green-700">
+                                <strong>Correct Answer:</strong> {question.options[question.correctAnswer]}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                onClick={handleBackToList}
+                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
+              >
+                <i className="fas fa-arrow-left mr-2"></i>
+                Back to Assessments
+              </button>
+              {!assessmentResults.passed && (
+                <button
+                  onClick={handleRequestRetake}
+                  className="px-8 py-3 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
+                >
+                  <i className="fas fa-redo mr-2"></i>
+                  Request Retake
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Completed Assessment Details View
+  if (viewingCompletedAssessment && !studyPlanModal) {
+    const correctAnswers = viewingCompletedAssessment.questions.filter(
+      q => viewingCompletedAssessment.userAnswers[q.id] === q.correctAnswer
+    ).length;
+
+    return (
+      <>
+        {!playingVideo && (
+          <StudentMenuNavigation currentPage={currentPage} onPageChange={handlePageChange} />
+        )}
+        <div className={`min-h-screen bg-slate-50 ${!playingVideo ? 'lg:ml-72' : ''}`}>
+          <div className="max-w-4xl mx-auto px-4 py-8 pt-20 lg:pt-8">
+            {/* Header with Close Button */}
+            <div className="flex items-center justify-between mb-8">
+              <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Review Results</h1>
+              <button
+                onClick={handleBackToList}
+                className="w-10 h-10 flex items-center justify-center bg-white hover:bg-slate-100 border border-slate-200 rounded-full text-slate-600 hover:text-slate-900 transition-all"
+                title="Close"
+              >
+                <i className="fas fa-times text-xl"></i>
+              </button>
+            </div>
+
+            <div className="text-center mb-8">
+              {/* Score Circle */}
+              <div className="inline-block relative">
+                <svg className="w-48 h-48">
+                  <circle
+                    cx="96"
+                    cy="96"
+                    r="88"
+                    fill="none"
+                    stroke="#e2e8f0"
+                    strokeWidth="12"
+                  />
+                  <circle
+                    cx="96"
+                    cy="96"
+                    r="88"
+                    fill="none"
+                    stroke={viewingCompletedAssessment.score >= viewingCompletedAssessment.passingScore ? '#10b981' : '#ef4444'}
+                    strokeWidth="12"
+                    strokeDasharray={`${(viewingCompletedAssessment.score / 100) * 553} 553`}
+                    strokeLinecap="round"
+                    transform="rotate(-90 96 96)"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className={`text-5xl font-bold ${viewingCompletedAssessment.score >= viewingCompletedAssessment.passingScore ? 'text-green-600' : 'text-red-600'}`}>
+                    {viewingCompletedAssessment.score}%
+                  </span>
+                  <span className="text-sm text-slate-600 mt-1">Your Score</span>
+                </div>
+              </div>
+
+              {/* Result Message */}
+              <div className="mt-6">
+                {viewingCompletedAssessment.score >= viewingCompletedAssessment.passingScore ? (
+                  <div className="inline-flex items-center gap-2 px-6 py-3 bg-green-100 text-green-800 rounded-full font-semibold">
+                    <i className="fas fa-check-circle text-xl"></i>
+                    You Passed!
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-2 px-6 py-3 bg-red-100 text-red-800 rounded-full font-semibold">
+                    <i className="fas fa-times-circle text-xl"></i>
+                    You Did Not Pass
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-3 gap-2 md:gap-4 mb-8">
+              <div className="bg-white rounded-lg md:rounded-xl shadow-sm border border-slate-200 p-3 md:p-6 text-center">
+                <i className="fas fa-check-circle text-green-600 text-xl md:text-3xl mb-1 md:mb-2"></i>
+                <p className="text-xl md:text-3xl font-bold text-slate-900">{correctAnswers}</p>
+                <p className="text-xs md:text-sm text-slate-600">Correct</p>
+              </div>
+              <div className="bg-white rounded-lg md:rounded-xl shadow-sm border border-slate-200 p-3 md:p-6 text-center">
+                <i className="fas fa-times-circle text-red-600 text-xl md:text-3xl mb-1 md:mb-2"></i>
+                <p className="text-xl md:text-3xl font-bold text-slate-900">
+                  {viewingCompletedAssessment.totalQuestions - correctAnswers}
+                </p>
+                <p className="text-xs md:text-sm text-slate-600">Incorrect</p>
+              </div>
+              <div className="bg-white rounded-lg md:rounded-xl shadow-sm border border-slate-200 p-3 md:p-6 text-center">
+                <i className="fas fa-clipboard-check text-blue-600 text-xl md:text-3xl mb-1 md:mb-2"></i>
+                <p className="text-xl md:text-3xl font-bold text-slate-900">{viewingCompletedAssessment.totalQuestions}</p>
+                <p className="text-xs md:text-sm text-slate-600">Total</p>
+              </div>
+            </div>
+
+            {/* Detailed Review */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i className="fas fa-list-check text-blue-600"></i>
+                Detailed Review
+              </h3>
+              <div className="space-y-4">
+                {viewingCompletedAssessment.questions.map((question, index) => {
+                  const userAnswer = viewingCompletedAssessment.userAnswers[question.id];
+                  const isCorrect = userAnswer === question.correctAnswer;
+                  
+                  return (
+                    <div key={question.id} className={`p-4 rounded-lg border-2 ${isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+                      <div className="flex items-start gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          isCorrect ? 'bg-green-500' : 'bg-red-500'
+                        }`}>
+                          <i className={`fas ${isCorrect ? 'fa-check' : 'fa-times'} text-white`}></i>
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900 mb-2">Q{index + 1}. {question.question}</p>
+                          <div className="space-y-1 text-sm">
+                            <p className={userAnswer !== undefined ? (isCorrect ? 'text-green-700' : 'text-red-700') : 'text-slate-600'}>
+                              <strong>Your Answer:</strong> {userAnswer !== undefined ? question.options[userAnswer] : 'Not answered'}
+                            </p>
+                            {!isCorrect && (
+                              <p className="text-green-700">
+                                <strong>Correct Answer:</strong> {question.options[question.correctAnswer]}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
+              <button
+                onClick={handleBackToList}
+                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
+              >
+                <i className="fas fa-arrow-left mr-2"></i>
+                Back to Assessments
+              </button>
+              <button
+                onClick={handleCreateStudyPlan}
+                className="px-8 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
+              >
+                <i className="fas fa-book-reader mr-2"></i>
+                Create Study Plan
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Video Player Modal */}
+        <VideoPlayerModal
+          video={playingVideo}
+          onClose={handleCloseVideo}
+        />
+      </>
+    );
+  }
+
+  // Study Plan Modal View
+  if (studyPlanModal) {
+    const wrongQuestions = studyPlanModal.questions.filter(
+      q => studyPlanModal.userAnswers[q.id] !== q.correctAnswer
+    );
+
+    return (
+      <>
+        {!playingVideo && (
+          <StudentMenuNavigation currentPage={currentPage} onPageChange={handlePageChange} />
+        )}
+        <div className={`min-h-screen bg-slate-50 ${!playingVideo ? 'lg:ml-72' : ''}`}>
+          <div className="max-w-6xl mx-auto px-4 py-8 pt-20 lg:pt-8">
+            {/* Header */}
+            <div className="mb-8">
+              <button
+                onClick={handleCloseStudyPlan}
+                className="mb-4 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-all flex items-center gap-2"
+              >
+                <i className="fas fa-arrow-left"></i>
+                Back to Review
+              </button>
+              <h1 className="text-3xl font-bold text-slate-900 mb-2">Study Plan</h1>
+              <p className="text-slate-600">{studyPlanModal.title}</p>
+            </div>
+
+            {/* Questions You Got Wrong */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i className="fas fa-times-circle text-red-600"></i>
+                Questions You Got Wrong
+              </h3>
+              {wrongQuestions.length > 0 ? (
+                <div className="space-y-3">
+                  {wrongQuestions.map((question, index) => (
+                    <div key={question.id} className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="font-medium text-slate-900 mb-2">Q. {question.question}</p>
+                      <div className="text-sm space-y-1">
+                        <p className="text-red-700">
+                          <strong>Your Answer:</strong> {studyPlanModal.userAnswers[question.id] !== undefined ? question.options[studyPlanModal.userAnswers[question.id]] : 'Not answered'}
+                        </p>
+                        <p className="text-green-700">
+                          <strong>Correct Answer:</strong> {question.options[question.correctAnswer]}
+                        </p>
+                        <p className="text-purple-700">
+                          <strong>Topic:</strong> {question.topic}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-slate-600 py-4">You answered all questions correctly! 🎉</p>
+              )}
+            </div>
+
+            {/* Focus Areas Section */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i className="fas fa-clipboard-list text-orange-600"></i>
+                Focus Areas & Study Notes
+              </h3>
+              
+              {/* Add/Edit Note Form */}
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  {editingNoteId ? 'Edit Note' : 'Add a New Note'} (Max 300 characters)
+                </label>
+                <textarea
+                  value={currentNote}
+                  onChange={(e) => {
+                    if (e.target.value.length <= 300) {
+                      setCurrentNote(e.target.value);
+                    }
+                  }}
+                  placeholder="E.g., Need to review audience targeting strategies, confused about attribution windows..."
+                  className="w-full px-4 py-3 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                  rows="3"
+                />
+                <div className="flex justify-between items-center mt-2">
+                  <span className={`text-xs ${currentNote.length >= 300 ? 'text-red-600 font-bold' : 'text-slate-500'}`}>
+                    {currentNote.length}/300 characters
+                  </span>
+                  <div className="flex gap-2">
+                    {editingNoteId && (
+                      <button
+                        onClick={handleCancelEdit}
+                        className="px-4 py-2 bg-slate-400 hover:bg-slate-500 text-white rounded-lg text-sm font-medium transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                    <button
+                      onClick={() => editingNoteId ? handleUpdateNote(studyPlanModal.id) : handleAddNote(studyPlanModal.id)}
+                      className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                    >
+                      <i className={`fas ${editingNoteId ? 'fa-check' : 'fa-plus'}`}></i>
+                      {editingNoteId ? 'Update Note' : 'Add Note'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Saved Notes */}
+              {focusAreas[studyPlanModal.id] && focusAreas[studyPlanModal.id].length > 0 ? (
+                <div>
+                  <p className="text-sm font-medium text-slate-700 mb-3">Your Notes:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {focusAreas[studyPlanModal.id].map((note) => (
+                      <div
+                        key={note.id}
+                        className="bg-white border border-orange-200 rounded-lg p-3 hover:shadow-md transition-shadow flex flex-col h-full"
+                      >
+                        <div className="flex-1 mb-3">
+                          <p className="text-slate-900 text-sm whitespace-pre-wrap break-words">{note.text}</p>
+                        </div>
+                        <div className="border-t border-orange-100 pt-2 mt-auto">
+                          <p className="text-xs text-slate-500 mb-2 flex items-center gap-1">
+                            <i className="fas fa-clock"></i>
+                            <span className="truncate">
+                              {new Date(note.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              {note.updatedAt && ' (edited)'}
+                            </span>
+                          </p>
+                          <div className="flex gap-2 justify-center">
+                            <button
+                              onClick={() => handleEditNote(studyPlanModal.id, note.id)}
+                              className="flex-1 p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors text-center"
+                              title="Edit note"
+                            >
+                              <i className="fas fa-edit"></i>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteNote(studyPlanModal.id, note.id)}
+                              className="flex-1 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-center"
+                              title="Delete note"
+                            >
+                              <i className="fas fa-trash"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-center text-slate-600">
+                  <i className="fas fa-sticky-note text-slate-400 text-2xl mb-2"></i>
+                  <p className="text-sm">No notes yet. Add your first note above!</p>
+                </div>
+              )}
+            </div>
+
+            {/* Related Videos Section */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i className="fas fa-video text-blue-600"></i>
+                Recommended Videos to Review
+              </h3>
+              {studyPlanModal.relatedVideos && studyPlanModal.relatedVideos.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {studyPlanModal.relatedVideos.map((video) => (
+                    <div
+                      key={video.id}
+                      onClick={() => handlePlayVideo(video)}
+                      className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4 cursor-pointer hover:shadow-lg transition-all hover:scale-105"
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <i className="fab fa-youtube text-white text-xl"></i>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-slate-900 text-sm truncate">{video.title}</p>
+                          <p className="text-xs text-slate-600">{video.duration}</p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-blue-700 font-medium">
+                        <i className="fas fa-tag mr-1"></i>
+                        {video.topic}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-slate-600 py-4">No videos available for this assessment.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Video Player Modal */}
+        <VideoPlayerModal
+          video={playingVideo}
+          onClose={handleCloseVideo}
+        />
+      </>
+    );
+  }
+
+  // Main Assessment List View
   return (
     <>
-      <LoaderOverlay isVisible={isLoading} title="Classroom Recordings" subtitle="Loading recordings..." />
+      <LoaderOverlay isVisible={isLoading} title="Course Assessments" subtitle="Loading assessments..." />
       
       <StudentMenuNavigation currentPage={currentPage} onPageChange={handlePageChange} />
       
@@ -236,181 +1521,124 @@ const Abc = () => {
         <div className="bg-white shadow-sm border-b border-slate-200">
           <div className="px-4 sm:px-6 lg:px-8 py-4 pt-16 lg:pt-4">
             <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 flex items-center gap-3">
-              <i className="fas fa-video text-blue-600"></i>
-              Classroom Recordings
+              <i className="fas fa-clipboard-check text-blue-600"></i>
+              Course Assessments
             </h1>
+            <p className="text-sm text-slate-600 mt-1">
+              Complete your assigned assessments and track your progress
+            </p>
           </div>
         </div>
 
-        {/* Main Content - Split Layout */}
-        <div className="flex flex-col lg:flex-row h-[calc(100vh-73px)] lg:h-[calc(100vh-89px)]">
-          {/* Left Side - Video Player */}
-          <div className="lg:w-[65%] bg-black flex flex-col">
-            {activeRecording ? (
-              <>
-                {/* Video Player */}
-                <div className="flex-1 bg-black flex items-center justify-center">
-                  <div className="w-full h-full">
-                    <iframe
-                      src={`https://www.youtube.com/embed/${activeRecording.videoId}?autoplay=0`}
-                      title={activeRecording.title}
-                      className="w-full h-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    ></iframe>
-                  </div>
-                </div>
-                
-                {/* Video Info */}
-                <div className="bg-slate-900 text-white px-3 py-2 lg:px-4 lg:py-3">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-8 h-8 bg-gradient-to-br from-${activeRecording.subjectColor}-500 to-${activeRecording.subjectColor}-600 rounded-lg flex items-center justify-center flex-shrink-0`}>
-                      <i className="fab fa-youtube text-white text-sm"></i>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h2 className="text-sm lg:text-base font-semibold truncate">{activeRecording.title}</h2>
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 mt-0.5">
-                        <span>{activeRecording.subjectName}</span>
-                        <span>•</span>
-                        <span>{activeRecording.duration}</span>
-                        <span>•</span>
-                        <span>{activeRecording.addedBy}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center text-slate-400">
-                  <i className="fas fa-video text-6xl mb-4"></i>
-                  <p className="text-lg">Select a video to start watching</p>
-                </div>
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Subject Filter */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Select Subject
+            </label>
+            <select
+              value={selectedSubject}
+              onChange={(e) => {
+                setSelectedSubject(e.target.value);
+                setSelectedTopic(''); // Reset topic when subject changes
+              }}
+              className="w-full md:w-64 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">-- Select a Subject --</option>
+              {dummySubjects.map((subject) => (
+                <option key={subject._id} value={subject._id}>
+                  {subject.name} ({subject.code})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Subject-Level Tests */}
+          {selectedSubject && displayedSubjectTests.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i className="fas fa-book text-blue-600"></i>
+                Subject-Level Tests
+              </h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {displayedSubjectTests.map(assessment => renderTestCard(assessment))}
               </div>
-            )}
-          </div>
-
-          {/* Right Side - Playlist/Accordion */}
-          <div className="lg:w-[35%] bg-white border-t lg:border-t-0 lg:border-l border-slate-200 overflow-y-auto">
-            <div className="sticky top-0 bg-slate-50 border-b border-slate-200 px-3 py-2 z-10">
-              <h3 className="font-semibold text-sm text-slate-900 flex items-center gap-2">
-                <i className="fas fa-list text-blue-600 text-xs"></i>
-                All Recordings
-              </h3>
-              <p className="text-xs text-slate-600 mt-0.5">
-                {subjects.reduce((sum, s) => sum + getSubjectRecordingsCount(s), 0)} videos
-              </p>
             </div>
+          )}
 
-            {/* Subjects List */}
-            <div className="divide-y divide-slate-200">
-              {subjects.map((subject) => {
-                const isSubjectExpanded = expandedSubjects.has(subject.id);
-                const totalRecordings = getSubjectRecordingsCount(subject);
-
-                return (
-                  <div key={subject.id} className="bg-white">
-                    {/* Subject Header */}
-                    <div
-                      className="p-2 cursor-pointer hover:bg-slate-50 transition-colors"
-                      onClick={() => toggleSubject(subject.id)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className={`w-9 h-9 bg-gradient-to-br from-${subject.color}-500 to-${subject.color}-600 rounded-lg flex items-center justify-center flex-shrink-0`}>
-                          <span className="text-white font-bold text-[9px] leading-tight">{subject.code}</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-slate-900 text-sm truncate">{subject.name}</h4>
-                          <p className="text-xs text-slate-600 flex items-center gap-1">
-                            <i className="fas fa-film text-[10px]"></i>
-                            {totalRecordings} video{totalRecordings !== 1 ? 's' : ''}
-                          </p>
-                        </div>
-                        <i className={`fas fa-chevron-${isSubjectExpanded ? 'up' : 'down'} text-${subject.color}-600 text-xs`}></i>
-                      </div>
+          {/* Topics List */}
+          {selectedSubject && currentTopics.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i className="fas fa-tags text-purple-600"></i>
+                Topics
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+                {currentTopics.map((topic) => (
+                  <button
+                    key={topic._id}
+                    onClick={() => setSelectedTopic(topic._id)}
+                    className={`p-4 rounded-lg border-2 text-left transition-all ${
+                      selectedTopic === topic._id
+                        ? 'border-purple-500 bg-purple-50 shadow-md'
+                        : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <i className={`fas fa-tag ${selectedTopic === topic._id ? 'text-purple-600' : 'text-slate-500'}`}></i>
+                      <span className={`font-medium ${selectedTopic === topic._id ? 'text-purple-900' : 'text-slate-700'}`}>
+                        {topic.name}
+                      </span>
                     </div>
-
-                    {/* Topics & Recordings */}
-                    {isSubjectExpanded && (
-                      <div className="bg-slate-50 px-2 pb-2">
-                        {subject.topics.map((topic) => {
-                          const isTopicExpanded = expandedTopics.has(topic.id);
-
-                          return (
-                            <div key={topic.id} className="mb-1.5">
-                              {/* Topic Header */}
-                              <div
-                                className="bg-white rounded-lg p-1.5 cursor-pointer hover:bg-slate-100 transition-colors border border-slate-200"
-                                onClick={() => toggleTopic(topic.id)}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-slate-900 text-xs truncate">{topic.title}</p>
-                                    <p className="text-xs text-slate-600 flex items-center gap-1 mt-0.5">
-                                      <i className="fas fa-play-circle text-[10px]"></i>
-                                      {topic.recordings.length} video{topic.recordings.length !== 1 ? 's' : ''}
-                                    </p>
-                                  </div>
-                                  <i className={`fas fa-chevron-${isTopicExpanded ? 'up' : 'down'} text-${subject.color}-600 text-xs`}></i>
-                                </div>
-                              </div>
-
-                              {/* Recordings List */}
-                              {isTopicExpanded && (
-                                <div className="mt-1.5 space-y-1 pl-1.5">
-                                  {topic.recordings.map((recording) => {
-                                    const isActive = activeRecording?.id === recording.id;
-                                    return (
-                                      <div
-                                        key={recording.id}
-                                        className={`rounded-lg p-1.5 cursor-pointer transition-all ${
-                                          isActive 
-                                            ? `bg-${subject.color}-100 border-2 border-${subject.color}-400` 
-                                            : 'bg-white border border-slate-200 hover:border-slate-300 hover:shadow-sm'
-                                        }`}
-                                        onClick={() => handlePlayVideo(recording, subject, topic)}
-                                      >
-                                        <div className="flex items-center gap-2">
-                                          <div className={`w-7 h-7 rounded flex items-center justify-center flex-shrink-0 ${
-                                            isActive ? `bg-${subject.color}-500` : `bg-${subject.color}-100`
-                                          }`}>
-                                            <i className={`fab fa-youtube ${isActive ? 'text-white' : `text-${subject.color}-600`} text-xs`}></i>
-                                          </div>
-                                          <div className="flex-1 min-w-0">
-                                            <p className={`text-xs font-medium truncate ${
-                                              isActive ? `text-${subject.color}-900` : 'text-slate-900'
-                                            }`}>{recording.title}</p>
-                                            <span className="text-xs text-slate-600 flex items-center gap-1 mt-0.5">
-                                              <i className="fas fa-clock text-[10px]"></i>
-                                              {recording.duration}
-                                            </span>
-                                          </div>
-                                          {isActive && (
-                                            <div className={`text-${subject.color}-600`}>
-                                              <i className="fas fa-play-circle text-sm"></i>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Topic-Level Tests */}
+          {selectedTopic && displayedTopicTests.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i className="fas fa-clipboard-list text-green-600"></i>
+                Topic-Level Tests
+              </h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {displayedTopicTests.map(assessment => renderTestCard(assessment))}
+              </div>
+            </div>
+          )}
+
+          {/* Empty States */}
+          {!selectedSubject && !isLoading && (
+            <div className="text-center py-16">
+              <i className="fas fa-clipboard-list text-slate-300 text-6xl mb-4"></i>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Select a Subject</h3>
+              <p className="text-slate-600">Please select a subject to view assessments.</p>
+            </div>
+          )}
+
+          {selectedSubject && displayedSubjectTests.length === 0 && currentTopics.length === 0 && !isLoading && (
+            <div className="text-center py-16">
+              <i className="fas fa-clipboard-list text-slate-300 text-6xl mb-4"></i>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">No Tests Available</h3>
+              <p className="text-slate-600">No tests available for this subject.</p>
+            </div>
+          )}
+
+          {selectedTopic && displayedTopicTests.length === 0 && !isLoading && (
+            <div className="text-center py-16">
+              <i className="fas fa-clipboard-list text-slate-300 text-6xl mb-4"></i>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">No Topic Tests Available</h3>
+              <p className="text-slate-600">No tests available for this topic.</p>
+            </div>
+          )}
         </div>
       </div>
     </>
   );
 };
 
-export default Abc;
+export default CourseAssessments;
 

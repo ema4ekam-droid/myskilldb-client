@@ -338,6 +338,7 @@ const TestManagement = () => {
             return "Medium";
           };
 
+          const questionsArray = testData?.questions || [];
           const payload = {
             name:
               testData?.title ||
@@ -359,7 +360,8 @@ const TestManagement = () => {
               testData?.difficulty || viewingTest?.difficulty
             ),
             organizationId: organization?._id,
-            questions: (testData?.questions || []).map((q) => {
+            questionCount: questionsArray.length,
+            questions: questionsArray.map((q) => {
               const options = q?.options || [];
               const correct =
                 typeof q?.correctAnswer === "number"
@@ -417,6 +419,7 @@ const TestManagement = () => {
             return "Medium";
           };
 
+          const questionsArray = testData?.questions || [];
           const payload = {
             name:
               testData?.title ||
@@ -438,7 +441,8 @@ const TestManagement = () => {
               testData?.difficulty || viewingTest?.difficulty
             ),
             organizationId: organization?._id,
-            questions: (testData?.questions || []).map((q) => {
+            questionCount: questionsArray.length,
+            questions: questionsArray.map((q) => {
               const options = q?.options || [];
               const correct =
                 typeof q?.correctAnswer === "number"
@@ -529,6 +533,7 @@ const TestManagement = () => {
           return "Medium";
         };
 
+        const questionsArray = testData?.questions || [];
         const payload = {
           name: testData?.title || testData?.name || "Untitled Test",
           description: testData?.description,
@@ -544,7 +549,8 @@ const TestManagement = () => {
           }),
           difficultyLevel: mapDifficulty(testData?.difficulty),
           organizationId: organization?._id,
-          questions: (testData?.questions || []).map((q) => {
+          questionCount: questionsArray.length,
+          questions: questionsArray.map((q) => {
             const options = q?.options || [];
             const correct =
               typeof q?.correctAnswer === "number"
@@ -629,6 +635,7 @@ const TestManagement = () => {
           return "Medium";
         };
 
+        const questionsArray = testData?.questions || [];
         const payload = {
           name: testData?.title || testData?.name || "Untitled Test",
           description: testData?.description,
@@ -644,7 +651,8 @@ const TestManagement = () => {
           }),
           difficultyLevel: mapDifficulty(testData?.difficulty),
           organizationId: organization?._id,
-          questions: (testData?.questions || []).map((q) => {
+          questionCount: questionsArray.length,
+          questions: questionsArray.map((q) => {
             const options = q?.options || [];
             const correct =
               typeof q?.correctAnswer === "number"
