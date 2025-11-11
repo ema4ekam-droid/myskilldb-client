@@ -62,27 +62,14 @@ const MobileJobDetailsModal = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-col gap-3">
-            <a 
-              href={selectedJob.jobPostingLink} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="w-full px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full transition-colors inline-flex items-center justify-center gap-2"
+          <div className="flex gap-3">
+            <button 
+              disabled
+              className="flex-1 px-6 py-2.5 bg-slate-400 text-white font-semibold rounded-full transition-colors inline-flex items-center justify-center gap-2 cursor-not-allowed opacity-60"
+              title="Apply functionality coming soon"
             >
               <i className="fas fa-external-link-alt text-xs"></i>
               Apply Now
-            </a>
-            
-            <button 
-              onClick={() => onAddToSkillPlanner(selectedJob)}
-              className={`w-full px-6 py-2.5 font-semibold rounded-full transition-colors inline-flex items-center justify-center gap-2 ${
-                isInSkillPlanner(selectedJob._id)
-                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                  : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-              }`}
-            >
-              <i className={`fas fa-bullseye`}></i>
-              {isInSkillPlanner(selectedJob._id) ? 'In Skill Planner' : 'Add to Skill Planner'}
             </button>
           </div>
         </div>

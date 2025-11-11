@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { toast } from 'react-hot-toast';
 import StudentMenuNavigation from '../../../components/student-components/student-menu-components/StudentMenuNavigation';
 import LoaderOverlay from '../../../components/loader/LoaderOverlay';
+import { getRequest, postRequest } from '../../../api/apiRequests';
+import { VideoPlayerModal } from '../../../components/student-components/student-courses-components/course-assessments-components';
 
 const JobAssessments = () => {
   const [currentPage, setCurrentPage] = useState('job-assessments');
   const [isLoading, setIsLoading] = useState(true);
   const [jobs, setJobs] = useState([]);
-  const [expandedJobs, setExpandedJobs] = useState({});
-  const [expandedSkills, setExpandedSkills] = useState({});
+  const [selectedJob, setSelectedJob] = useState('');
+  const [selectedTopic, setSelectedTopic] = useState('');
   const [selectedAssessment, setSelectedAssessment] = useState(null);
   const [isAssessmentActive, setIsAssessmentActive] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -16,10 +19,21 @@ const JobAssessments = () => {
   const [timeRemaining, setTimeRemaining] = useState(null);
   const [showResults, setShowResults] = useState(false);
   const [assessmentResults, setAssessmentResults] = useState(null);
+  const [viewingCompletedAssessment, setViewingCompletedAssessment] = useState(null);
+  const [studyPlanModal, setStudyPlanModal] = useState(null);
+  const [playingVideo, setPlayingVideo] = useState(null);
+  const [recommendedVideos, setRecommendedVideos] = useState([]);
+
+  // Redux state
+  const user = useSelector((state) => state.user);
 
   useEffect(() => {
-    fetchJobsAndAssessments();
-  }, []);
+    if (user?.organizationId) {
+      fetchJobs();
+    } else {
+      setIsLoading(false);
+    }
+  }, [user?.organizationId]);
 
   // Timer effect
   useEffect(() => {
@@ -38,573 +52,80 @@ const JobAssessments = () => {
     return () => clearInterval(timer);
   }, [isAssessmentActive, timeRemaining]);
 
-  const fetchJobsAndAssessments = async () => {
+  // Fetch jobs from API
+  const fetchJobs = async () => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Organize assessments by Job > Skills > Tests
-      const jobsData = [
-        {
-          id: 'job-1',
-          title: 'Frontend Developer',
-          company: 'TechCorp Solutions',
-          location: 'Bangalore, India',
-          skills: [
-            {
-              id: 'skill-1',
-              name: 'React Fundamentals',
-              assessments: [
-                {
-                  id: 'test-1',
-                  topic: 'Components & Props',
-                  difficulty: 'intermediate',
-                  duration: 20,
-                  totalQuestions: 10,
-                  passingScore: 70,
-                  status: 'pending',
-                  questions: [
-                    {
-                      id: 'q1',
-                      question: 'What is the correct way to create a functional component in React?',
-                      options: [
-                        'function MyComponent() { return <div>Hello</div>; }',
-                        'const MyComponent = () => { return <div>Hello</div>; }',
-                        'class MyComponent extends React.Component { render() { return <div>Hello</div>; } }',
-                        'Both A and B'
-                      ],
-                      correctAnswer: 3
-                    },
-                    {
-                      id: 'q2',
-                      question: 'Which hook is used to manage state in a functional component?',
-                      options: ['useEffect', 'useState', 'useContext', 'useReducer'],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q3',
-                      question: 'What does props stand for in React?',
-                      options: ['Properties', 'Propositions', 'Protocols', 'Projections'],
-                      correctAnswer: 0
-                    },
-                    {
-                      id: 'q4',
-                      question: 'How do you pass data from a parent component to a child component?',
-                      options: ['Using state', 'Using props', 'Using context', 'Using refs'],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q5',
-                      question: 'What is the purpose of useEffect hook?',
-                      options: [
-                        'To manage component state',
-                        'To handle side effects',
-                        'To create context',
-                        'To optimize performance'
-                      ],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q6',
-                      question: 'Which method is called when a component is removed from the DOM?',
-                      options: ['componentDidMount', 'componentWillUnmount', 'componentDidUpdate', 'constructor'],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q7',
-                      question: 'What is JSX?',
-                      options: [
-                        'A programming language',
-                        'A syntax extension for JavaScript',
-                        'A CSS framework',
-                        'A database query language'
-                      ],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q8',
-                      question: 'How do you update state in a functional component?',
-                      options: [
-                        'this.setState()',
-                        'Using the setter function from useState',
-                        'Directly modifying the state variable',
-                        'Using useReducer only'
-                      ],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q9',
-                      question: 'What is the virtual DOM?',
-                      options: [
-                        'A copy of the real DOM kept in memory',
-                        'A database for storing component data',
-                        'A CSS styling technique',
-                        'A routing mechanism'
-                      ],
-                      correctAnswer: 0
-                    },
-                    {
-                      id: 'q10',
-                      question: 'Which hook would you use to access context values?',
-                      options: ['useState', 'useEffect', 'useContext', 'useRef'],
-                      correctAnswer: 2
-                    }
-                  ]
-                },
-                {
-                  id: 'test-2',
-                  topic: 'Hooks & State Management',
-                  difficulty: 'advanced',
-                  duration: 25,
-                  totalQuestions: 12,
-                  passingScore: 75,
-                  status: 'completed',
-                  score: 91.7,
-                  completedDate: '2024-01-28'
-                }
-              ]
-            },
-            {
-              id: 'skill-2',
-              name: 'JavaScript ES6+',
-              assessments: [
-                {
-                  id: 'test-3',
-                  topic: 'Arrow Functions & Promises',
-                  difficulty: 'intermediate',
-                  duration: 15,
-                  totalQuestions: 8,
-                  passingScore: 75,
-                  status: 'completed',
-                  score: 87.5,
-                  completedDate: '2024-01-27',
-                  questions: [
-                    {
-                      id: 'q1',
-                      question: 'What is the output of: const arr = [1, 2, 3]; console.log(arr.map(x => x * 2));',
-                      options: ['[1, 2, 3]', '[2, 4, 6]', '[1, 4, 9]', 'undefined'],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q2',
-                      question: 'What does the spread operator (...) do?',
-                      options: [
-                        'Multiplies numbers',
-                        'Expands an iterable into individual elements',
-                        'Creates a new array',
-                        'Divides numbers'
-                      ],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q3',
-                      question: 'What is a Promise in JavaScript?',
-                      options: [
-                        'A guarantee that code will run',
-                        'An object representing eventual completion or failure of an async operation',
-                        'A function that returns a value',
-                        'A type of loop'
-                      ],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q4',
-                      question: 'What is the difference between let and const?',
-                      options: [
-                        'No difference',
-                        'let can be reassigned, const cannot',
-                        'const is faster',
-                        'let is block-scoped, const is not'
-                      ],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q5',
-                      question: 'What does async/await do?',
-                      options: [
-                        'Makes code run faster',
-                        'Handles asynchronous operations in a synchronous manner',
-                        'Creates multiple threads',
-                        'Optimizes memory usage'
-                      ],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q6',
-                      question: 'What is destructuring in JavaScript?',
-                      options: [
-                        'Breaking code into pieces',
-                        'Extracting values from arrays or objects',
-                        'Deleting variables',
-                        'Creating new objects'
-                      ],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q7',
-                      question: 'What is the purpose of template literals?',
-                      options: [
-                        'To create HTML templates',
-                        'To enable string interpolation and multi-line strings',
-                        'To optimize performance',
-                        'To create arrays'
-                      ],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q8',
-                      question: 'What does the filter() method do?',
-                      options: [
-                        'Removes all elements',
-                        'Creates a new array with elements that pass a test',
-                        'Sorts an array',
-                        'Modifies the original array'
-                      ],
-                      correctAnswer: 1
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              id: 'skill-3',
-              name: 'CSS Flexbox & Grid',
-              assessments: [
-                {
-                  id: 'test-4',
-                  topic: 'Modern Layout Techniques',
-                  difficulty: 'beginner',
-                  duration: 15,
-                  totalQuestions: 8,
-                  passingScore: 70,
-                  status: 'completed',
-                  score: 100,
-                  completedDate: '2024-01-25',
-                  questions: [
-                    {
-                      id: 'q1',
-                      question: 'What CSS property is used to create a flex container?',
-                      options: ['display: flex', 'flex: container', 'display: flexbox', 'flex-container: true'],
-                      correctAnswer: 0
-                    },
-                    {
-                      id: 'q2',
-                      question: 'Which property aligns items along the main axis in Flexbox?',
-                      options: ['align-items', 'justify-content', 'align-content', 'flex-align'],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q3',
-                      question: 'What is the default flex-direction?',
-                      options: ['column', 'row', 'row-reverse', 'column-reverse'],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q4',
-                      question: 'How do you create a CSS Grid container?',
-                      options: ['display: grid', 'grid: container', 'display: css-grid', 'grid-container: true'],
-                      correctAnswer: 0
-                    },
-                    {
-                      id: 'q5',
-                      question: 'What does justify-content: space-between do?',
-                      options: [
-                        'Centers all items',
-                        'Distributes items with space between them',
-                        'Aligns items to the start',
-                        'Stacks items vertically'
-                      ],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q6',
-                      question: 'Which property controls the size of a flex item?',
-                      options: ['flex-size', 'flex', 'size', 'flex-grow'],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q7',
-                      question: 'What is gap property used for in Grid?',
-                      options: [
-                        'To create empty cells',
-                        'To set spacing between grid items',
-                        'To set the grid width',
-                        'To align items'
-                      ],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q8',
-                      question: 'How do you make a flex item grow to fill available space?',
-                      options: ['flex-grow: 1', 'flex: auto', 'flex-fill: true', 'grow: 1'],
-                      correctAnswer: 0
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        {
-          id: 'job-2',
-          title: 'Full Stack Developer',
-          company: 'Innovation Labs',
-          location: 'Remote',
-          skills: [
-            {
-              id: 'skill-4',
-              name: 'Node.js Basics',
-              assessments: [
-                {
-                  id: 'test-5',
-                  topic: 'Server-side JavaScript',
-                  difficulty: 'intermediate',
-                  duration: 20,
-                  totalQuestions: 10,
-                  passingScore: 70,
-                  status: 'pending',
-                  questions: [
-                    {
-                      id: 'q1',
-                      question: 'What is Node.js?',
-                      options: [
-                        'A JavaScript framework',
-                        'A JavaScript runtime built on Chrome V8 engine',
-                        'A database',
-                        'A programming language'
-                      ],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q2',
-                      question: 'What is npm?',
-                      options: [
-                        'Node Package Manager',
-                        'New Programming Method',
-                        'Node Protocol Manager',
-                        'Network Package Module'
-                      ],
-                      correctAnswer: 0
-                    },
-                    {
-                      id: 'q3',
-                      question: 'Which module is used to create a web server in Node.js?',
-                      options: ['fs', 'http', 'path', 'url'],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q4',
-                      question: 'What is the purpose of package.json?',
-                      options: [
-                        'To store application data',
-                        'To manage project metadata and dependencies',
-                        'To configure the database',
-                        'To handle routing'
-                      ],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q5',
-                      question: 'Which keyword is used to import modules in Node.js?',
-                      options: ['import', 'require', 'include', 'use'],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q6',
-                      question: 'What is Express.js?',
-                      options: [
-                        'A database',
-                        'A web application framework for Node.js',
-                        'A testing library',
-                        'A CSS framework'
-                      ],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q7',
-                      question: 'What does the fs module do?',
-                      options: [
-                        'Handles HTTP requests',
-                        'Provides file system operations',
-                        'Manages databases',
-                        'Handles routing'
-                      ],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q8',
-                      question: 'What is middleware in Express?',
-                      options: [
-                        'A database connector',
-                        'Functions that execute during request-response cycle',
-                        'A routing mechanism',
-                        'A template engine'
-                      ],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q9',
-                      question: 'Which method is used to handle POST requests in Express?',
-                      options: ['app.post()', 'app.get()', 'app.request()', 'app.send()'],
-                      correctAnswer: 0
-                    },
-                    {
-                      id: 'q10',
-                      question: 'What is the purpose of process.env?',
-                      options: [
-                        'To process data',
-                        'To access environment variables',
-                        'To manage processes',
-                        'To configure the server'
-                      ],
-                      correctAnswer: 1
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              id: 'skill-5',
-              name: 'REST APIs & HTTP',
-              assessments: [
-                {
-                  id: 'test-6',
-                  topic: 'API Integration Basics',
-                  difficulty: 'intermediate',
-                  duration: 25,
-                  totalQuestions: 12,
-                  passingScore: 75,
-                  status: 'pending',
-                  questions: [
-                    {
-                      id: 'q1',
-                      question: 'What does REST stand for?',
-                      options: [
-                        'Rapid Execution Service Technology',
-                        'Representational State Transfer',
-                        'Remote Execution State Transfer',
-                        'Resource Execution Service Technology'
-                      ],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q2',
-                      question: 'Which HTTP method is used to retrieve data?',
-                      options: ['POST', 'PUT', 'GET', 'DELETE'],
-                      correctAnswer: 2
-                    },
-                    {
-                      id: 'q3',
-                      question: 'What status code indicates a successful request?',
-                      options: ['404', '500', '200', '301'],
-                      correctAnswer: 2
-                    },
-                    {
-                      id: 'q4',
-                      question: 'Which HTTP method is idempotent?',
-                      options: ['POST', 'PUT', 'PATCH', 'Both B and C'],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q5',
-                      question: 'What does a 404 status code mean?',
-                      options: ['Server Error', 'Not Found', 'Unauthorized', 'Bad Request'],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q6',
-                      question: 'Which header specifies the format of the request body?',
-                      options: ['Accept', 'Content-Type', 'Authorization', 'User-Agent'],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q7',
-                      question: 'What is the purpose of the Authorization header?',
-                      options: [
-                        'To specify content type',
-                        'To send authentication credentials',
-                        'To cache responses',
-                        'To compress data'
-                      ],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q8',
-                      question: 'Which method is used to update a resource partially?',
-                      options: ['PUT', 'PATCH', 'UPDATE', 'POST'],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q9',
-                      question: 'What does CORS stand for?',
-                      options: [
-                        'Cross-Origin Resource Sharing',
-                        'Common Origin Resource System',
-                        'Cross-Origin Request Security',
-                        'Common Object Resource Sharing'
-                      ],
-                      correctAnswer: 0
-                    },
-                    {
-                      id: 'q10',
-                      question: 'What is JSON?',
-                      options: [
-                        'JavaScript Object Notation',
-                        'Java Syntax Object Notation',
-                        'JavaScript Oriented Notation',
-                        'Java Script Object Network'
-                      ],
-                      correctAnswer: 0
-                    },
-                    {
-                      id: 'q11',
-                      question: 'Which status code indicates resource created successfully?',
-                      options: ['200', '201', '204', '301'],
-                      correctAnswer: 1
-                    },
-                    {
-                      id: 'q12',
-                      question: 'What is an endpoint in REST API?',
-                      options: [
-                        'The final destination',
-                        'A URL where an API resource can be accessed',
-                        'The server location',
-                        'The database connection'
-                      ],
-                      correctAnswer: 1
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      ];
+      if (!user?.organizationId) {
+        setIsLoading(false);
+        return;
+      }
 
-      setJobs(jobsData);
-      setIsLoading(false);
+      setIsLoading(true);
+      
+      // Fetch jobs - use department endpoint if departmentId is available, otherwise use organization endpoint
+      let response;
+      if (user?.departmentId) {
+        try {
+          response = await getRequest(`/jobs/departments/${user.organizationId}/${user.departmentId}`);
+        } catch (error) {
+          // Fallback to organization endpoint if department endpoint fails (e.g., auth issue)
+          console.warn('Department endpoint failed, using organization endpoint:', error);
+          response = await getRequest(`/jobs/organization/${user.organizationId}`);
+        }
+      } else {
+        // Fetch jobs by organization (students can see all jobs in their organization)
+        response = await getRequest(`/jobs/organization/${user.organizationId}`);
+      }
+      
+      if (response.data?.success && response.data?.data) {
+        const apiJobs = response.data.data || [];
+        
+        // Transform API jobs to match component structure
+        const transformedJobs = await Promise.all(
+          apiJobs.map(async (job) => {
+            // Fetch topics for this job
+            let topics = [];
+            try {
+              const topicsResponse = await getRequest(`/topics/job/${job._id}`);
+              if (topicsResponse.data?.success && topicsResponse.data?.data) {
+                topics = (topicsResponse.data.data || []).map(topic => ({
+                  id: topic._id,
+                  _id: topic._id,
+                  name: topic.name || topic.title,
+                  assessments: [] // Will be fetched when topic is selected
+                }));
+              }
+            } catch (error) {
+              console.error(`Error fetching topics for job ${job._id}:`, error);
+            }
+
+            return {
+              id: job._id,
+              _id: job._id,
+              title: job.name || job.title,
+              company: job.companyName || job.company || 'Company',
+              location: job.place || job.location || 'Location',
+              jobAssessments: [], // Will be fetched when job is selected
+              topics: topics
+            };
+          })
+        );
+
+        setJobs(transformedJobs);
+      } else {
+        setJobs([]);
+      }
     } catch (error) {
       console.error('Error fetching jobs:', error);
-      toast.error('Failed to load assessments');
+      toast.error('Failed to load jobs');
+      setJobs([]);
+    } finally {
       setIsLoading(false);
     }
   };
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
-  };
-
-  const toggleJob = (jobId) => {
-    setExpandedJobs(prev => ({
-      ...prev,
-      [jobId]: !prev[jobId]
-    }));
-  };
-
-  const toggleSkill = (skillId) => {
-    setExpandedSkills(prev => ({
-      ...prev,
-      [skillId]: !prev[skillId]
-    }));
   };
 
   const getDifficultyColor = (difficulty) => {
@@ -626,14 +147,57 @@ const JobAssessments = () => {
       : 'bg-orange-100 text-orange-700 border-orange-300';
   };
 
-  const handleStartAssessment = (job, skill, assessment) => {
-    setSelectedAssessment({ ...assessment, job, skill });
-    setIsAssessmentActive(true);
-    setCurrentQuestionIndex(0);
-    setUserAnswers({});
-    setTimeRemaining(assessment.duration * 60);
-    setShowResults(false);
-    toast.success(`Assessment started! You have ${assessment.duration} minutes.`);
+  const handleStartAssessment = async (job, topic, assessment) => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch test details including questions
+      const response = await getRequest(`/tests/${assessment.testId}`);
+      if (response.data.success && response.data.data) {
+        const testData = response.data.data;
+        const test = testData.test || testData;
+        
+        // Transform questions to match component's expected format
+        const transformedQuestions = (testData.questions || []).map((q, index) => {
+          const correctAnswerText = q.answer?.correctAnswer || '';
+          const correctAnswerIndex = q.options?.findIndex(opt => opt === correctAnswerText) ?? -1;
+          
+          return {
+            id: q._id || `q${index + 1}`,
+            question: q.questionText || '',
+            options: q.options || [],
+            correctAnswer: correctAnswerIndex >= 0 ? correctAnswerIndex : 0,
+            topic: q.topicId?.name || 'General',
+            topicId: q.topicId?._id || q.topicId || null,
+          };
+        });
+        
+        // Merge test data with assessment data
+        const fullAssessment = {
+          ...assessment,
+          questions: transformedQuestions,
+          duration: 30, // Default duration
+          passingScore: 70, // Default passing score
+          job,
+          topic
+        };
+        
+        setSelectedAssessment(fullAssessment);
+        setCurrentQuestionIndex(0);
+        setUserAnswers({});
+        setTimeRemaining(30 * 60); // Default 30 minutes in seconds
+        setIsAssessmentActive(true);
+        setShowResults(false);
+        toast.success(`Assessment started! You have 30 minutes.`);
+      } else {
+        toast.error('Failed to load test details');
+      }
+    } catch (error) {
+      console.error('Error fetching test details:', error);
+      toast.error('Failed to load test details');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleAnswerSelect = (questionId, answerIndex) => {
@@ -655,18 +219,44 @@ const JobAssessments = () => {
     }
   };
 
-  const handleSubmitAssessment = () => {
+  const handleSubmitAssessment = async () => {
     if (!selectedAssessment) return;
 
     let correctCount = 0;
-    selectedAssessment.questions.forEach(question => {
-      if (userAnswers[question.id] === question.correctAnswer) {
+    const answerRecords = selectedAssessment.questions.map(question => {
+      const userAnswerIndex = userAnswers[question.id];
+      const isCorrect = userAnswerIndex === question.correctAnswer;
+      if (isCorrect) {
         correctCount++;
       }
+      
+      return {
+        questionId: question.id,
+        selectedAnswer: userAnswerIndex !== undefined ? question.options[userAnswerIndex] : '',
+        isCorrect: isCorrect
+      };
     });
 
-    const score = (correctCount / selectedAssessment.questions.length) * 100;
+    const score = Math.round((correctCount / selectedAssessment.questions.length) * 100);
     const passed = score >= selectedAssessment.passingScore;
+
+    // Save to backend
+    if (selectedAssessment.studentTestHistoryId) {
+      try {
+        await postRequest(
+          `/student-test-history/${selectedAssessment.studentTestHistoryId}/complete`,
+          {
+            answers: answerRecords,
+            score,
+            correctAnswers: correctCount,
+            totalQuestions: selectedAssessment.questions.length
+          }
+        );
+      } catch (error) {
+        console.error('Error saving test results:', error);
+        toast.error('Failed to save test results');
+      }
+    }
 
     const results = {
       score: score,
@@ -682,25 +272,23 @@ const JobAssessments = () => {
     setShowResults(true);
     setIsAssessmentActive(false);
 
-    // Update assessment status in the jobs data
-    const updatedJobs = jobs.map(job => ({
-      ...job,
-      skills: job.skills.map(skill => ({
-        ...skill,
-        assessments: skill.assessments.map(a => {
-          if (a.id === selectedAssessment.id) {
-            return {
-              ...a,
-              status: 'completed',
-              score: score.toFixed(1),
-              completedDate: new Date().toISOString()
-            };
-          }
-          return a;
-        })
-      }))
-    }));
-    setJobs(updatedJobs);
+    // Update job-level assessments
+    if (selectedAssessment.type === 'job') {
+      setJobLevelAssessments(prev => prev.map(a => 
+        a._id === selectedAssessment.studentTestHistoryId
+          ? { ...a, status: 'completed', score, completedDate: new Date().toISOString().split('T')[0] }
+          : a
+      ));
+    }
+    
+    // Update topic-level assessments
+    if (selectedAssessment.type === 'topic') {
+      setTopicLevelAssessments(prev => prev.map(a => 
+        a._id === selectedAssessment.studentTestHistoryId
+          ? { ...a, status: 'completed', score, completedDate: new Date().toISOString().split('T')[0] }
+          : a
+      ));
+    }
 
     if (passed) {
       toast.success(`🎉 Congratulations! You passed with ${score.toFixed(1)}%`);
@@ -717,6 +305,146 @@ const JobAssessments = () => {
     setCurrentQuestionIndex(0);
     setTimeRemaining(null);
     setAssessmentResults(null);
+    setViewingCompletedAssessment(null);
+    setStudyPlanModal(null);
+    setPlayingVideo(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleViewCompletedAssessment = async (assessment) => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch test details with student answers
+      const response = await getRequest(`/student-test-history/${assessment.studentTestHistoryId}`);
+      
+      if (response.data.success && response.data.data) {
+        const data = response.data.data;
+        const questions = data.questions || [];
+        
+        // Transform questions to match component format
+        const transformedQuestions = questions.map((q) => ({
+          id: q.id || q._id,
+          question: q.question || q.questionText,
+          options: q.options || [],
+          correctAnswer: q.correctAnswer,
+          topic: q.topic || 'General',
+          topicId: q.topicId || null,
+        }));
+        
+        // Create userAnswers object from student answers
+        const userAnswers = {};
+        questions.forEach((q) => {
+          if (q.studentAnswer) {
+            // Find the index of the selected answer in options
+            const selectedIndex = q.options.findIndex(opt => opt === q.studentAnswer.selectedAnswer);
+            if (selectedIndex >= 0) {
+              userAnswers[q.id || q._id] = selectedIndex;
+            }
+          }
+        });
+        
+        const completedAssessment = {
+          ...assessment,
+          questions: transformedQuestions,
+          userAnswers: userAnswers,
+          score: data.score || assessment.score,
+          totalQuestions: data.totalQuestions || assessment.totalQuestions,
+          correctAnswers: data.correctAnswers || 0,
+          passingScore: 70, // Default, can be updated if available in API
+          completedDate: data.completedAt ? new Date(data.completedAt).toISOString().split('T')[0] : assessment.completedDate,
+        };
+        
+        setViewingCompletedAssessment(completedAssessment);
+        setShowResults(false);
+      } else {
+        toast.error('Failed to load assessment details');
+        setViewingCompletedAssessment(assessment);
+      }
+    } catch (error) {
+      console.error('Error fetching assessment details:', error);
+      toast.error('Failed to load assessment details');
+      setViewingCompletedAssessment(assessment);
+    } finally {
+      setIsLoading(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleCreateStudyPlan = async () => {
+    // Get all wrong answers and extract their topic IDs
+    const wrongQuestions = viewingCompletedAssessment.questions.filter(
+      q => viewingCompletedAssessment.userAnswers[q.id] !== q.correctAnswer
+    );
+    const topicIds = [...new Set(
+      wrongQuestions
+        .map(q => q.topicId)
+        .filter(id => id !== null && id !== undefined)
+    )];
+    
+    // Fetch videos for these topic IDs
+    if (topicIds.length > 0) {
+      try {
+        setIsLoading(true);
+        const topicIdsQuery = topicIds.map(id => `topicIds=${id}`).join('&');
+        const response = await getRequest(`/recordings/topics?${topicIdsQuery}`);
+        if (response.data.success && response.data.data) {
+          setRecommendedVideos(response.data.data || []);
+        } else {
+          setRecommendedVideos([]);
+        }
+      } catch (error) {
+        console.error('Error fetching recommended videos:', error);
+        setRecommendedVideos([]);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      setRecommendedVideos([]);
+    }
+        
+    setStudyPlanModal(viewingCompletedAssessment);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCloseStudyPlan = () => {
+    setStudyPlanModal(null);
+    setRecommendedVideos([]);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handlePlayVideo = (video) => {
+    setPlayingVideo(video);
+  };
+
+  const handleCloseVideo = () => {
+    setPlayingVideo(null);
+  };
+
+  // Extract YouTube video ID from URL
+  const getYouTubeVideoId = (url) => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  // Group videos by topic
+  const groupVideosByTopic = (videos) => {
+    const grouped = {};
+    videos.forEach((video) => {
+      const topicId = String(video.topicId?._id || video.topicId);
+      const topicName = video.topicId?.name || 'General';
+      if (!grouped[topicId]) {
+        grouped[topicId] = {
+          topicId,
+          topicName,
+          videos: []
+        };
+      }
+      grouped[topicId].videos.push(video);
+    });
+    return Object.values(grouped);
   };
 
   const formatTime = (seconds) => {
@@ -725,22 +453,243 @@ const JobAssessments = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Calculate stats
-  const totalTests = jobs.reduce((sum, job) => 
-    sum + job.skills.reduce((s, skill) => s + skill.assessments.length, 0), 0
-  );
-  const completedTests = jobs.reduce((sum, job) => 
-    sum + job.skills.reduce((s, skill) => 
-      s + skill.assessments.filter(a => a.status === 'completed').length, 0
-    ), 0
-  );
-  const pendingTests = totalTests - completedTests;
-  const completedAssessments = jobs.flatMap(job => 
-    job.skills.flatMap(skill => skill.assessments.filter(a => a.status === 'completed' && a.score))
-  );
-  const averageScore = completedAssessments.length > 0
-    ? completedAssessments.reduce((sum, a) => sum + parseFloat(a.score), 0) / completedAssessments.length
-    : 0;
+  // State for assessments
+  const [jobLevelAssessments, setJobLevelAssessments] = useState([]);
+  const [topicLevelAssessments, setTopicLevelAssessments] = useState([]);
+
+  // Get selected job data
+  const selectedJobData = jobs.find(j => j.id === selectedJob || j._id === selectedJob);
+  
+  // Get topics for selected job
+  const currentTopics = selectedJobData?.topics || [];
+
+  // Fetch job-level assessments when job is selected
+  useEffect(() => {
+    const fetchJobLevelAssessments = async () => {
+      if (!selectedJob || !user?._id || !user?.organizationId) {
+        setJobLevelAssessments([]);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        const response = await getRequest(
+          `/student-test-history/tests/job/${selectedJob}?studentId=${user._id}&organizationId=${user.organizationId}`
+        );
+        
+        if (response.data.success && response.data.data) {
+          const assessments = response.data.data || [];
+          
+          // Transform API data to match component's expected format
+          const transformedAssessments = assessments.map((item, index) => {
+            // Determine status
+            let status = 'pending';
+            if (item.status === 'Completed') {
+              status = 'completed';
+            } else if (item.status === 'Pending' && item.startedAt) {
+              status = 'in-progress';
+            }
+
+            return {
+              id: index + 1,
+              _id: item._id,
+              title: item.testName || 'Untitled Assessment',
+              job: selectedJobData,
+              assignedDate: new Date().toISOString().split('T')[0],
+              totalQuestions: item.questionCount || 0,
+              status: status,
+              difficulty: item.difficultyLevel?.toLowerCase() || 'medium',
+              type: 'job',
+              score: item.score ?? undefined,
+              completedDate: undefined,
+              userAnswers: {},
+              questions: [],
+              testId: item.testId,
+              studentTestHistoryId: item._id,
+              duration: 30, // Default, can be updated if available in API
+              passingScore: 70 // Default, can be updated if available in API
+            };
+          });
+
+          setJobLevelAssessments(transformedAssessments);
+        } else {
+          setJobLevelAssessments([]);
+        }
+      } catch (error) {
+        console.error('Error fetching job-level assessments:', error);
+        toast.error('Failed to load job assessments');
+        setJobLevelAssessments([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchJobLevelAssessments();
+  }, [selectedJob, user?._id, user?.organizationId, selectedJobData]);
+
+  // Fetch topic-level assessments when topic is selected
+  useEffect(() => {
+    const fetchTopicLevelAssessments = async () => {
+      if (!selectedTopic || !selectedJob || !user?._id || !user?.organizationId) {
+        setTopicLevelAssessments([]);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        const response = await getRequest(
+          `/student-test-history/tests/job/${selectedJob}?studentId=${user._id}&organizationId=${user.organizationId}&topicId=${selectedTopic}`
+        );
+        
+        if (response.data.success && response.data.data) {
+          const assessments = response.data.data || [];
+          
+          // Transform API data to match component's expected format
+          const transformedAssessments = assessments.map((item, index) => {
+            const selectedTopicData = currentTopics.find(t => t.id === selectedTopic || t._id === selectedTopic);
+            
+            // Determine status
+            let status = 'pending';
+            if (item.status === 'Completed') {
+              status = 'completed';
+            } else if (item.status === 'Pending' && item.startedAt) {
+              status = 'in-progress';
+            }
+
+            return {
+              id: index + 1,
+              _id: item._id,
+              title: item.testName || 'Untitled Assessment',
+              job: selectedJobData,
+              topicId: selectedTopic,
+              topic: selectedTopicData,
+              topicName: selectedTopicData?.name || 'Unknown Topic',
+              assignedDate: new Date().toISOString().split('T')[0],
+              totalQuestions: item.questionCount || 0,
+              status: status,
+              difficulty: item.difficultyLevel?.toLowerCase() || 'medium',
+              type: 'topic',
+              score: item.score ?? undefined,
+              completedDate: undefined,
+              userAnswers: {},
+              questions: [],
+              testId: item.testId,
+              studentTestHistoryId: item._id,
+              duration: 30, // Default
+              passingScore: 70 // Default
+            };
+          });
+
+          setTopicLevelAssessments(transformedAssessments);
+        } else {
+          setTopicLevelAssessments([]);
+        }
+      } catch (error) {
+        console.error('Error fetching topic-level assessments:', error);
+        toast.error('Failed to load topic assessments');
+        setTopicLevelAssessments([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTopicLevelAssessments();
+  }, [selectedTopic, selectedJob, user?._id, user?.organizationId, currentTopics, selectedJobData]);
+
+  // Render assessment card component
+  const renderAssessmentCard = (assessment) => {
+    const isPending = assessment.status === 'pending';
+    const isCompleted = assessment.status === 'completed';
+    
+    if (isPending) {
+      return (
+        <div
+          key={assessment.id}
+          className="bg-white rounded-xl shadow-sm border-2 border-slate-200 overflow-hidden hover:shadow-lg transition-all"
+        >
+          <div className="p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <i className="fas fa-briefcase text-white text-lg"></i>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-slate-900 text-lg mb-1">{assessment.title || assessment.topic}</h3>
+                <p className="text-sm text-slate-600">{assessment.topic?.name || assessment.job?.title || 'Job Assessment'}</p>
+              </div>
+            </div>
+            <div className="space-y-2 mb-4 text-sm">
+              <div className="flex items-center gap-2 text-slate-600">
+                <i className="fas fa-question-circle w-4"></i>
+                <span>{assessment.totalQuestions} questions</span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-600">
+                <i className="fas fa-clock w-4"></i>
+                <span>{assessment.duration} minutes</span>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 mb-4">
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getDifficultyColor(assessment.difficulty)}`}>
+                {assessment.difficulty}
+              </span>
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(assessment.status)}`}>
+                {assessment.status === 'pending' ? 'Pending' : 'Completed'}
+              </span>
+            </div>
+            <button
+              onClick={() => handleStartAssessment(assessment.job || selectedJobData, assessment.topic || null, assessment)}
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+            >
+              <i className="fas fa-play-circle"></i>
+              Start Assessment
+            </button>
+          </div>
+        </div>
+      );
+    } else if (isCompleted) {
+      return (
+        <div
+          key={assessment.id}
+          className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-all"
+        >
+          <div className="p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <i className="fas fa-briefcase text-white text-lg"></i>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-slate-900 text-lg mb-1">{assessment.title || assessment.topic}</h3>
+                <p className="text-sm text-slate-600">{assessment.topic?.name || assessment.job?.title || 'Job Assessment'}</p>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-blue-600">
+                  {assessment.score}%
+                </div>
+              </div>
+            </div>
+            <div className="space-y-2 mb-4 text-sm">
+              <div className="flex items-center gap-2 text-slate-600">
+                <i className="fas fa-calendar-check w-4"></i>
+                <span>Completed: {assessment.completedDate ? new Date(assessment.completedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</span>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 mb-4">
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(assessment.status)}`}>
+                Completed
+              </span>
+            </div>
+            <button
+              onClick={() => handleViewCompletedAssessment(assessment)}
+              className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition-all flex items-center justify-center gap-2"
+            >
+              <i className="fas fa-eye"></i>
+              View Details
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
 
   // Assessment taking interface (same as before)
   if (isAssessmentActive && selectedAssessment) {
@@ -754,8 +703,8 @@ const JobAssessments = () => {
           <div className="bg-white border-b border-slate-200 px-4 py-4 sticky top-0 z-10">
             <div className="max-w-4xl mx-auto flex items-center justify-between">
               <div>
-                <h2 className="text-lg lg:text-xl font-bold text-slate-900">{selectedAssessment.skill.name}</h2>
-                <p className="text-xs lg:text-sm text-slate-600">{selectedAssessment.topic}</p>
+                <h2 className="text-lg lg:text-xl font-bold text-slate-900">{selectedAssessment.title || selectedAssessment.topic?.name || 'Assessment'}</h2>
+                <p className="text-xs lg:text-sm text-slate-600">{selectedAssessment.topic?.name || selectedAssessment.job?.title || 'Job Assessment'}</p>
               </div>
               <div className="flex items-center gap-4">
                 <div className={`px-4 py-2 rounded-lg font-bold text-lg ${timeRemaining < 60 ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
@@ -926,10 +875,11 @@ const JobAssessments = () => {
                 {assessmentResults.passed ? 'Congratulations!' : 'Keep Practicing!'}
               </h2>
               <p className="text-white text-opacity-90 mb-1">
-                {selectedAssessment.skill.name} - {selectedAssessment.topic}
+                {selectedAssessment.title || selectedAssessment.topic?.name || 'Assessment'}
               </p>
               <p className="text-white text-opacity-75 text-sm mb-4">
-                {selectedAssessment.job.title} at {selectedAssessment.job.company}
+                {selectedAssessment.job?.title || 'Job'} at {selectedAssessment.job?.company || 'Company'}
+                {selectedAssessment.topic && ` • ${selectedAssessment.topic.name}`}
               </p>
               <div className="text-5xl font-bold text-white mb-2">
                 {assessmentResults.score.toFixed(1)}%
@@ -1042,18 +992,13 @@ const JobAssessments = () => {
                 <i className="fas fa-home mr-2"></i>
                 Back to Assessments
               </button>
-              {!assessmentResults.passed && (
-                <button
-                  onClick={() => {
-                    handleCloseAssessment();
-                    setTimeout(() => handleStartAssessment(selectedAssessment.job, selectedAssessment.skill, selectedAssessment), 100);
-                  }}
-                  className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
-                >
-                  <i className="fas fa-redo mr-2"></i>
-                  Retake Assessment
-                </button>
-              )}
+              <button
+                onClick={() => handleViewCompletedAssessment(selectedAssessment)}
+                className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
+              >
+                <i className="fas fa-eye mr-2"></i>
+                View Details
+              </button>
             </div>
           </div>
         </div>
@@ -1061,211 +1006,452 @@ const JobAssessments = () => {
     );
   }
 
-  // Main list view with Job > Skills > Tests hierarchy
-  return (
-    <>
-      <LoaderOverlay isVisible={isLoading} title="Job Assessments" subtitle="Loading skill assessments..." />
-      <StudentMenuNavigation currentPage={currentPage} onPageChange={handlePageChange} />
-      
-      <div className="min-h-screen bg-slate-50 lg:ml-72 p-4 lg:p-6">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 mb-2">Skill Assessments</h1>
-          <p className="text-sm text-slate-600">Test your knowledge on job-related skills organized by position</p>
-        </div>
+  // Completed Assessment Details View
+  if (viewingCompletedAssessment && !studyPlanModal) {
+    const correctAnswers = viewingCompletedAssessment.questions.filter(
+      q => viewingCompletedAssessment.userAnswers[q.id] === q.correctAnswer
+    ).length;
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <i className="fas fa-clipboard-list text-blue-600 text-xl"></i>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900">{totalTests}</p>
-                <p className="text-xs text-slate-600">Total</p>
-              </div>
+    return (
+      <>
+        {!playingVideo && (
+          <StudentMenuNavigation currentPage={currentPage} onPageChange={handlePageChange} />
+        )}
+        <div className={`min-h-screen bg-slate-50 ${!playingVideo ? 'lg:ml-72' : ''}`}>
+          <div className="max-w-4xl mx-auto px-4 py-8 pt-20 lg:pt-8">
+            {/* Header with Close Button */}
+            <div className="flex items-center justify-between mb-8">
+              <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Review Results</h1>
+              <button
+                onClick={handleCloseAssessment}
+                className="w-10 h-10 flex items-center justify-center bg-white hover:bg-slate-100 border border-slate-200 rounded-full text-slate-600 hover:text-slate-900 transition-all"
+                title="Close"
+              >
+                <i className="fas fa-times text-xl"></i>
+              </button>
             </div>
-          </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <i className="fas fa-check-circle text-green-600 text-xl"></i>
+            <div className="text-center mb-8">
+              {/* Score Circle */}
+              <div className="inline-block relative">
+                <svg className="w-48 h-48">
+                  <circle
+                    cx="96"
+                    cy="96"
+                    r="88"
+                    fill="none"
+                    stroke="#e2e8f0"
+                    strokeWidth="12"
+                  />
+                  <circle
+                    cx="96"
+                    cy="96"
+                    r="88"
+                    fill="none"
+                    stroke={viewingCompletedAssessment.score >= viewingCompletedAssessment.passingScore ? '#10b981' : '#ef4444'}
+                    strokeWidth="12"
+                    strokeDasharray={`${(viewingCompletedAssessment.score / 100) * 553} 553`}
+                    strokeLinecap="round"
+                    transform="rotate(-90 96 96)"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className={`text-5xl font-bold ${viewingCompletedAssessment.score >= viewingCompletedAssessment.passingScore ? 'text-green-600' : 'text-red-600'}`}>
+                    {viewingCompletedAssessment.score}%
+                  </span>
+                  <span className="text-sm text-slate-600 mt-1">Your Score</span>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900">{completedTests}</p>
-                <p className="text-xs text-slate-600">Completed</p>
-              </div>
-            </div>
-          </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <i className="fas fa-clock text-orange-600 text-xl"></i>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900">{pendingTests}</p>
-                <p className="text-xs text-slate-600">Pending</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <i className="fas fa-star text-purple-600 text-xl"></i>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900">{averageScore.toFixed(0)}%</p>
-                <p className="text-xs text-slate-600">Avg Score</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Jobs List with Accordions */}
-        <div className="space-y-4">
-          {jobs.map((job) => {
-            const jobCompleted = job.skills.reduce((sum, skill) => 
-              sum + skill.assessments.filter(a => a.status === 'completed').length, 0
-            );
-            const jobTotal = job.skills.reduce((sum, skill) => sum + skill.assessments.length, 0);
-
-            return (
-              <div key={job.id} className="bg-white rounded-xl shadow-sm border-2 border-slate-200 overflow-hidden">
-                {/* Job Header */}
-                <button
-                  onClick={() => toggleJob(job.id)}
-                  className="w-full p-4 lg:p-6 flex items-center justify-between hover:bg-slate-50 transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-                      <i className="fas fa-briefcase text-indigo-600 text-xl"></i>
-                    </div>
-                    <div className="text-left">
-                      <h3 className="text-lg lg:text-xl font-bold text-slate-900">{job.title}</h3>
-                      <p className="text-sm text-slate-600">
-                        <i className="fas fa-building mr-2"></i>
-                        {job.company} • {job.location}
-                      </p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        {jobCompleted}/{jobTotal} tests completed • {job.skills.length} skills
-                      </p>
-                    </div>
+              {/* Result Message */}
+              <div className="mt-6">
+                {viewingCompletedAssessment.score >= viewingCompletedAssessment.passingScore ? (
+                  <div className="inline-flex items-center gap-2 px-6 py-3 bg-green-100 text-green-800 rounded-full font-semibold">
+                    <i className="fas fa-check-circle text-xl"></i>
+                    You Passed!
                   </div>
-                  <i className={`fas fa-chevron-${expandedJobs[job.id] ? 'up' : 'down'} text-slate-400 text-xl`}></i>
-                </button>
-
-                {/* Skills List */}
-                {expandedJobs[job.id] && (
-                  <div className="border-t border-slate-200 bg-slate-50 p-4">
-                    <div className="space-y-3">
-                      {job.skills.map((skill) => {
-                        const skillCompleted = skill.assessments.filter(a => a.status === 'completed').length;
-                        const skillTotal = skill.assessments.length;
-
-                        return (
-                          <div key={skill.id} className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-                            {/* Skill Header */}
-                            <button
-                              onClick={() => toggleSkill(skill.id)}
-                              className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                  <i className="fas fa-code text-blue-600"></i>
-                                </div>
-                                <div className="text-left">
-                                  <h4 className="font-bold text-slate-900">{skill.name}</h4>
-                                  <p className="text-xs text-slate-600">
-                                    {skillCompleted}/{skillTotal} tests completed
-                                  </p>
-                                </div>
-                              </div>
-                              <i className={`fas fa-chevron-${expandedSkills[skill.id] ? 'up' : 'down'} text-slate-400`}></i>
-                            </button>
-
-                            {/* Tests List */}
-                            {expandedSkills[skill.id] && (
-                              <div className="border-t border-slate-200 bg-slate-50 p-4">
-                                <div className="space-y-3">
-                                  {skill.assessments.map((assessment) => (
-                                    <div
-                                      key={assessment.id}
-                                      className="bg-white rounded-lg border border-slate-200 p-4 hover:shadow-sm transition-shadow"
-                                    >
-                                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-                                        <div className="flex-1">
-                                          <div className="flex flex-wrap items-center gap-2 mb-2">
-                                            <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${getStatusColor(assessment.status)}`}>
-                                              {assessment.status === 'completed' ? (
-                                                <>
-                                                  <i className="fas fa-check-circle mr-1"></i>
-                                                  Completed
-                                                </>
-                                              ) : (
-                                                <>
-                                                  <i className="fas fa-clock mr-1"></i>
-                                                  Pending
-                                                </>
-                                              )}
-                                            </span>
-                                            <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${getDifficultyColor(assessment.difficulty)}`}>
-                                              {assessment.difficulty}
-                                            </span>
-                                            {assessment.status === 'completed' && assessment.score && (
-                                              <span className="px-2 py-1 rounded-full text-xs font-semibold border bg-purple-100 text-purple-700 border-purple-300">
-                                                <i className="fas fa-star mr-1"></i>
-                                                {assessment.score}%
-                                              </span>
-                                            )}
-                                          </div>
-
-                                          <h5 className="font-bold text-slate-900 mb-1">{assessment.topic}</h5>
-                                          <div className="flex flex-wrap gap-3 text-xs text-slate-600">
-                                            <span>
-                                              <i className="fas fa-clock mr-1"></i>
-                                              {assessment.duration} min
-                                            </span>
-                                            <span>
-                                              <i className="fas fa-question-circle mr-1"></i>
-                                              {assessment.totalQuestions} questions
-                                            </span>
-                                            <span>
-                                              <i className="fas fa-chart-line mr-1"></i>
-                                              Pass: {assessment.passingScore}%
-                                            </span>
-                                          </div>
-                                        </div>
-
-                                        <button
-                                          onClick={() => handleStartAssessment(job, skill, assessment)}
-                                          className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
-                                            assessment.status === 'pending'
-                                              ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                                              : 'bg-green-600 hover:bg-green-700 text-white'
-                                          }`}
-                                        >
-                                          <i className={`fas ${assessment.status === 'pending' ? 'fa-play' : 'fa-redo'} mr-2`}></i>
-                                          {assessment.status === 'pending' ? 'Start' : 'Retake'}
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                ) : (
+                  <div className="inline-flex items-center gap-2 px-6 py-3 bg-red-100 text-red-800 rounded-full font-semibold">
+                    <i className="fas fa-times-circle text-xl"></i>
+                    You Did Not Pass
                   </div>
                 )}
               </div>
-            );
-          })}
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-3 gap-2 md:gap-4 mb-8">
+              <div className="bg-white rounded-lg md:rounded-xl shadow-sm border border-slate-200 p-3 md:p-6 text-center">
+                <i className="fas fa-check-circle text-green-600 text-xl md:text-3xl mb-1 md:mb-2"></i>
+                <p className="text-xl md:text-3xl font-bold text-slate-900">{correctAnswers}</p>
+                <p className="text-xs md:text-sm text-slate-600">Correct</p>
+              </div>
+              <div className="bg-white rounded-lg md:rounded-xl shadow-sm border border-slate-200 p-3 md:p-6 text-center">
+                <i className="fas fa-times-circle text-red-600 text-xl md:text-3xl mb-1 md:mb-2"></i>
+                <p className="text-xl md:text-3xl font-bold text-slate-900">
+                  {viewingCompletedAssessment.totalQuestions - correctAnswers}
+                </p>
+                <p className="text-xs md:text-sm text-slate-600">Incorrect</p>
+              </div>
+              <div className="bg-white rounded-lg md:rounded-xl shadow-sm border border-slate-200 p-3 md:p-6 text-center">
+                <i className="fas fa-clipboard-check text-blue-600 text-xl md:text-3xl mb-1 md:mb-2"></i>
+                <p className="text-xl md:text-3xl font-bold text-slate-900">{viewingCompletedAssessment.totalQuestions}</p>
+                <p className="text-xs md:text-sm text-slate-600">Total</p>
+              </div>
+            </div>
+
+            {/* Detailed Review */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i className="fas fa-list-check text-blue-600"></i>
+                Detailed Review
+              </h3>
+              <div className="space-y-4">
+                {viewingCompletedAssessment.questions.map((question, index) => {
+                  const userAnswer = viewingCompletedAssessment.userAnswers[question.id];
+                  const isCorrect = userAnswer === question.correctAnswer;
+                  
+                  return (
+                    <div key={question.id} className={`p-4 rounded-lg border-2 ${isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+                      <div className="flex items-start gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          isCorrect ? 'bg-green-500' : 'bg-red-500'
+                        }`}>
+                          <i className={`fas ${isCorrect ? 'fa-check' : 'fa-times'} text-white`}></i>
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900 mb-2">Q{index + 1}. {question.question}</p>
+                          <div className="space-y-1 text-sm">
+                            <p className={userAnswer !== undefined ? (isCorrect ? 'text-green-700' : 'text-red-700') : 'text-slate-600'}>
+                              <strong>Your Answer:</strong> {userAnswer !== undefined ? question.options[userAnswer] : 'Not answered'}
+                            </p>
+                            {!isCorrect && (
+                              <p className="text-green-700">
+                                <strong>Correct Answer:</strong> {question.options[question.correctAnswer]}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
+              <button
+                onClick={handleCloseAssessment}
+                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
+              >
+                <i className="fas fa-arrow-left mr-2"></i>
+                Back to Assessments
+              </button>
+              <button
+                onClick={handleCreateStudyPlan}
+                className="px-8 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
+              >
+                <i className="fas fa-book-reader mr-2"></i>
+                Create Study Plan
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Video Player Modal */}
+        <VideoPlayerModal
+          video={playingVideo}
+          onClose={handleCloseVideo}
+        />
+      </>
+    );
+  }
+
+  // Study Plan Modal View
+  if (studyPlanModal) {
+    const wrongQuestions = studyPlanModal.questions.filter(
+      q => studyPlanModal.userAnswers[q.id] !== q.correctAnswer
+    );
+
+    return (
+      <>
+        {!playingVideo && (
+          <StudentMenuNavigation currentPage={currentPage} onPageChange={handlePageChange} />
+        )}
+        <div className={`min-h-screen bg-slate-50 ${!playingVideo ? 'lg:ml-72' : ''}`}>
+          <div className="max-w-6xl mx-auto px-4 py-8 pt-20 lg:pt-8">
+            {/* Header */}
+            <div className="mb-8">
+              <button
+                onClick={handleCloseStudyPlan}
+                className="mb-4 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-all flex items-center gap-2"
+              >
+                <i className="fas fa-arrow-left"></i>
+                Back to Review
+              </button>
+              <h1 className="text-3xl font-bold text-slate-900 mb-2">Study Plan</h1>
+              <p className="text-slate-600">{studyPlanModal.title}</p>
+            </div>
+
+            {/* Questions You Got Wrong */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i className="fas fa-times-circle text-red-600"></i>
+                Questions You Got Wrong
+              </h3>
+              {wrongQuestions.length > 0 ? (
+                <div className="space-y-3">
+                  {wrongQuestions.map((question, index) => (
+                    <div key={question.id} className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="font-medium text-slate-900 mb-2">Q. {question.question}</p>
+                      <div className="text-sm space-y-1">
+                        <p className="text-red-700">
+                          <strong>Your Answer:</strong> {studyPlanModal.userAnswers[question.id] !== undefined ? question.options[studyPlanModal.userAnswers[question.id]] : 'Not answered'}
+                        </p>
+                        <p className="text-green-700">
+                          <strong>Correct Answer:</strong> {question.options[question.correctAnswer]}
+                        </p>
+                        <p className="text-purple-700">
+                          <strong>Topic:</strong> {question.topic}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-slate-600 py-4">You answered all questions correctly! 🎉</p>
+              )}
+            </div>
+
+            {/* Related Videos Section */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i className="fas fa-video text-blue-600"></i>
+                Recommended Videos to Review
+              </h3>
+              {recommendedVideos.length > 0 ? (
+                <div className="space-y-6">
+                  {groupVideosByTopic(recommendedVideos).map((topicGroup) => (
+                    <div key={topicGroup.topicId}>
+                      <h4 className="text-lg font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                        <i className="fas fa-tag text-purple-600"></i>
+                        {topicGroup.topicName}
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {topicGroup.videos.map((video) => {
+                          const videoId = getYouTubeVideoId(video.link);
+                          return (
+                            <div
+                              key={video._id}
+                              onClick={() => setPlayingVideo({
+                                videoId: videoId,
+                                title: video.name,
+                                duration: video.duration,
+                                topic: topicGroup.topicName,
+                                description: video.description
+                              })}
+                              className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 hover:shadow-md transition-all cursor-pointer"
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                                  <i className="fab fa-youtube text-white text-xl"></i>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-semibold text-slate-900 text-sm mb-1">{video.name}</p>
+                                  {video.description && (
+                                    <p className="text-xs text-slate-600 mb-2 line-clamp-2">{video.description}</p>
+                                  )}
+                                  <div className="flex items-center gap-2 text-xs text-slate-600">
+                                    <span className="flex items-center gap-1">
+                                      <i className="fas fa-clock"></i>
+                                      {video.duration}
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      <i className="fas fa-play-circle"></i>
+                                      Watch Now
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-slate-600 py-4">No videos available for these topics.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Video Player Modal */}
+        <VideoPlayerModal
+          video={playingVideo}
+          onClose={handleCloseVideo}
+        />
+      </>
+    );
+  }
+
+  // Main Assessment List View
+  return (
+    <>
+      <LoaderOverlay isVisible={isLoading} title="Job Assessments" subtitle="Loading skill assessments..." />
+      
+      <StudentMenuNavigation currentPage={currentPage} onPageChange={handlePageChange} />
+      
+      <div className="min-h-screen bg-slate-50 lg:ml-72">
+        {/* Header Section */}
+        <div className="bg-white shadow-sm border-b border-slate-200">
+          <div className="px-4 sm:px-6 lg:px-8 py-4 pt-16 lg:pt-4">
+            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 flex items-center gap-3">
+              <i className="fas fa-clipboard-check text-blue-600"></i>
+              Job Assessments
+            </h1>
+            <p className="text-sm text-slate-600 mt-1">
+              Test your knowledge on job-related skills organized by position
+            </p>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Job Filter */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Select Job
+            </label>
+            <select
+              value={selectedJob}
+              onChange={(e) => {
+                setSelectedJob(e.target.value);
+                setSelectedTopic(''); // Reset topic when job changes
+                setJobLevelAssessments([]); // Clear assessments
+                setTopicLevelAssessments([]); // Clear topic assessments
+              }}
+              className="w-full md:w-64 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">-- Select a Job --</option>
+              {jobs.map((job) => (
+                <option key={job.id || job._id} value={job.id || job._id}>
+                  {job.title} - {job.company}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Job-Level Assessments */}
+          {selectedJob && jobLevelAssessments.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i className="fas fa-briefcase text-blue-600"></i>
+                Job-Level Assessments
+              </h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {jobLevelAssessments.map(assessment => renderAssessmentCard({
+                  ...assessment,
+                  job: selectedJobData
+                }))}
+              </div>
+            </div>
+          )}
+
+          {/* Topics List */}
+          {selectedJob && currentTopics.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i className="fas fa-tags text-purple-600"></i>
+                Topics
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+                {currentTopics.map((topic) => {
+                  return (
+                    <button
+                      key={topic.id || topic._id}
+                      onClick={() => {
+                        const topicId = topic.id || topic._id;
+                        setSelectedTopic(selectedTopic === topicId ? '' : topicId);
+                        if (selectedTopic !== topicId) {
+                          setTopicLevelAssessments([]); // Clear when switching topics
+                        }
+                      }}
+                      className={`p-4 rounded-lg border-2 text-left transition-all ${
+                        selectedTopic === (topic.id || topic._id)
+                          ? 'border-purple-500 bg-purple-50 shadow-md'
+                          : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <i className={`fas fa-tag ${selectedTopic === (topic.id || topic._id) ? 'text-purple-600' : 'text-slate-500'}`}></i>
+                        <span className={`font-medium ${selectedTopic === (topic.id || topic._id) ? 'text-purple-900' : 'text-slate-700'}`}>
+                          {topic.name}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Topic-Level Assessments */}
+          {selectedTopic && topicLevelAssessments.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i className="fas fa-clipboard-list text-green-600"></i>
+                Topic-Level Assessments
+              </h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {topicLevelAssessments.map(assessment => renderAssessmentCard(assessment))}
+              </div>
+            </div>
+          )}
+
+          {/* No Assessments Available */}
+          {selectedJob && jobLevelAssessments.length === 0 && currentTopics.length === 0 && !isLoading && (
+            <div className="mb-8">
+              <div className="text-center py-12 bg-slate-50 rounded-lg border border-slate-200">
+                <i className="fas fa-clipboard-list text-slate-300 text-5xl mb-3"></i>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">No Assessments Available</h3>
+                <p className="text-slate-600">There are no assessments available for this job.</p>
+              </div>
+            </div>
+          )}
+
+          {selectedTopic && topicLevelAssessments.length === 0 && !isLoading && (
+            <div className="mb-8">
+              <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i className="fas fa-clipboard-list text-green-600"></i>
+                Topic-Level Assessments
+              </h2>
+              <div className="text-center py-12 bg-slate-50 rounded-lg border border-slate-200">
+                <i className="fas fa-clipboard-list text-slate-300 text-5xl mb-3"></i>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">No Topic Assessments Available</h3>
+                <p className="text-slate-600">There are no assessments available for this topic.</p>
+              </div>
+            </div>
+          )}
+
+          {/* Empty States */}
+          {!selectedJob && !isLoading && (
+            <div className="text-center py-16">
+              <i className="fas fa-briefcase text-slate-300 text-6xl mb-4"></i>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Select a Job</h3>
+              <p className="text-slate-600">Please select a job to view assessments.</p>
+            </div>
+          )}
+
+          {selectedJob && currentTopics.length === 0 && !isLoading && (
+            <div className="text-center py-16">
+              <i className="fas fa-tags text-slate-300 text-6xl mb-4"></i>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">No Topics Available</h3>
+              <p className="text-slate-600">No topics available for this job.</p>
+            </div>
+          )}
         </div>
       </div>
     </>

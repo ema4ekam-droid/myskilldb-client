@@ -26,6 +26,7 @@ const CourseAssessments = () => {
   const timerRef = useRef(null);
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedTopic, setSelectedTopic] = useState('');
+  const [recommendedVideos, setRecommendedVideos] = useState([]);
 
   // Redux state
   const user = useSelector((state) => state.user);
@@ -304,7 +305,6 @@ const CourseAssessments = () => {
       const response = await getRequest(`/tests/${assessment.testId}`);
       if (response.data.success && response.data.data) {
         const testData = response.data.data;
-        const test = testData.test || testData;
         
         // Transform questions to match component's expected format
         const transformedQuestions = (testData.questions || []).map((q, index) => {
@@ -461,7 +461,6 @@ const CourseAssessments = () => {
       
       // Fetch test details with student answers
       const response = await getRequest(`/student-test-history/${assessment.studentTestHistoryId}`);
-      
       if (response.data.success && response.data.data) {
         const data = response.data.data;
         const questions = data.questions || [];
@@ -473,8 +472,9 @@ const CourseAssessments = () => {
           options: q.options || [],
           correctAnswer: q.correctAnswer,
           topic: q.topic || 'General',
+          topicId: q.topicId || null,
         }));
-        
+        console.log("transformedQuestions", transformedQuestions);
         // Create userAnswers object from student answers
         const userAnswers = {};
         questions.forEach((q) => {
@@ -520,7 +520,39 @@ const CourseAssessments = () => {
     });
   };
 
-  const handleCreateStudyPlan = () => {
+  const handleCreateStudyPlan = async () => {
+    // Get all wrong answers and extract their topic IDs
+    const wrongQuestions = viewingCompletedAssessment.questions.filter(
+      q => viewingCompletedAssessment.userAnswers[q.id] !== q.correctAnswer
+    );
+    const topicIds = [...new Set(
+      wrongQuestions
+        .map(q => q.topicId)
+        .filter(id => id !== null && id !== undefined)
+    )];
+    
+    // Fetch videos for these topic IDs
+    if (topicIds.length > 0) {
+      try {
+        setIsLoading(true);
+        const topicIdsQuery = topicIds.map(id => `topicIds=${id}`).join('&');
+        console.log("topicIdsQuery", topicIdsQuery);
+        const response = await getRequest(`/recordings/topics?${topicIdsQuery}`);
+        if (response.data.success && response.data.data) {
+          setRecommendedVideos(response.data.data || []);
+        } else {
+          setRecommendedVideos([]);
+        }
+      } catch (error) {
+        console.error('Error fetching recommended videos:', error);
+        setRecommendedVideos([]);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      setRecommendedVideos([]);
+    }
+        
     setStudyPlanModal(viewingCompletedAssessment);
     setCurrentNote('');
     setEditingNoteId(null);
@@ -537,79 +569,38 @@ const CourseAssessments = () => {
     setStudyPlanModal(null);
     setCurrentNote('');
     setEditingNoteId(null);
+    setRecommendedVideos([]);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleAddNote = (assessmentId) => {
-    if (currentNote.trim().length === 0) {
-      toast.error('Please enter a note');
-      return;
-    }
-
-    const newNote = {
-      id: Date.now(),
-      text: currentNote.trim(),
-      createdAt: new Date().toISOString()
-    };
-
-    setFocusAreas(prev => ({
-      ...prev,
-      [assessmentId]: [...(prev[assessmentId] || []), newNote]
-    }));
-
-    setCurrentNote('');
-    toast.success('Note added successfully');
-  };
-
-  const handleEditNote = (assessmentId, noteId) => {
-    const note = focusAreas[assessmentId]?.find(n => n.id === noteId);
-    if (note) {
-      setCurrentNote(note.text);
-      setEditingNoteId(noteId);
-    }
-  };
-
-  const handleUpdateNote = (assessmentId) => {
-    if (currentNote.trim().length === 0) {
-      toast.error('Please enter a note');
-      return;
-    }
-
-    setFocusAreas(prev => ({
-      ...prev,
-      [assessmentId]: prev[assessmentId].map(note =>
-        note.id === editingNoteId
-          ? { ...note, text: currentNote.trim(), updatedAt: new Date().toISOString() }
-          : note
-      )
-    }));
-
-    setCurrentNote('');
-    setEditingNoteId(null);
-    toast.success('Note updated successfully');
-  };
-
-  const handleDeleteNote = (assessmentId, noteId) => {
-    if (confirm('Are you sure you want to delete this note?')) {
-      setFocusAreas(prev => ({
-        ...prev,
-        [assessmentId]: prev[assessmentId].filter(note => note.id !== noteId)
-      }));
-      toast.success('Note deleted');
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setCurrentNote('');
-    setEditingNoteId(null);
-  };
-
-  const handlePlayVideo = (video) => {
-    setPlayingVideo(video);
   };
 
   const handleCloseVideo = () => {
     setPlayingVideo(null);
+  };
+
+  // Extract YouTube video ID from URL
+  const getYouTubeVideoId = (url) => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  // Group videos by topic
+  const groupVideosByTopic = (videos) => {
+    const grouped = {};
+    videos.forEach((video) => {
+      const topicId = String(video.topicId?._id || video.topicId);
+      const topicName = video.topicId?.name || 'General';
+      if (!grouped[topicId]) {
+        grouped[topicId] = {
+          topicId,
+          topicName,
+          videos: []
+        };
+      }
+      grouped[topicId].videos.push(video);
+    });
+    return Object.values(grouped);
   };
 
   const formatTime = (seconds) => {
@@ -1272,7 +1263,60 @@ const CourseAssessments = () => {
                 <i className="fas fa-video text-blue-600"></i>
                 Recommended Videos to Review
               </h3>
-                <p className="text-center text-slate-600 py-4">No videos available for this assessment.</p>
+              {recommendedVideos.length > 0 ? (
+                <div className="space-y-6">
+                  {groupVideosByTopic(recommendedVideos).map((topicGroup) => (
+                    <div key={topicGroup.topicId}>
+                      <h4 className="text-lg font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                        <i className="fas fa-tag text-purple-600"></i>
+                        {topicGroup.topicName}
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {topicGroup.videos.map((video) => {
+                          const videoId = getYouTubeVideoId(video.link);
+                          return (
+                            <div
+                              key={video._id}
+                              onClick={() => setPlayingVideo({
+                                videoId: videoId,
+                                title: video.name,
+                                duration: video.duration,
+                                topic: topicGroup.topicName,
+                                description: video.description
+                              })}
+                              className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 hover:shadow-md transition-all cursor-pointer"
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                                  <i className="fab fa-youtube text-white text-xl"></i>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-semibold text-slate-900 text-sm mb-1">{video.name}</p>
+                                  {video.description && (
+                                    <p className="text-xs text-slate-600 mb-2 line-clamp-2">{video.description}</p>
+                                  )}
+                                  <div className="flex items-center gap-2 text-xs text-slate-600">
+                                    <span className="flex items-center gap-1">
+                                      <i className="fas fa-clock"></i>
+                                      {video.duration}
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      <i className="fas fa-play-circle"></i>
+                                      Watch Now
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-slate-600 py-4">No videos available for these topics.</p>
+              )}
             </div>
           </div>
         </div>
