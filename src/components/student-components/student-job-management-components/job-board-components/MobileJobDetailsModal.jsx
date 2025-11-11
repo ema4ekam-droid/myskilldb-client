@@ -63,15 +63,14 @@ const MobileJobDetailsModal = ({
 
           {/* Action Buttons */}
           <div className="flex gap-3">
-            <a 
-              href={selectedJob.jobPostingLink} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex-1 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full transition-colors inline-flex items-center justify-center gap-2"
+            <button 
+              disabled
+              className="flex-1 px-6 py-2.5 bg-slate-400 text-white font-semibold rounded-full transition-colors inline-flex items-center justify-center gap-2 cursor-not-allowed opacity-60"
+              title="Apply functionality coming soon"
             >
               <i className="fas fa-external-link-alt text-xs"></i>
               Apply Now
-            </a>
+            </button>
           </div>
         </div>
 
