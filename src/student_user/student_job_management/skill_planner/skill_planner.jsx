@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { toast } from 'react-hot-toast';
 import StudentMenuNavigation from '../../../components/student-components/student-menu-components/StudentMenuNavigation';
 import LoaderOverlay from '../../../components/loader/LoaderOverlay';
+import { getRequest, postRequest } from '../../../api/apiRequests';
 import {
   AddResourceModal,
   RequestTestimonialModal,
@@ -26,6 +28,7 @@ import {
 
 const SkillPlanner = () => {
   const navigate = useNavigate();
+  const user = useSelector((state) => state.user);
   const [currentPage, setCurrentPage] = useState('skill-planner');
   const [isLoading, setIsLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState(null);
@@ -92,413 +95,117 @@ const SkillPlanner = () => {
   const [validatorRole, setValidatorRole] = useState('');
   const [personalMessage, setPersonalMessage] = useState('');
   
-  // Dummy data
-  const [plannerJobs, setPlannerJobs] = useState([
-    {
-      _id: 'job-1',
-      title: 'Frontend Developer',
-      company: 'TechCorp Solutions',
-      targetDate: '2025-03-15',
-      priority: 'high',
-      skills: [
-        {
-          id: 'skill-1',
-          name: 'React',
-          status: 'completed',
-          progress: 100,
-          assessmentCompleted: true,
-          assessmentScore: 91.7,
-          assessmentDate: '2024-01-28',
-          hoursInvested: 45,
-          estimatedHoursLeft: 0,
-          linkedInPosts: [
-            { 
-              id: 'li-1', 
-              topic: 'React Hooks Mastery', 
-              postText: '🚀 Just completed my React journey!\n\nExcited to share that I\'ve mastered React Hooks and Context API. Here are 3 key takeaways:\n\n1️⃣ useState & useEffect are game-changers\n2️⃣ Custom hooks make code reusable\n3️⃣ Context API eliminates prop drilling\n\n#React #WebDevelopment #JavaScript',
-              imageUrl: 'https://via.placeholder.com/1200x630/4F46E5/ffffff?text=React+Mastery',
-              date: '2024-10-20' 
-            },
-            { 
-              id: 'li-2', 
-              topic: 'Building Scalable Apps', 
-              postText: '💻 Learning React has transformed how I build web applications!\n\nJust finished a complex project using React best practices.',
-              imageUrl: 'https://via.placeholder.com/1200x630/6366F1/ffffff?text=React+Apps',
-              date: '2024-10-25' 
-            }
-          ],
-          youtubeLinks: [
-            { id: 'yt-1', title: 'React Complete Course', url: 'https://youtu.be/y9Dk6wMc8UM', addedDate: '2024-10-18' },
-            { id: 'yt-2', title: 'My React Tutorial Series - Part 1', url: 'https://youtu.be/y9Dk6wMc8UM', addedDate: '2024-10-22' }
-          ],
-          certificates: [
-            { id: 'cert-1', title: 'React Basics Certificate', url: 'https://drive.google.com/file/example', type: 'drive', addedDate: '2024-10-15' }
-          ],
-          testimonials: [
-            { 
-              id: 'test-1', 
-              project: 'E-commerce Checkout', 
-              skills: ['React'], 
-              validatorName: 'Ms. Priya Sharma', 
-              validatorEmail: 'priya.sharma@company.com', 
-              validatorRole: 'Project Manager, TechSolutions Inc.', 
-              status: 'approved',
-              testimonialText: 'Excellent work on React components. Shows strong understanding of component architecture and state management. Built a clean, maintainable checkout system.',
-              approvedDate: '2024-10-18'
-            },
-            { 
-              id: 'test-2', 
-              project: 'Dashboard Analytics', 
-              skills: ['React'], 
-              validatorName: 'Mr. John Davis', 
-              validatorEmail: 'john@startup.com', 
-              validatorRole: 'Lead Developer, StartupXYZ', 
-              status: 'pending',
-              requestedDate: '2024-10-28'
-            }
-          ],
-          assessments: [
-            {
-              id: 'assess-1',
-              name: 'React Fundamentals Test',
-              score: 91.7,
-              totalQuestions: 24,
-              correctAnswers: 22,
-              completedDate: '2024-01-28',
-              difficulty: 'Intermediate',
-              timeSpent: '45 minutes'
-            }
-          ],
-          readingModules: [
-            {
-              id: 'module-1',
-              title: 'React Core Concepts',
-              completedDate: '2024-10-10',
-              timeSpent: '2 hours',
-              content: {
-                skillName: 'React Core Concepts',
-                jobContext: 'Frontend Developer at TechCorp Solutions',
-                introduction: 'React is a powerful JavaScript library for building user interfaces. Created by Facebook, it revolutionizes how we think about building web applications by introducing a component-based architecture and virtual DOM for optimal performance.',
-                keyConcepts: [
-                  {
-                    title: 'Components and Props',
-                    content: 'React applications are built using components - reusable pieces of UI that can accept inputs called props. Components can be functional or class-based, with functional components being the modern standard.'
-                  },
-                  {
-                    title: 'State Management',
-                    content: 'State is data that changes over time in your application. React provides the useState hook for functional components, allowing you to track and update component-specific data.'
-                  },
-                  {
-                    title: 'Virtual DOM',
-                    content: 'React uses a virtual representation of the DOM to optimize updates. When state changes, React compares the virtual DOM with the actual DOM and only updates what has changed, making applications faster.'
-                  }
-                ],
-                practicalExample: `function Counter() {
-  const [count, setCount] = useState(0);
-  
-  return (
-    <div>
-      <p>You clicked {count} times</p>
-      <button onClick={() => setCount(count + 1)}>
-        Click me
-      </button>
-    </div>
-  );
-}`,
-                summary: [
-                  'React uses a component-based architecture for building UIs',
-                  'Props allow data to flow from parent to child components',
-                  'State management with useState enables dynamic, interactive applications',
-                  'Virtual DOM optimization ensures high performance',
-                  'React has a rich ecosystem with tools like React Router and Redux'
-                ]
-              }
-            },
-            {
-              id: 'module-2',
-              title: 'Advanced React Patterns',
-              completedDate: '2024-10-18',
-              timeSpent: '3 hours',
-              content: {
-                skillName: 'Advanced React Patterns',
-                jobContext: 'Frontend Developer at TechCorp Solutions',
-                introduction: 'Once you understand React basics, mastering advanced patterns will help you build more maintainable and scalable applications. These patterns solve common problems in larger React applications.',
-                keyConcepts: [
-                  {
-                    title: 'Custom Hooks',
-                    content: 'Custom hooks let you extract component logic into reusable functions. They follow the naming convention of starting with "use" and can call other hooks.'
-                  },
-                  {
-                    title: 'Context API',
-                    content: 'Context provides a way to pass data through the component tree without having to pass props down manually at every level, solving the prop drilling problem.'
-                  },
-                  {
-                    title: 'Memoization and Performance',
-                    content: 'React provides useMemo and useCallback hooks to optimize performance by memoizing values and functions, preventing unnecessary re-renders.'
-                  }
-                ],
-                practicalExample: `// Custom Hook Example
-function useCounter(initialValue = 0) {
-  const [count, setCount] = useState(initialValue);
-  
-  const increment = useCallback(() => {
-    setCount(c => c + 1);
-  }, []);
-  
-  const decrement = useCallback(() => {
-    setCount(c => c - 1);
-  }, []);
-  
-  return { count, increment, decrement };
-}`,
-                summary: [
-                  'Custom hooks promote code reuse and separation of concerns',
-                  'Context API solves prop drilling in deeply nested components',
-                  'useMemo and useCallback optimize performance',
-                  'Proper memoization prevents unnecessary re-renders',
-                  'These patterns are essential for large-scale React applications'
-                ]
-              }
-            }
-          ],
-          videoScripts: [
-            {
-              id: 'script-1',
-              title: 'Introduction to React Hooks',
-              generatedDate: '2024-10-15',
-              duration: '8-10 minutes',
-              content: {
-                skillName: 'Introduction to React Hooks',
-                duration: '8-10 minutes',
-                sections: [
-                  {
-                    time: '0:00-0:30',
-                    title: 'Introduction',
-                    content: 'Hey everyone! Today we\'re diving into React Hooks. Whether you\'re just starting with React or looking to modernize your code, this video will give you everything you need to know about hooks. Let\'s get started!'
-                  },
-                  {
-                    time: '0:30-2:00',
-                    title: 'What are Hooks?',
-                    content: 'Hooks are functions that let you use state and other React features in functional components. Before hooks, you needed class components for state management. Hooks changed everything! The most common hooks are useState for state management and useEffect for side effects.'
-                  },
-                  {
-                    time: '2:00-4:00',
-                    title: 'useState Hook',
-                    content: 'Let me show you useState in action. [Show code] useState returns an array with two elements: the current state value and a function to update it. We use array destructuring to get these values. Every time you call the setter function, React re-renders your component with the new state.'
-                  },
-                  {
-                    time: '4:00-6:30',
-                    title: 'useEffect Hook',
-                    content: 'useEffect is for side effects like data fetching, subscriptions, or manual DOM changes. [Show example] The second parameter is the dependency array - it controls when the effect runs. Empty array means run once, no array means run on every render, and with dependencies means run when those values change.'
-                  },
-                  {
-                    time: '6:30-8:00',
-                    title: 'Conclusion',
-                    content: 'That\'s your introduction to React Hooks! We covered useState and useEffect - the two most important hooks. Practice using them in your projects, and soon they\'ll feel natural. Check out the description for code examples and additional resources!'
-                  }
-                ],
-                visualSuggestions: [
-                  'Show React hooks logo and animation',
-                  'Display code editor with syntax highlighting',
-                  'Animate state changes in real-time',
-                  'Show before/after: class vs functional components',
-                  'Include visual diagram of useEffect lifecycle'
-                ],
-                thumbnailIdeas: [
-                  'React logo with "Hooks Explained" overlay',
-                  'Split screen showing code and result',
-                  'Colorful hooks diagram',
-                  'Before/After comparison thumbnail'
-                ]
-              }
-            }
-          ]
-        },
-        {
-          id: 'skill-2',
-          name: 'JavaScript ES6+',
-          status: 'in-progress',
-          progress: 65,
-          assessmentCompleted: false,
-          hoursInvested: 20,
-          estimatedHoursLeft: 10,
-          linkedInPosts: [],
-          youtubeLinks: [
-            { id: 'yt-3', title: 'JavaScript ES6 Features', url: 'https://youtu.be/y9Dk6wMc8UM', addedDate: '2024-10-25' }
-          ],
-          certificates: [],
-          testimonials: [
-            { 
-              id: 'test-3', 
-              project: 'Modern JS App', 
-              skills: ['JavaScript'], 
-              validatorName: 'Ms. Sarah Wilson', 
-              validatorEmail: 'sarah@tech.com', 
-              validatorRole: 'Senior Developer', 
-              status: 'pending',
-              requestedDate: '2024-10-29'
-            }
-          ],
-          assessments: [],
-          readingModules: [],
-          videoScripts: []
-        }
-      ]
-    },
-    {
-      _id: 'job-2',
-      title: 'Backend Developer',
-      company: 'InnovateTech',
-      targetDate: '2025-06-20',
-      priority: 'medium',
-      skills: [
-        {
-          id: 'skill-3',
-          name: 'Node.js',
-          status: 'in-progress',
-          progress: 40,
-          assessmentCompleted: false,
-          hoursInvested: 15,
-          estimatedHoursLeft: 20,
-          linkedInPosts: [],
-          youtubeLinks: [],
-          certificates: [],
-          testimonials: [],
-          assessments: [],
-          readingModules: [],
-          videoScripts: []
-        },
-        {
-          id: 'skill-4',
-          name: 'MongoDB',
-          status: 'not-started',
-          progress: 0,
-          assessmentCompleted: false,
-          hoursInvested: 0,
-          estimatedHoursLeft: 25,
-          linkedInPosts: [],
-          youtubeLinks: [],
-          certificates: [],
-          testimonials: [],
-          assessments: [],
-          readingModules: [],
-          videoScripts: []
-        },
-        {
-          id: 'skill-5',
-          name: 'Express.js',
-          status: 'not-started',
-          progress: 0,
-          assessmentCompleted: false,
-          hoursInvested: 0,
-          estimatedHoursLeft: 18,
-          linkedInPosts: [],
-          youtubeLinks: [],
-          certificates: [],
-          testimonials: [],
-          assessments: [],
-          readingModules: [],
-          videoScripts: []
-        }
-      ]
-    },
-    {
-      _id: 'job-3',
-      title: 'UI/UX Designer',
-      company: 'DesignHub Studios',
-      targetDate: '2025-04-10',
-      priority: 'low',
-      skills: [
-        {
-          id: 'skill-6',
-          name: 'Figma',
-          status: 'completed',
-          progress: 100,
-          assessmentCompleted: true,
-          assessmentScore: 88.5,
-          assessmentDate: '2024-02-10',
-          hoursInvested: 30,
-          estimatedHoursLeft: 0,
-          linkedInPosts: [
-            { 
-              id: 'li-3', 
-              topic: 'Figma Design Tips', 
-              postText: '🎨 5 Figma features that changed my design workflow!\n\nJust completed my Figma mastery journey.',
-              imageUrl: 'https://via.placeholder.com/1200x630/F24E1E/ffffff?text=Figma+Tips',
-              date: '2024-02-12' 
-            }
-          ],
-          youtubeLinks: [],
-          certificates: [
-            { id: 'cert-2', title: 'Figma Professional Certificate', url: 'https://drive.google.com/file/example2', type: 'drive', addedDate: '2024-02-11' }
-          ],
-          testimonials: [
-            { 
-              id: 'test-4', 
-              project: 'Mobile App Design', 
-              skills: ['Figma'], 
-              validatorName: 'Ms. Emily Chen', 
-              validatorEmail: 'emily@designstudio.com', 
-              validatorRole: 'Design Lead, CreativeWorks', 
-              status: 'approved',
-              testimonialText: 'Outstanding design skills in Figma. Created pixel-perfect mockups and maintained excellent design systems.',
-              approvedDate: '2024-02-15'
-            }
-          ],
-          assessments: [
-            {
-              id: 'assess-2',
-              name: 'Figma Mastery Test',
-              score: 88.5,
-              totalQuestions: 20,
-              correctAnswers: 18,
-              completedDate: '2024-02-10',
-              difficulty: 'Advanced',
-              timeSpent: '35 minutes'
-            }
-          ],
-          readingModules: [],
-          videoScripts: []
-        },
-        {
-          id: 'skill-7',
-          name: 'Adobe XD',
-          status: 'completed',
-          progress: 100,
-          assessmentCompleted: true,
-          assessmentScore: 92.0,
-          assessmentDate: '2024-02-18',
-          hoursInvested: 25,
-          estimatedHoursLeft: 0,
-          linkedInPosts: [],
-          youtubeLinks: [],
-          certificates: [],
-          testimonials: [],
-          assessments: [
-            {
-              id: 'assess-3',
-              name: 'Adobe XD Fundamentals',
-              score: 92.0,
-              totalQuestions: 25,
-              correctAnswers: 23,
-              completedDate: '2024-02-18',
-              difficulty: 'Intermediate',
-              timeSpent: '40 minutes'
-            }
-          ],
-          readingModules: [],
-          videoScripts: []
-        }
-      ]
-    }
-  ]);
+  // Planner jobs data
+  const [plannerJobs, setPlannerJobs] = useState([]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    if (user?._id) {
+      fetchSkillPlannerJobs();
+    } else {
       setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+    }
+  }, [user?._id]);
+
+  const fetchSkillPlannerJobs = async () => {
+    if (!user?._id) return;
+    
+    try {
+      setIsLoading(true);
+      const response = await getRequest('/skill-planner');
+      
+      if (response.data?.success && response.data?.data) {
+        const plannerEntries = response.data.data; // Contains both jobId and _id (skillPlannerId)
+        
+        // Fetch full job details for each job ID
+        const jobsPromises = plannerEntries.map(async (plannerEntry) => {
+          const jobId = plannerEntry.jobId;
+          const skillPlannerId = plannerEntry._id;
+          try {
+            // Fetch job details
+            const jobResponse = await getRequest(`/jobs/${jobId}`);
+            if (jobResponse.data?.success && jobResponse.data?.data) {
+              const jobData = jobResponse.data.data;
+              
+              // Fetch topics (skills) for this job
+              let skills = [];
+              try {
+                const topicsResponse = await getRequest(`/topics/job/${jobId}`);
+                if (topicsResponse.data?.success && topicsResponse.data?.data) {
+                  // Transform topics to skills format and check for existing reading modules
+                  const skillsPromises = topicsResponse.data.data.map(async (topic, index) => {
+                    let hasReadingModule = false;
+                    let existingModule = null;
+                    
+                    // Check if reading module exists for this job and topic
+                    try {
+                      const moduleResponse = await getRequest(`/reading-modules?jobId=${jobId}&topicId=${topic._id}`);
+                      if (moduleResponse.data?.success && moduleResponse.data?.data) {
+                        hasReadingModule = true;
+                        existingModule = moduleResponse.data.data;
+                      }
+                    } catch (error) {
+                      // Module doesn't exist, which is fine
+                    }
+
+                    return {
+                      id: topic._id || `skill-${index}`,
+                      name: topic.name || topic.title || 'Skill',
+                      status: 'not-started',
+                      progress: 0,
+                      assessmentCompleted: false,
+                      hoursInvested: 0,
+                      estimatedHoursLeft: 0,
+                      linkedInPosts: [],
+                      youtubeLinks: [],
+                      certificates: [],
+                      testimonials: [],
+                      assessments: [],
+                      readingModules: hasReadingModule ? [existingModule] : [],
+                      videoScripts: [],
+                      hasReadingModule: hasReadingModule,
+                      existingReadingModule: existingModule
+                    };
+                  });
+                  
+                  skills = await Promise.all(skillsPromises);
+                }
+              } catch (error) {
+                console.error('Error fetching topics for job:', jobId, error);
+              }
+              
+              // Transform API data to match component's expected format
+              return {
+                _id: jobData._id,
+                title: jobData.name || jobData.title || 'Job Title',
+                company: jobData.companyName || jobData.company || 'Company',
+                targetDate: jobData.targetDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Default 90 days from now
+                priority: jobData.priority || 'medium',
+                skillPlannerId: skillPlannerId,
+                skills: skills.length > 0 ? skills : []
+              };
+            }
+            return null;
+          } catch (error) {
+            console.error('Error fetching job details:', jobId, error);
+            return null;
+          }
+        });
+        
+        const fetchedJobs = await Promise.all(jobsPromises);
+        const validJobs = fetchedJobs.filter(job => job !== null);
+        
+        setPlannerJobs(validJobs);
+      } else {
+        setPlannerJobs([]);
+      }
+    } catch (error) {
+      console.error('Error fetching skill planner jobs:', error);
+      toast.error('Failed to load skill planner jobs');
+      setPlannerJobs([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -558,28 +265,6 @@ function useCounter(initialValue = 0) {
     }, 0);
   };
 
-  const getCVStatus = (job) => {
-    const totalSkills = job.skills.length;
-    const assessmentsCompleted = job.skills.filter(skill => skill.assessmentCompleted).length;
-    
-    if (assessmentsCompleted === 0) {
-      return { status: 'start', label: 'Start CV Creation', color: 'text-slate-600 bg-slate-100', link: '/student/job-assessments' };
-    } else if (assessmentsCompleted === totalSkills) {
-      return { status: 'generated', label: 'CV Generated', color: 'text-green-600 bg-green-100', link: '/student/job-cv' };
-    } else {
-      return { status: 'progress', label: 'CV In Progress', color: 'text-amber-600 bg-amber-100', link: '/student/job-cv' };
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'completed': return 'text-green-600 bg-green-50 border-green-200';
-      case 'in-progress': return 'text-blue-600 bg-blue-50 border-blue-200';
-      case 'not-started': return 'text-slate-600 bg-slate-50 border-slate-200';
-      default: return 'text-slate-600 bg-slate-50 border-slate-200';
-    }
-  };
-
   const getPriorityColor = (priority) => {
     switch (priority) {
       case 'high': return 'text-red-600 bg-red-50 border-red-200';
@@ -589,15 +274,45 @@ function useCounter(initialValue = 0) {
     }
   };
 
+  // View Existing Module Handler
+  const handleViewModule = async (job, skill) => {
+    if (!skill?.existingReadingModule) {
+      toast.error('Module not found');
+      return;
+    }
+
+    setSelectedJob(job);
+    setSelectedSkill(skill);
+    
+    // Transform database module to display format
+    const module = {
+      skillName: skill.existingReadingModule.skillName,
+      jobContext: skill.existingReadingModule.jobContext,
+      introduction: skill.existingReadingModule.introduction,
+      keyConcepts: skill.existingReadingModule.keyConcepts,
+      practicalExample: skill.existingReadingModule.practicalExample,
+      summary: skill.existingReadingModule.summary
+    };
+
+    setGeneratedModule(module);
+    setReaderMode(true);
+  };
+
   // Generate Module Handler
-  const handleGenerateModule = (job, skill) => {
+  const handleGenerateModule = async (job, skill) => {
+    if (!user?._id || !job?._id || !skill?.id) {
+      toast.error('Unable to generate module. Missing required information.');
+      return;
+    }
+
     setSelectedJob(job);
     setSelectedSkill(skill);
     setIsGenerating(true);
     setGenerationType('module');
     setReaderMode(true);
     
-    setTimeout(() => {
+    try {
+      // Generate module content (simulating AI generation)
       const module = {
         skillName: skill.name,
         jobContext: job.title,
@@ -627,15 +342,59 @@ function useCounter(initialValue = 0) {
           'Practice with real-world examples solidifies knowledge',
           'Following best practices ensures code quality',
           'Continuous learning keeps skills relevant'
-        ],
-        generatedAt: new Date().toISOString()
+        ]
       };
-      
-      setGeneratedModule(module);
+
+      // Save to database
+      const response = await postRequest('/reading-modules', {
+        jobId: job._id,
+        topicId: skill.id,
+        skillName: module.skillName,
+        jobContext: module.jobContext,
+        introduction: module.introduction,
+        keyConcepts: module.keyConcepts,
+        practicalExample: module.practicalExample,
+        summary: module.summary
+      });
+
+      if (response.data?.success) {
+        setGeneratedModule(module);
+        toast.success('Learning module generated and saved successfully!');
+        // Refresh the jobs to update the hasReadingModule flag
+        fetchSkillPlannerJobs();
+      } else {
+        if (response.data?.message?.includes('already exists')) {
+          toast.info('Module already exists. Loading existing module...');
+          // Fetch and show existing module
+          try {
+            const moduleResponse = await getRequest(`/reading-modules?jobId=${job._id}&topicId=${skill.id}`);
+            if (moduleResponse.data?.success && moduleResponse.data?.data) {
+              const existingModule = moduleResponse.data.data;
+              setGeneratedModule({
+                skillName: existingModule.skillName,
+                jobContext: existingModule.jobContext,
+                introduction: existingModule.introduction,
+                keyConcepts: existingModule.keyConcepts,
+                practicalExample: existingModule.practicalExample,
+                summary: existingModule.summary
+              });
+              fetchSkillPlannerJobs();
+            }
+          } catch (error) {
+            console.error('Error fetching existing module:', error);
+          }
+        } else {
+          toast.error(response.data?.message || 'Failed to save module');
+          setGeneratedModule(module); // Still show the module even if save fails
+        }
+      }
+    } catch (error) {
+      console.error('Error generating module:', error);
+      toast.error('Failed to generate module');
+    } finally {
       setIsGenerating(false);
       setGenerationType('');
-      toast.success('Learning module generated successfully!');
-    }, 3000);
+    }
   };
 
   const handleCloseReader = () => {
@@ -1051,16 +810,6 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                           <div className="flex-1">
                             <h2 className="text-lg font-bold text-slate-900 mb-1">{job.title}</h2>
                             <p className="text-sm text-slate-600 mb-2">{job.company}</p>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(getCVStatus(job).link);
-                              }}
-                              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold ${getCVStatus(job).color} hover:opacity-80 transition-opacity`}
-                            >
-                              <i className={`fas ${getCVStatus(job).status === 'generated' ? 'fa-check-circle' : getCVStatus(job).status === 'progress' ? 'fa-clock' : 'fa-play-circle'}`}></i>
-                              {getCVStatus(job).label}
-                            </button>
                           </div>
                           <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'} text-slate-400 text-xl ml-2`}></i>
                         </div>
@@ -1089,14 +838,12 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                         <div>
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-xs font-medium text-slate-700">Progress</span>
-                            <span className="text-xs font-semibold text-indigo-600">
-                              {job.skills.length > 0 ? Math.round((job.skills.filter(s => s.status === 'completed').length / job.skills.length) * 100) : 0}%
-                            </span>
+                            <span className="text-xs font-semibold text-indigo-600">50%</span>
                           </div>
                           <div className="w-full bg-slate-200 rounded-full h-2">
                             <div
                               className="bg-gradient-to-r from-indigo-500 to-purple-600 h-2 rounded-full transition-all"
-                              style={{ width: `${job.skills.length > 0 ? (job.skills.filter(s => s.status === 'completed').length / job.skills.length) * 100 : 0}%` }}
+                              style={{ width: '50%' }}
                             ></div>
                           </div>
                         </div>
@@ -1114,16 +861,6 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                           <div className="flex-1">
                             <h2 className="text-xl font-bold text-slate-900 mb-1">{job.title}</h2>
                             <p className="text-sm text-slate-600 mb-3">{job.company}</p>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(getCVStatus(job).link);
-                              }}
-                              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold ${getCVStatus(job).color} hover:opacity-80 transition-opacity`}
-                            >
-                              <i className={`fas ${getCVStatus(job).status === 'generated' ? 'fa-check-circle' : getCVStatus(job).status === 'progress' ? 'fa-clock' : 'fa-play-circle'}`}></i>
-                              {getCVStatus(job).label}
-                            </button>
                           </div>
                           <div className="px-4 py-2 bg-white text-slate-700 rounded-lg font-medium flex items-center gap-2 shadow-sm">
                             <span>{isExpanded ? 'Collapse' : 'Expand'}</span>
@@ -1136,14 +873,12 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                       <div className="p-6">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-medium text-slate-700">Overall Progress</span>
-                          <span className="text-sm font-semibold text-slate-900">
-                            {job.skills.length > 0 ? Math.round((job.skills.filter(s => s.status === 'completed').length / job.skills.length) * 100) : 0}%
-                          </span>
+                          <span className="text-sm font-semibold text-slate-900">50%</span>
                         </div>
                         <div className="w-full bg-slate-200 rounded-full h-3">
                           <div
                             className="bg-gradient-to-r from-indigo-500 to-purple-600 h-3 rounded-full transition-all"
-                            style={{ width: `${job.skills.length > 0 ? (job.skills.filter(s => s.status === 'completed').length / job.skills.length) * 100 : 0}%` }}
+                            style={{ width: '50%' }}
                           ></div>
                         </div>
                       </div>
@@ -1168,9 +903,6 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                                   <div className="flex-1">
                                     <h4 className="font-semibold text-slate-900 mb-2">{skill.name}</h4>
                                     <div className="flex items-center gap-3 flex-wrap">
-                                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(skill.status)}`}>
-                                        {skill.status.replace('-', ' ').toUpperCase()}
-                                      </span>
                                       {skill.assessmentCompleted && (
                                         <span className="flex items-center gap-1 text-green-600 font-medium text-xs">
                                           <i className="fas fa-check-circle"></i>
@@ -1225,12 +957,21 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                                             </div>
                                             <span className="text-xs text-slate-500 font-medium">{skill.readingModules?.length || 0}</span>
                                           </div>
-                                          <button
-                                            onClick={() => handleGenerateModule(job, skill)}
-                                            className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm"
-                                          >
-                                            Generate
-                                          </button>
+                                          {skill.hasReadingModule ? (
+                                            <button
+                                              onClick={() => handleViewModule(job, skill)}
+                                              className="w-full px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm"
+                                            >
+                                              View Module
+                                            </button>
+                                          ) : (
+                                            <button
+                                              onClick={() => handleGenerateModule(job, skill)}
+                                              className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm"
+                                            >
+                                              Generate
+                                            </button>
+                                          )}
                                         </div>
 
                                         <div className="border-t border-slate-100 my-4"></div>
