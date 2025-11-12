@@ -55,6 +55,7 @@ const SkillPlanner = () => {
   const [showScriptGeneratorModal, setShowScriptGeneratorModal] = useState(false);
   const [showCertificatesModal, setShowCertificatesModal] = useState(false);
   const [showAddCertificateModal, setShowAddCertificateModal] = useState(false);
+  const [showVideoScriptsModal, setShowVideoScriptsModal] = useState(false);
   const [scriptIdea, setScriptIdea] = useState('');
   const [videoLength, setVideoLength] = useState('5-7'); // '2-3', '5-7', or '8-10'
   const [readerMode, setReaderMode] = useState(false);
@@ -412,6 +413,13 @@ const SkillPlanner = () => {
     setShowScriptGeneratorModal(true);
   };
 
+  // View Video Scripts Handler
+  const handleViewVideoScripts = (job, skill) => {
+    setSelectedJob(job);
+    setSelectedSkill(skill);
+    setShowVideoScriptsModal(true);
+  };
+
   // Handle Script Generation with Vertex AI
   const handleGenerateScript = async () => {
     if (!selectedSkill || !selectedJob) {
@@ -419,82 +427,103 @@ const SkillPlanner = () => {
       return;
     }
 
+    if (!scriptIdea.trim()) {
+      toast.error('Please enter a specific idea or focus for the video script');
+      return;
+    }
+
+    if (!selectedJob.skillPlannerId) {
+      toast.error('Skill planner ID is missing');
+      return;
+    }
+
     setShowScriptGeneratorModal(false);
     setIsGenerating(true);
     setGenerationType('script');
     
-    // Simulating API call to Vertex AI
-    // In production, this will be: const response = await fetch('/api/generate-script', { method: 'POST', body: JSON.stringify({ skill, job, idea, length }) });
-    
-    setTimeout(() => {
+    try {
       const durationMap = {
         '2-3': '2-3 minutes',
         '5-7': '5-7 minutes',
         '8-10': '8-10 minutes'
       };
 
-      const script = {
-        skillName: selectedSkill.name,
-        jobContext: selectedJob.title,
-        duration: durationMap[videoLength],
-        sections: [
+      // Generate sections (this would normally come from AI, but keeping the same structure for now)
+      const sections = [
+        {
+          time: '0:00 - 0:30',
+          title: 'Hook & Introduction',
+          content: `"Hey everyone! Today I'm going to share everything I've learned about ${selectedSkill.name}${scriptIdea ? `, specifically focusing on ${scriptIdea}` : ''}. If you're preparing for a ${selectedJob.title} role, this is essential knowledge you need to master. By the end of this video, you'll understand the core concepts and how to apply them in real projects."`
+        },
+        {
+          time: '0:30 - 1:30',
+          title: `What is ${selectedSkill.name}?`,
+          content: `"Let me start by explaining what ${selectedSkill.name} actually is and why it matters${scriptIdea ? `, especially when it comes to ${scriptIdea}` : ''}. This is particularly important for ${selectedJob.title} because it's a fundamental skill that employers look for."`
+        },
+        {
+          time: '1:30 - 3:30',
+          title: 'Key Concepts',
+          content: `"Now let's dive into the most important concepts you need to know. I'll walk you through each one with examples that relate to real-world scenarios${scriptIdea ? `, particularly around ${scriptIdea}` : ''}."`
+        },
+        ...(videoLength !== '2-3' ? [
           {
-            time: '0:00 - 0:30',
-            title: 'Hook & Introduction',
-            content: `"Hey everyone! Today I'm going to share everything I've learned about ${selectedSkill.name}${scriptIdea ? `, specifically focusing on ${scriptIdea}` : ''}. If you're preparing for a ${selectedJob.title} role, this is essential knowledge you need to master. By the end of this video, you'll understand the core concepts and how to apply them in real projects."`
-          },
-          {
-            time: '0:30 - 1:30',
-            title: `What is ${selectedSkill.name}?`,
-            content: `"Let me start by explaining what ${selectedSkill.name} actually is and why it matters${scriptIdea ? `, especially when it comes to ${scriptIdea}` : ''}. This is particularly important for ${selectedJob.title} because it's a fundamental skill that employers look for."`
-          },
-          {
-            time: '1:30 - 3:30',
-            title: 'Key Concepts',
-            content: `"Now let's dive into the most important concepts you need to know. I'll walk you through each one with examples that relate to real-world scenarios${scriptIdea ? `, particularly around ${scriptIdea}` : ''}."`
-          },
-          ...(videoLength !== '2-3' ? [
-            {
-              time: videoLength === '5-7' ? '3:30 - 5:00' : '3:30 - 6:00',
-              title: 'Practical Examples',
-              content: `"Let me show you how this works in practice. I'll demonstrate with a real example that shows ${selectedSkill.name} in action${scriptIdea ? `, focusing on ${scriptIdea}` : ''}."`
-            }
-          ] : []),
-          ...(videoLength === '8-10' ? [
-            {
-              time: '6:00 - 8:00',
-              title: 'Best Practices & Tips',
-              content: `"Here are some best practices and pro tips that will help you master ${selectedSkill.name}. These are insights I've learned through my journey and from industry professionals."`
-            }
-          ] : []),
-          {
-            time: videoLength === '2-3' ? '2:30 - 3:00' : videoLength === '5-7' ? '5:00 - 5:30' : '8:00 - 8:30',
-            title: 'Closing',
-            content: `"Thanks for watching! If you found this helpful, please like and subscribe. Drop a comment below with your questions about ${selectedSkill.name}, and I'll answer them. Keep learning and keep building!"`
+            time: videoLength === '5-7' ? '3:30 - 5:00' : '3:30 - 6:00',
+            title: 'Practical Examples',
+            content: `"Let me show you how this works in practice. I'll demonstrate with a real example that shows ${selectedSkill.name} in action${scriptIdea ? `, focusing on ${scriptIdea}` : ''}."`
           }
-        ],
-        visualSuggestions: [
-          'Use screen recording for demonstrations',
-          'Add text overlays for key points',
-          'Include relevant diagrams',
-          'Show code examples if applicable'
-        ],
-        thumbnailIdeas: [
-          `"${selectedSkill.name} Explained"`,
-          `Professional skill demonstration`,
-          `Clear, engaging title overlay`
-        ],
-        generatedAt: new Date().toISOString(),
-        userIdea: scriptIdea || 'General overview',
-        selectedLength: durationMap[videoLength]
-      };
-      
+        ] : []),
+        ...(videoLength === '8-10' ? [
+          {
+            time: '6:00 - 8:00',
+            title: 'Best Practices & Tips',
+            content: `"Here are some best practices and pro tips that will help you master ${selectedSkill.name}. These are insights I've learned through my journey and from industry professionals."`
+          }
+        ] : []),
+        {
+          time: videoLength === '2-3' ? '2:30 - 3:00' : videoLength === '5-7' ? '5:00 - 5:30' : '8:00 - 8:30',
+          title: 'Closing',
+          content: `"Thanks for watching! If you found this helpful, please like and subscribe. Drop a comment below with your questions about ${selectedSkill.name}, and I'll answer them. Keep learning and keep building!"`
+        }
+      ];
+
+      // Call API to create video script
+      const response = await postRequest('/video-scripts', {
+        jobId: selectedJob._id,
+        topicId: selectedSkill.id,
+        skillPlannerId: selectedJob.skillPlannerId,
+        userIdea: scriptIdea.trim(),
+        selectedLength: durationMap[videoLength],
+        sections: sections
+      });
+
+      if (response.data?.success) {
+        // Transform response to match frontend format
+        const script = {
+          duration: durationMap[videoLength],
+          sections: sections,
+          generatedAt: new Date().toISOString(),
+          userIdea: scriptIdea.trim(),
+          selectedLength: durationMap[videoLength]
+        };
+        
+        setGeneratedVideoScript(script);
+        setShowVideoScriptModal(true);
+        toast.success('Video script generated and saved successfully!');
+      } else {
+        // Check if it's a duplicate error
+        if (response.data?.message?.includes('already exists')) {
+          toast.error('A video script with this idea already exists for this skill and topic');
+        } else {
+          toast.error(response.data?.message || 'Failed to generate video script');
+        }
+      }
+    } catch (error) {
+      console.error('Error generating video script:', error);
+      toast.error('Failed to generate video script');
+    } finally {
       setIsGenerating(false);
       setGenerationType('');
-      setGeneratedVideoScript(script);
-      setShowVideoScriptModal(true);
-      toast.success('Video script generated successfully!');
-    }, 3000);
+    }
   };
 
   // Handle Create LinkedIn Post
@@ -988,28 +1017,21 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                                           </div>
                                           <button
                                             onClick={() => handleGenerateVideoScript(job, skill)}
-                                            className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm"
+                                            className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm mb-2"
                                           >
                                             Generate Script
                                           </button>
+                                          <button
+                                            onClick={() => {
+                                              setSelectedSkill(skill);
+                                              setSelectedJob(job);
+                                              setShowViewAllResourcesModal(true);
+                                            }}
+                                            className="w-full text-center text-indigo-600 hover:text-indigo-800 text-xs font-medium transition-colors py-2"
+                                          >
+                                            View All Scripts
+                                          </button>
                                         </div>
-
-                                        {/* View All Resources Link */}
-                                        {(skill.readingModules?.length > 0 || skill.videoScripts?.length > 0) && (
-                                          <>
-                                            <div className="border-t border-slate-100 my-4"></div>
-                                            <button
-                                              onClick={() => {
-                                                setSelectedSkill(skill);
-                                                setSelectedJob(job);
-                                                setShowViewAllResourcesModal(true);
-                                              }}
-                                              className="w-full text-center text-indigo-600 hover:text-indigo-800 text-xs font-medium transition-colors py-2"
-                                            >
-                                              View All Resources ({(skill.readingModules?.length || 0) + (skill.videoScripts?.length || 0)})
-                                            </button>
-                                          </>
-                                        )}
                                       </div>
 
                                       {/* Evidence & Proof */}
@@ -1588,18 +1610,16 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                 {/* Specific Idea Input */}
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Any specific idea or focus? (Optional)
+                    Any specific idea or focus? <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     value={scriptIdea}
                     onChange={(e) => setScriptIdea(e.target.value)}
                     placeholder="e.g., focus on hooks and state management, or explain async/await patterns..."
                     rows={3}
+                    required
                     className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-sm"
                   />
-                  <p className="text-xs text-slate-500 mt-1">
-                    Leave blank for a general overview of the skill
-                  </p>
                 </div>
 
                 {/* Video Length Selection */}
