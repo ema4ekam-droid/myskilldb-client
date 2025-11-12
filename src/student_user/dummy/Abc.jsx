@@ -1,1644 +1,1949 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import StudentMenuNavigation from '../../components/student-components/student-menu-components/StudentMenuNavigation';
 import LoaderOverlay from '../../components/loader/LoaderOverlay';
-import toast from 'react-hot-toast';
-import { VideoPlayerModal } from '../../components/student-components/student-courses-components/course-assessments-components';
+import {
+  AddResourceModal,
+  RequestTestimonialModal,
+  ViewTestimonialModal,
+  ViewNoteModal,
+  CameraRecorder
+} from '../../components/student-components/student-job-management-components/skill-planner-components';
+import {
+  AIGenerationLoader,
+  AssessmentReviewModal,
+  AddVideoModal,
+  VideosListModal,
+  TestimonialsListModal,
+  LinkedInPostsModal,
+  LearningModuleReader,
+  VideoScriptViewer,
+  ViewAllResourcesModal,
+  CreateLinkedInPostModal
+} from '../../components/student-components/student-job-management-components/skill-planner-components/modals';
 
-const CourseAssessments = () => {
-  const [currentPage, setCurrentPage] = useState('course-assessments');
+const SkillPlanner = () => {
+  const navigate = useNavigate();
+  const [currentPage, setCurrentPage] = useState('skill-planner');
   const [isLoading, setIsLoading] = useState(true);
-  const [assessments, setAssessments] = useState([]);
-  const [activeAssessment, setActiveAssessment] = useState(null);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState({});
-  const [timeRemaining, setTimeRemaining] = useState(0);
-  const [isAssessmentStarted, setIsAssessmentStarted] = useState(false);
-  const [showWarning, setShowWarning] = useState(false);
-  const [showResults, setShowResults] = useState(false);
-  const [assessmentResults, setAssessmentResults] = useState(null);
-  const [viewingCompletedAssessment, setViewingCompletedAssessment] = useState(null);
-  const [studyPlanModal, setStudyPlanModal] = useState(null);
-  const [focusAreas, setFocusAreas] = useState({});
-  const [currentNote, setCurrentNote] = useState('');
-  const [editingNoteId, setEditingNoteId] = useState(null);
-  const [playingVideo, setPlayingVideo] = useState(null);
-  const timerRef = useRef(null);
-  const visibilityRef = useRef(true);
-  const [selectedSubject, setSelectedSubject] = useState('');
-  const [selectedTopic, setSelectedTopic] = useState('');
-
-  // Dummy data structure
-  const dummySubjects = [
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [expandedJobs, setExpandedJobs] = useState({});
+  const [expandedSkills, setExpandedSkills] = useState({});
+  const [isAddResourceModalOpen, setIsAddResourceModalOpen] = useState(false);
+  const [isRequestTestimonialModalOpen, setIsRequestTestimonialModalOpen] = useState(false);
+  const [isViewTestimonialModalOpen, setIsViewTestimonialModalOpen] = useState(false);
+  const [isViewNoteModalOpen, setIsViewNoteModalOpen] = useState(false);
+  const [selectedSkill, setSelectedSkill] = useState(null);
+  const [selectedTestimonial, setSelectedTestimonial] = useState(null);
+  const [selectedNote, setSelectedNote] = useState(null);
+  const [resourceType, setResourceType] = useState('youtube');
+  const [isLinkedInModalOpen, setIsLinkedInModalOpen] = useState(false);
+  const [selectedLinkedInPost, setSelectedLinkedInPost] = useState(null);
+  const [showVideoScriptModal, setShowVideoScriptModal] = useState(false);
+  const [showModuleReaderModal, setShowModuleReaderModal] = useState(false);
+  const [showAssessmentReviewModal, setShowAssessmentReviewModal] = useState(false);
+  const [showVideosModal, setShowVideosModal] = useState(false);
+  const [showAddVideoModal, setShowAddVideoModal] = useState(false);
+  const [showLinkedInPostsModal, setShowLinkedInPostsModal] = useState(false);
+  const [showViewAllResourcesModal, setShowViewAllResourcesModal] = useState(false);
+  const [showCameraRecorder, setShowCameraRecorder] = useState(false);
+  const [showScriptGeneratorModal, setShowScriptGeneratorModal] = useState(false);
+  const [showCertificatesModal, setShowCertificatesModal] = useState(false);
+  const [showAddCertificateModal, setShowAddCertificateModal] = useState(false);
+  const [scriptIdea, setScriptIdea] = useState('');
+  const [videoLength, setVideoLength] = useState('5-7'); // '2-3', '5-7', or '8-10'
+  const [readerMode, setReaderMode] = useState(false);
+  const [generatedModule, setGeneratedModule] = useState(null);
+  const [generatedVideoScript, setGeneratedVideoScript] = useState(null);
+  const [generationType, setGenerationType] = useState(''); // 'module' or 'script'
+  
+  // Certificate form states
+  const [certificateTitle, setCertificateTitle] = useState('');
+  const [certificateLink, setCertificateLink] = useState('');
+  const [certificateProvider, setCertificateProvider] = useState('drive'); // 'drive' or 'dropbox'
+  
+  // Form states
+  const [resourceTitle, setResourceTitle] = useState('');
+  const [resourceUrl, setResourceUrl] = useState('');
+  const [resourceNote, setResourceNote] = useState('');
+  
+  // Video Form states
+  const [videoTitle, setVideoTitle] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
+  const [videoDescription, setVideoDescription] = useState('');
+  
+  // LinkedIn Post Form states
+  const [showCreateLinkedInPostModal, setShowCreateLinkedInPostModal] = useState(false);
+  const [linkedInPostTopic, setLinkedInPostTopic] = useState('');
+  const [linkedInPostContext, setLinkedInPostContext] = useState('');
+  const [generatedLinkedInPost, setGeneratedLinkedInPost] = useState('');
+  const [isGeneratingPost, setIsGeneratingPost] = useState(false);
+  const [linkedInTopic, setLinkedInTopic] = useState('');
+  const [generatedPostText, setGeneratedPostText] = useState('');
+  const [generatedImageUrl, setGeneratedImageUrl] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  
+  // Testimonial form states
+  const [testimonialProject, setTestimonialProject] = useState('');
+  const [validatorName, setValidatorName] = useState('');
+  const [validatorEmail, setValidatorEmail] = useState('');
+  const [validatorRole, setValidatorRole] = useState('');
+  const [personalMessage, setPersonalMessage] = useState('');
+  
+  // Dummy data
+  const [plannerJobs, setPlannerJobs] = useState([
     {
-      _id: 'sub1',
-      name: 'Amazon Ads Fundamentals',
-      code: 'ADS101',
-      color: 'blue',
-      topics: [
-        { _id: 'topic1', name: 'Campaign Setup', title: 'Campaign Setup' },
-        { _id: 'topic2', name: 'Bidding Strategies', title: 'Bidding Strategies' },
-        { _id: 'topic3', name: 'Performance Analysis', title: 'Performance Analysis' }
+      _id: 'job-1',
+      title: 'Frontend Developer',
+      company: 'TechCorp Solutions',
+      targetDate: '2025-03-15',
+      priority: 'high',
+      skills: [
+        {
+          id: 'skill-1',
+          name: 'React',
+          status: 'completed',
+          progress: 100,
+          assessmentCompleted: true,
+          assessmentScore: 91.7,
+          assessmentDate: '2024-01-28',
+          hoursInvested: 45,
+          estimatedHoursLeft: 0,
+          linkedInPosts: [
+            { 
+              id: 'li-1', 
+              topic: 'React Hooks Mastery', 
+              postText: '🚀 Just completed my React journey!\n\nExcited to share that I\'ve mastered React Hooks and Context API. Here are 3 key takeaways:\n\n1️⃣ useState & useEffect are game-changers\n2️⃣ Custom hooks make code reusable\n3️⃣ Context API eliminates prop drilling\n\n#React #WebDevelopment #JavaScript',
+              imageUrl: 'https://via.placeholder.com/1200x630/4F46E5/ffffff?text=React+Mastery',
+              date: '2024-10-20' 
+            },
+            { 
+              id: 'li-2', 
+              topic: 'Building Scalable Apps', 
+              postText: '💻 Learning React has transformed how I build web applications!\n\nJust finished a complex project using React best practices.',
+              imageUrl: 'https://via.placeholder.com/1200x630/6366F1/ffffff?text=React+Apps',
+              date: '2024-10-25' 
+            }
+          ],
+          youtubeLinks: [
+            { id: 'yt-1', title: 'React Complete Course', url: 'https://youtu.be/y9Dk6wMc8UM', addedDate: '2024-10-18' },
+            { id: 'yt-2', title: 'My React Tutorial Series - Part 1', url: 'https://youtu.be/y9Dk6wMc8UM', addedDate: '2024-10-22' }
+          ],
+          certificates: [
+            { id: 'cert-1', title: 'React Basics Certificate', url: 'https://drive.google.com/file/example', type: 'drive', addedDate: '2024-10-15' }
+          ],
+          testimonials: [
+            { 
+              id: 'test-1', 
+              project: 'E-commerce Checkout', 
+              skills: ['React'], 
+              validatorName: 'Ms. Priya Sharma', 
+              validatorEmail: 'priya.sharma@company.com', 
+              validatorRole: 'Project Manager, TechSolutions Inc.', 
+              status: 'approved',
+              testimonialText: 'Excellent work on React components. Shows strong understanding of component architecture and state management. Built a clean, maintainable checkout system.',
+              approvedDate: '2024-10-18'
+            },
+            { 
+              id: 'test-2', 
+              project: 'Dashboard Analytics', 
+              skills: ['React'], 
+              validatorName: 'Mr. John Davis', 
+              validatorEmail: 'john@startup.com', 
+              validatorRole: 'Lead Developer, StartupXYZ', 
+              status: 'pending',
+              requestedDate: '2024-10-28'
+            }
+          ],
+          assessments: [
+            {
+              id: 'assess-1',
+              name: 'React Fundamentals Test',
+              score: 91.7,
+              totalQuestions: 24,
+              correctAnswers: 22,
+              completedDate: '2024-01-28',
+              difficulty: 'Intermediate',
+              timeSpent: '45 minutes'
+            }
+          ],
+          readingModules: [
+            {
+              id: 'module-1',
+              title: 'React Core Concepts',
+              completedDate: '2024-10-10',
+              timeSpent: '2 hours',
+              content: {
+                skillName: 'React Core Concepts',
+                jobContext: 'Frontend Developer at TechCorp Solutions',
+                introduction: 'React is a powerful JavaScript library for building user interfaces. Created by Facebook, it revolutionizes how we think about building web applications by introducing a component-based architecture and virtual DOM for optimal performance.',
+                keyConcepts: [
+                  {
+                    title: 'Components and Props',
+                    content: 'React applications are built using components - reusable pieces of UI that can accept inputs called props. Components can be functional or class-based, with functional components being the modern standard.'
+                  },
+                  {
+                    title: 'State Management',
+                    content: 'State is data that changes over time in your application. React provides the useState hook for functional components, allowing you to track and update component-specific data.'
+                  },
+                  {
+                    title: 'Virtual DOM',
+                    content: 'React uses a virtual representation of the DOM to optimize updates. When state changes, React compares the virtual DOM with the actual DOM and only updates what has changed, making applications faster.'
+                  }
+                ],
+                practicalExample: `function Counter() {
+  const [count, setCount] = useState(0);
+  
+  return (
+    <div>
+      <p>You clicked {count} times</p>
+      <button onClick={() => setCount(count + 1)}>
+        Click me
+      </button>
+    </div>
+  );
+}`,
+                summary: [
+                  'React uses a component-based architecture for building UIs',
+                  'Props allow data to flow from parent to child components',
+                  'State management with useState enables dynamic, interactive applications',
+                  'Virtual DOM optimization ensures high performance',
+                  'React has a rich ecosystem with tools like React Router and Redux'
+                ]
+              }
+            },
+            {
+              id: 'module-2',
+              title: 'Advanced React Patterns',
+              completedDate: '2024-10-18',
+              timeSpent: '3 hours',
+              content: {
+                skillName: 'Advanced React Patterns',
+                jobContext: 'Frontend Developer at TechCorp Solutions',
+                introduction: 'Once you understand React basics, mastering advanced patterns will help you build more maintainable and scalable applications. These patterns solve common problems in larger React applications.',
+                keyConcepts: [
+                  {
+                    title: 'Custom Hooks',
+                    content: 'Custom hooks let you extract component logic into reusable functions. They follow the naming convention of starting with "use" and can call other hooks.'
+                  },
+                  {
+                    title: 'Context API',
+                    content: 'Context provides a way to pass data through the component tree without having to pass props down manually at every level, solving the prop drilling problem.'
+                  },
+                  {
+                    title: 'Memoization and Performance',
+                    content: 'React provides useMemo and useCallback hooks to optimize performance by memoizing values and functions, preventing unnecessary re-renders.'
+                  }
+                ],
+                practicalExample: `// Custom Hook Example
+function useCounter(initialValue = 0) {
+  const [count, setCount] = useState(initialValue);
+  
+  const increment = useCallback(() => {
+    setCount(c => c + 1);
+  }, []);
+  
+  const decrement = useCallback(() => {
+    setCount(c => c - 1);
+  }, []);
+  
+  return { count, increment, decrement };
+}`,
+                summary: [
+                  'Custom hooks promote code reuse and separation of concerns',
+                  'Context API solves prop drilling in deeply nested components',
+                  'useMemo and useCallback optimize performance',
+                  'Proper memoization prevents unnecessary re-renders',
+                  'These patterns are essential for large-scale React applications'
+                ]
+              }
+            }
+          ],
+          videoScripts: [
+            {
+              id: 'script-1',
+              title: 'Introduction to React Hooks',
+              generatedDate: '2024-10-15',
+              duration: '8-10 minutes',
+              content: {
+                skillName: 'Introduction to React Hooks',
+                duration: '8-10 minutes',
+                sections: [
+                  {
+                    time: '0:00-0:30',
+                    title: 'Introduction',
+                    content: 'Hey everyone! Today we\'re diving into React Hooks. Whether you\'re just starting with React or looking to modernize your code, this video will give you everything you need to know about hooks. Let\'s get started!'
+                  },
+                  {
+                    time: '0:30-2:00',
+                    title: 'What are Hooks?',
+                    content: 'Hooks are functions that let you use state and other React features in functional components. Before hooks, you needed class components for state management. Hooks changed everything! The most common hooks are useState for state management and useEffect for side effects.'
+                  },
+                  {
+                    time: '2:00-4:00',
+                    title: 'useState Hook',
+                    content: 'Let me show you useState in action. [Show code] useState returns an array with two elements: the current state value and a function to update it. We use array destructuring to get these values. Every time you call the setter function, React re-renders your component with the new state.'
+                  },
+                  {
+                    time: '4:00-6:30',
+                    title: 'useEffect Hook',
+                    content: 'useEffect is for side effects like data fetching, subscriptions, or manual DOM changes. [Show example] The second parameter is the dependency array - it controls when the effect runs. Empty array means run once, no array means run on every render, and with dependencies means run when those values change.'
+                  },
+                  {
+                    time: '6:30-8:00',
+                    title: 'Conclusion',
+                    content: 'That\'s your introduction to React Hooks! We covered useState and useEffect - the two most important hooks. Practice using them in your projects, and soon they\'ll feel natural. Check out the description for code examples and additional resources!'
+                  }
+                ],
+                visualSuggestions: [
+                  'Show React hooks logo and animation',
+                  'Display code editor with syntax highlighting',
+                  'Animate state changes in real-time',
+                  'Show before/after: class vs functional components',
+                  'Include visual diagram of useEffect lifecycle'
+                ],
+                thumbnailIdeas: [
+                  'React logo with "Hooks Explained" overlay',
+                  'Split screen showing code and result',
+                  'Colorful hooks diagram',
+                  'Before/After comparison thumbnail'
+                ]
+              }
+            }
+          ]
+        },
+        {
+          id: 'skill-2',
+          name: 'JavaScript ES6+',
+          status: 'in-progress',
+          progress: 65,
+          assessmentCompleted: false,
+          hoursInvested: 20,
+          estimatedHoursLeft: 10,
+          linkedInPosts: [],
+          youtubeLinks: [
+            { id: 'yt-3', title: 'JavaScript ES6 Features', url: 'https://youtu.be/y9Dk6wMc8UM', addedDate: '2024-10-25' }
+          ],
+          certificates: [],
+          testimonials: [
+            { 
+              id: 'test-3', 
+              project: 'Modern JS App', 
+              skills: ['JavaScript'], 
+              validatorName: 'Ms. Sarah Wilson', 
+              validatorEmail: 'sarah@tech.com', 
+              validatorRole: 'Senior Developer', 
+              status: 'pending',
+              requestedDate: '2024-10-29'
+            }
+          ],
+          assessments: [],
+          readingModules: [],
+          videoScripts: []
+        }
       ]
     },
     {
-      _id: 'sub2',
-      name: 'Amazon Search & SEO',
-      code: 'SEO201',
-      color: 'green',
-      topics: [
-        { _id: 'topic4', name: 'A9 Algorithm', title: 'A9 Algorithm' },
-        { _id: 'topic5', name: 'Keyword Tools', title: 'Keyword Tools' },
-        { _id: 'topic6', name: 'Listing Optimization', title: 'Listing Optimization' }
+      _id: 'job-2',
+      title: 'Backend Developer',
+      company: 'InnovateTech',
+      targetDate: '2025-06-20',
+      priority: 'medium',
+      skills: [
+        {
+          id: 'skill-3',
+          name: 'Node.js',
+          status: 'in-progress',
+          progress: 40,
+          assessmentCompleted: false,
+          hoursInvested: 15,
+          estimatedHoursLeft: 20,
+          linkedInPosts: [],
+          youtubeLinks: [],
+          certificates: [],
+          testimonials: [],
+          assessments: [],
+          readingModules: [],
+          videoScripts: []
+        },
+        {
+          id: 'skill-4',
+          name: 'MongoDB',
+          status: 'not-started',
+          progress: 0,
+          assessmentCompleted: false,
+          hoursInvested: 0,
+          estimatedHoursLeft: 25,
+          linkedInPosts: [],
+          youtubeLinks: [],
+          certificates: [],
+          testimonials: [],
+          assessments: [],
+          readingModules: [],
+          videoScripts: []
+        },
+        {
+          id: 'skill-5',
+          name: 'Express.js',
+          status: 'not-started',
+          progress: 0,
+          assessmentCompleted: false,
+          hoursInvested: 0,
+          estimatedHoursLeft: 18,
+          linkedInPosts: [],
+          youtubeLinks: [],
+          certificates: [],
+          testimonials: [],
+          assessments: [],
+          readingModules: [],
+          videoScripts: []
+        }
       ]
     },
     {
-      _id: 'sub3',
-      name: 'Amazon DSP (Demand-Side Platform)',
-      code: 'DSP301',
-      color: 'purple',
-      topics: [
-        { _id: 'topic7', name: 'Programmatic Advertising', title: 'Programmatic Advertising' },
-        { _id: 'topic8', name: 'Audience Targeting', title: 'Audience Targeting' },
-        { _id: 'topic9', name: 'Campaign Analytics', title: 'Campaign Analytics' }
+      _id: 'job-3',
+      title: 'UI/UX Designer',
+      company: 'DesignHub Studios',
+      targetDate: '2025-04-10',
+      priority: 'low',
+      skills: [
+        {
+          id: 'skill-6',
+          name: 'Figma',
+          status: 'completed',
+          progress: 100,
+          assessmentCompleted: true,
+          assessmentScore: 88.5,
+          assessmentDate: '2024-02-10',
+          hoursInvested: 30,
+          estimatedHoursLeft: 0,
+          linkedInPosts: [
+            { 
+              id: 'li-3', 
+              topic: 'Figma Design Tips', 
+              postText: '🎨 5 Figma features that changed my design workflow!\n\nJust completed my Figma mastery journey.',
+              imageUrl: 'https://via.placeholder.com/1200x630/F24E1E/ffffff?text=Figma+Tips',
+              date: '2024-02-12' 
+            }
+          ],
+          youtubeLinks: [],
+          certificates: [
+            { id: 'cert-2', title: 'Figma Professional Certificate', url: 'https://drive.google.com/file/example2', type: 'drive', addedDate: '2024-02-11' }
+          ],
+          testimonials: [
+            { 
+              id: 'test-4', 
+              project: 'Mobile App Design', 
+              skills: ['Figma'], 
+              validatorName: 'Ms. Emily Chen', 
+              validatorEmail: 'emily@designstudio.com', 
+              validatorRole: 'Design Lead, CreativeWorks', 
+              status: 'approved',
+              testimonialText: 'Outstanding design skills in Figma. Created pixel-perfect mockups and maintained excellent design systems.',
+              approvedDate: '2024-02-15'
+            }
+          ],
+          assessments: [
+            {
+              id: 'assess-2',
+              name: 'Figma Mastery Test',
+              score: 88.5,
+              totalQuestions: 20,
+              correctAnswers: 18,
+              completedDate: '2024-02-10',
+              difficulty: 'Advanced',
+              timeSpent: '35 minutes'
+            }
+          ],
+          readingModules: [],
+          videoScripts: []
+        },
+        {
+          id: 'skill-7',
+          name: 'Adobe XD',
+          status: 'completed',
+          progress: 100,
+          assessmentCompleted: true,
+          assessmentScore: 92.0,
+          assessmentDate: '2024-02-18',
+          hoursInvested: 25,
+          estimatedHoursLeft: 0,
+          linkedInPosts: [],
+          youtubeLinks: [],
+          certificates: [],
+          testimonials: [],
+          assessments: [
+            {
+              id: 'assess-3',
+              name: 'Adobe XD Fundamentals',
+              score: 92.0,
+              totalQuestions: 25,
+              correctAnswers: 23,
+              completedDate: '2024-02-18',
+              difficulty: 'Intermediate',
+              timeSpent: '40 minutes'
+            }
+          ],
+          readingModules: [],
+          videoScripts: []
+        }
       ]
     }
-  ];
+  ]);
 
-  // Dummy assessment data - Subject level tests
-  const dummySubjectTests = [
-    {
-      id: 1,
-      _id: 'test1',
-      title: 'Amazon Ads Campaign Optimization Quiz',
-      subject: 'Amazon Ads Fundamentals',
-      subjectId: 'sub1',
-      subjectCode: 'ADS101',
-      subjectColor: 'blue',
-      teacher: 'Sarah Johnson',
-      assignedDate: '2024-10-20',
-      dueDate: '2024-10-28',
-      duration: 30, // minutes
-      totalQuestions: 15,
-      passingScore: 70,
-      status: 'pending', // pending, in-progress, completed
-      difficulty: 'medium',
-      type: 'subject',
-      topics: ['Campaign Setup', 'Bidding Strategies', 'Performance Analysis'],
-      questions: [
-        {
-          id: 'q1',
-          question: 'What is the primary goal of Amazon Sponsored Products?',
-          options: [
-            'Increase brand awareness',
-            'Drive product sales directly',
-            'Gather customer data',
-            'Reduce advertising costs'
-          ],
-          correctAnswer: 1,
-          topic: 'Campaign Setup'
-        },
-        {
-          id: 'q2',
-          question: 'Which bidding strategy is best for new campaigns with limited data?',
-          options: [
-            'Manual bidding',
-            'Dynamic bids - down only',
-            'Dynamic bids - up and down',
-            'Fixed bids'
-          ],
-          correctAnswer: 2,
-          topic: 'Bidding Strategies'
-        },
-        {
-          id: 'q3',
-          question: 'What does ACOS stand for in Amazon advertising?',
-          options: [
-            'Average Cost of Sales',
-            'Advertising Cost of Sales',
-            'Annual Cost of Service',
-            'Automated Cost Optimization System'
-          ],
-          correctAnswer: 1,
-          topic: 'Performance Analysis'
-        },
-        {
-          id: 'q4',
-          question: 'What is the recommended minimum daily budget for a new Sponsored Products campaign?',
-          options: [
-            '$5',
-            '$10',
-            '$25',
-            '$50'
-          ],
-          correctAnswer: 1,
-          topic: 'Campaign Setup'
-        },
-        {
-          id: 'q5',
-          question: 'Which metric indicates the effectiveness of your ad spend?',
-          options: [
-            'Impressions',
-            'Click-through rate',
-            'Return on Ad Spend (ROAS)',
-            'Total sales'
-          ],
-          correctAnswer: 2,
-          topic: 'Performance Analysis'
-        }
-      ]
-    },
-    {
-      id: 2,
-      _id: 'test2',
-      title: 'SEO Keyword Research Assessment',
-      subject: 'Amazon Search & SEO',
-      subjectId: 'sub2',
-      subjectCode: 'SEO201',
-      subjectColor: 'green',
-      teacher: 'Michael Chen',
-      assignedDate: '2024-10-22',
-      dueDate: '2024-10-30',
-      duration: 25,
-      totalQuestions: 12,
-      passingScore: 75,
-      status: 'pending',
-      difficulty: 'hard',
-      type: 'subject',
-      topics: ['A9 Algorithm', 'Keyword Tools', 'Listing Optimization'],
-      questions: [
-        {
-          id: 'q1',
-          question: 'What is the primary ranking factor in Amazon\'s A9 algorithm?',
-          options: [
-            'Price',
-            'Sales velocity',
-            'Review count',
-            'Seller rating'
-          ],
-          correctAnswer: 1,
-          topic: 'A9 Algorithm'
-        },
-        {
-          id: 'q2',
-          question: 'Which tool is NOT commonly used for Amazon keyword research?',
-          options: [
-            'Helium 10',
-            'Jungle Scout',
-            'Google Keyword Planner',
-            'Merchant Words'
-          ],
-          correctAnswer: 2,
-          topic: 'Keyword Tools'
-        },
-        {
-          id: 'q3',
-          question: 'Where should your most important keywords be placed in a product listing?',
-          options: [
-            'In bullet points only',
-            'In the description only',
-            'In the title and first bullet point',
-            'In backend search terms only'
-          ],
-          correctAnswer: 2,
-          topic: 'Listing Optimization'
-        }
-      ]
-    },
-    {
-      id: 3,
-      _id: 'test3',
-      title: 'DSP Campaign Strategy Test',
-      subject: 'Amazon DSP (Demand-Side Platform)',
-      subjectId: 'sub3',
-      subjectCode: 'DSP301',
-      subjectColor: 'purple',
-      teacher: 'Emily Rodriguez',
-      assignedDate: '2024-10-18',
-      dueDate: '2024-10-26',
-      duration: 40,
-      totalQuestions: 5,
-      passingScore: 80,
-      status: 'completed',
-      difficulty: 'hard',
-      type: 'subject',
-      score: 60,
-      completedDate: '2024-10-24',
-      topics: ['Programmatic Advertising', 'Audience Targeting', 'Campaign Analytics'],
-      userAnswers: {
-        'q1': 1,  // Correct
-        'q2': 1,  // Wrong - answered "Demographic audiences" instead of "In-market audiences"
-        'q3': 2,  // Correct
-        'q4': 0,  // Wrong - answered "7 days" instead of "14 days"
-        'q5': 2   // Correct
-      },
-      questions: [
-        {
-          id: 'q1',
-          question: 'What is the primary benefit of using Amazon DSP?',
-          options: [
-            'Lower advertising costs',
-            'Access to Amazon and third-party inventory',
-            'Easier campaign setup',
-            'Automatic bidding'
-          ],
-          correctAnswer: 1,
-          topic: 'Programmatic Advertising'
-        },
-        {
-          id: 'q2',
-          question: 'Which audience type is unique to Amazon DSP?',
-          options: [
-            'In-market audiences',
-            'Demographic audiences',
-            'Location-based audiences',
-            'Interest-based audiences'
-          ],
-          correctAnswer: 0,
-          topic: 'Audience Targeting'
-        },
-        {
-          id: 'q3',
-          question: 'What does viewable CPM mean in DSP campaigns?',
-          options: [
-            'Cost per thousand clicks',
-            'Cost per million views',
-            'Cost per thousand viewable impressions',
-            'Cost per mille conversions'
-          ],
-          correctAnswer: 2,
-          topic: 'Campaign Analytics'
-        },
-        {
-          id: 'q4',
-          question: 'How long is the Amazon attribution window for DSP campaigns?',
-          options: [
-            '7 days',
-            '14 days',
-            '30 days',
-            '90 days'
-          ],
-          correctAnswer: 1,
-          topic: 'Campaign Analytics'
-        },
-        {
-          id: 'q5',
-          question: 'Which is NOT a valid DSP campaign goal?',
-          options: [
-            'Brand awareness',
-            'Product consideration',
-            'Direct product sales',
-            'Retargeting'
-          ],
-          correctAnswer: 2,
-          topic: 'Programmatic Advertising'
-        }
-      ],
-      relatedVideos: [
-        {
-          id: 'v1',
-          title: 'Introduction to Amazon DSP',
-          videoId: 'y9Dk6wMc8UM',
-          duration: '18:30',
-          topic: 'Programmatic Advertising'
-        },
-        {
-          id: 'v2',
-          title: 'Advanced Audience Targeting Strategies',
-          videoId: 'dQw4w9WgXcQ',
-          duration: '22:15',
-          topic: 'Audience Targeting'
-        },
-        {
-          id: 'v3',
-          title: 'Understanding DSP Analytics',
-          videoId: 'y9Dk6wMc8UM',
-          duration: '15:45',
-          topic: 'Campaign Analytics'
-        }
-      ]
-    }
-  ];
-
-  // Dummy topic-level tests
-  const dummyTopicTests = [
-    {
-      id: 4,
-      _id: 'test4',
-      title: 'Campaign Setup Basics',
-      subject: 'Amazon Ads Fundamentals',
-      subjectId: 'sub1',
-      topicId: 'topic1',
-      topicName: 'Campaign Setup',
-      subjectCode: 'ADS101',
-      subjectColor: 'blue',
-      teacher: 'Sarah Johnson',
-      assignedDate: '2024-10-21',
-      dueDate: '2024-10-29',
-      duration: 20,
-      totalQuestions: 10,
-      passingScore: 70,
-      status: 'pending',
-      difficulty: 'easy',
-      type: 'topic',
-      questions: [
-        {
-          id: 'q1',
-          question: 'What is the primary goal of Amazon Sponsored Products?',
-          options: [
-            'Increase brand awareness',
-            'Drive product sales directly',
-            'Gather customer data',
-            'Reduce advertising costs'
-          ],
-          correctAnswer: 1,
-          topic: 'Campaign Setup'
-        }
-      ]
-    },
-    {
-      id: 5,
-      _id: 'test5',
-      title: 'Bidding Strategies Advanced',
-      subject: 'Amazon Ads Fundamentals',
-      subjectId: 'sub1',
-      topicId: 'topic2',
-      topicName: 'Bidding Strategies',
-      subjectCode: 'ADS101',
-      subjectColor: 'blue',
-      teacher: 'Sarah Johnson',
-      assignedDate: '2024-10-22',
-      dueDate: '2024-10-30',
-      duration: 25,
-      totalQuestions: 12,
-      passingScore: 75,
-      status: 'completed',
-      difficulty: 'hard',
-      type: 'topic',
-      score: 83,
-      completedDate: '2024-10-25',
-      questions: [
-        {
-          id: 'q1',
-          question: 'Which bidding strategy is best for new campaigns with limited data?',
-          options: [
-            'Manual bidding',
-            'Dynamic bids - down only',
-            'Dynamic bids - up and down',
-            'Fixed bids'
-          ],
-          correctAnswer: 2,
-          topic: 'Bidding Strategies'
-        }
-      ]
-    },
-    {
-      id: 6,
-      _id: 'test6',
-      title: 'A9 Algorithm Fundamentals',
-      subject: 'Amazon Search & SEO',
-      subjectId: 'sub2',
-      topicId: 'topic4',
-      topicName: 'A9 Algorithm',
-      subjectCode: 'SEO201',
-      subjectColor: 'green',
-      teacher: 'Michael Chen',
-      assignedDate: '2024-10-23',
-      dueDate: '2024-10-31',
-      duration: 15,
-      totalQuestions: 8,
-      passingScore: 70,
-      status: 'pending',
-      difficulty: 'medium',
-      type: 'topic',
-      questions: [
-        {
-          id: 'q1',
-          question: 'What is the primary ranking factor in Amazon\'s A9 algorithm?',
-          options: [
-            'Price',
-            'Sales velocity',
-            'Review count',
-            'Seller rating'
-          ],
-          correctAnswer: 1,
-          topic: 'A9 Algorithm'
-        }
-      ]
-    }
-  ];
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
   };
 
-  // Initialize dummy data
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Tab visibility detection
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden && isAssessmentStarted && !showResults) {
-        // User left the tab/page during assessment
-        setShowWarning(true);
-        handleRestartAssessment();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [isAssessmentStarted, showResults]);
-
-  // Timer countdown
-  useEffect(() => {
-    if (isAssessmentStarted && timeRemaining > 0 && !showResults) {
-      timerRef.current = setInterval(() => {
-        setTimeRemaining(prev => {
-          if (prev <= 1) {
-            handleSubmitAssessment();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => {
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-        }
-      };
-    }
-  }, [isAssessmentStarted, timeRemaining, showResults]);
-
-  const handleStartAssessment = (assessment) => {
-    setActiveAssessment(assessment);
-    setCurrentQuestionIndex(0);
-    setAnswers({});
-    setTimeRemaining(assessment.duration * 60); // Convert minutes to seconds
-    setIsAssessmentStarted(true);
-    setShowResults(false);
-    setShowWarning(false);
-  };
-
-  const handleRestartAssessment = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-    setCurrentQuestionIndex(0);
-    setAnswers({});
-    setTimeRemaining(activeAssessment.duration * 60);
-    setShowWarning(false);
-  };
-
-  const handleAnswerSelect = (questionId, answerIndex) => {
-    setAnswers(prev => ({
+  const toggleJobExpansion = (jobId) => {
+    setExpandedJobs(prev => ({
       ...prev,
-      [questionId]: answerIndex
+      [jobId]: !prev[jobId]
     }));
   };
 
-  const handleNextQuestion = () => {
-    if (currentQuestionIndex < activeAssessment.questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-    }
+  const isJobExpanded = (jobId) => {
+    return expandedJobs[jobId] || false;
   };
 
-  const handlePreviousQuestion = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
-    }
-  };
-
-  const handleSubmitAssessment = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-
-    // Calculate results
-    let correctAnswers = 0;
-    activeAssessment.questions.forEach(question => {
-      if (answers[question.id] === question.correctAnswer) {
-        correctAnswers++;
-      }
-    });
-
-    const score = Math.round((correctAnswers / activeAssessment.questions.length) * 100);
-    const passed = score >= activeAssessment.passingScore;
-
-    setAssessmentResults({
-      score,
-      correctAnswers,
-      totalQuestions: activeAssessment.questions.length,
-      passed,
-      answers: answers
-    });
-
-    setShowResults(true);
-    setIsAssessmentStarted(false);
-
-    // Update assessment status
-    setAssessments(prev => prev.map(a => 
-      a.id === activeAssessment.id 
-        ? { ...a, status: 'completed', score, completedDate: new Date().toISOString().split('T')[0] }
-        : a
-    ));
-  };
-
-  const handleBackToList = () => {
-    setActiveAssessment(null);
-    setIsAssessmentStarted(false);
-    setShowResults(false);
-    setAnswers({});
-    setCurrentQuestionIndex(0);
-    setViewingCompletedAssessment(null);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleViewCompletedAssessment = (assessment) => {
-    setViewingCompletedAssessment(assessment);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleRequestRetake = () => {
-    toast.error('Please contact your teacher to request permission to retake this assessment.', {
-      duration: 5000,
-      icon: '📧'
-    });
-  };
-
-  const handleCreateStudyPlan = () => {
-    setStudyPlanModal(viewingCompletedAssessment);
-    setCurrentNote('');
-    setEditingNoteId(null);
-    if (!focusAreas[viewingCompletedAssessment.id]) {
-      setFocusAreas(prev => ({
-        ...prev,
-        [viewingCompletedAssessment.id]: []
-      }));
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleCloseStudyPlan = () => {
-    setStudyPlanModal(null);
-    setCurrentNote('');
-    setEditingNoteId(null);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleAddNote = (assessmentId) => {
-    if (currentNote.trim().length === 0) {
-      toast.error('Please enter a note');
-      return;
-    }
-
-    const newNote = {
-      id: Date.now(),
-      text: currentNote.trim(),
-      createdAt: new Date().toISOString()
-    };
-
-    setFocusAreas(prev => ({
+  const toggleSkillExpansion = (jobId, skillId) => {
+    const key = `${jobId}-${skillId}`;
+    setExpandedSkills(prev => ({
       ...prev,
-      [assessmentId]: [...(prev[assessmentId] || []), newNote]
+      [key]: !prev[key]
     }));
-
-    setCurrentNote('');
-    toast.success('Note added successfully');
   };
 
-  const handleEditNote = (assessmentId, noteId) => {
-    const note = focusAreas[assessmentId]?.find(n => n.id === noteId);
-    if (note) {
-      setCurrentNote(note.text);
-      setEditingNoteId(noteId);
-    }
+  const isSkillExpanded = (jobId, skillId) => {
+    const key = `${jobId}-${skillId}`;
+    return expandedSkills[key] || false;
   };
 
-  const handleUpdateNote = (assessmentId) => {
-    if (currentNote.trim().length === 0) {
-      toast.error('Please enter a note');
-      return;
-    }
-
-    setFocusAreas(prev => ({
-      ...prev,
-      [assessmentId]: prev[assessmentId].map(note =>
-        note.id === editingNoteId
-          ? { ...note, text: currentNote.trim(), updatedAt: new Date().toISOString() }
-          : note
-      )
-    }));
-
-    setCurrentNote('');
-    setEditingNoteId(null);
-    toast.success('Note updated successfully');
+  const getTotalJobs = () => {
+    return plannerJobs.length;
   };
 
-  const handleDeleteNote = (assessmentId, noteId) => {
-    if (confirm('Are you sure you want to delete this note?')) {
-      setFocusAreas(prev => ({
-        ...prev,
-        [assessmentId]: prev[assessmentId].filter(note => note.id !== noteId)
-      }));
-      toast.success('Note deleted');
-    }
+  const getTotalSkillsWorkingOn = () => {
+    return plannerJobs.reduce((total, job) => {
+      return total + job.skills.filter(skill => skill.status === 'in-progress' || skill.status === 'completed').length;
+    }, 0);
   };
 
-  const handleCancelEdit = () => {
-    setCurrentNote('');
-    setEditingNoteId(null);
+  const getTotalSkillContentCreated = () => {
+    return plannerJobs.reduce((total, job) => {
+      return total + job.skills.reduce((sum, skill) => {
+        const content = (skill.readingModules?.length || 0) + 
+                       (skill.videoScripts?.length || 0) + 
+                       (skill.linkedInPosts?.length || 0) + 
+                       (skill.youtubeLinks?.length || 0);
+        return sum + content;
+      }, 0);
+    }, 0);
   };
 
-  const handlePlayVideo = (video) => {
-    setPlayingVideo(video);
+  const getSkillsWithTestimonials = () => {
+    return plannerJobs.reduce((total, job) => {
+      return total + job.skills.filter(skill => 
+        skill.testimonials && skill.testimonials.length > 0
+      ).length;
+    }, 0);
   };
 
-  const handleCloseVideo = () => {
-    setPlayingVideo(null);
-  };
-
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const getDaysRemaining = (dueDate) => {
-    const today = new Date();
-    const due = new Date(dueDate);
-    const diffTime = due - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-
-  const getDifficultyColor = (difficulty) => {
-    switch (difficulty) {
-      case 'easy': return 'green';
-      case 'medium': return 'yellow';
-      case 'hard': return 'red';
-      default: return 'slate';
+  const getCVStatus = (job) => {
+    const totalSkills = job.skills.length;
+    const assessmentsCompleted = job.skills.filter(skill => skill.assessmentCompleted).length;
+    
+    if (assessmentsCompleted === 0) {
+      return { status: 'start', label: 'Start CV Creation', color: 'text-slate-600 bg-slate-100', link: '/student/job-assessments' };
+    } else if (assessmentsCompleted === totalSkills) {
+      return { status: 'generated', label: 'CV Generated', color: 'text-green-600 bg-green-100', link: '/student/job-cv' };
+    } else {
+      return { status: 'progress', label: 'CV In Progress', color: 'text-amber-600 bg-amber-100', link: '/student/job-cv' };
     }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'pending': return 'blue';
-      case 'in-progress': return 'orange';
-      case 'completed': return 'green';
-      default: return 'slate';
+      case 'completed': return 'text-green-600 bg-green-50 border-green-200';
+      case 'in-progress': return 'text-blue-600 bg-blue-50 border-blue-200';
+      case 'not-started': return 'text-slate-600 bg-slate-50 border-slate-200';
+      default: return 'text-slate-600 bg-slate-50 border-slate-200';
     }
   };
 
-  // Get selected subject data
-  const selectedSubjectData = dummySubjects.find(s => s._id === selectedSubject);
-  
-  // Get topics for selected subject
-  const currentTopics = selectedSubjectData?.topics || [];
-  
-  // Filter subject-level tests by selected subject
-  const displayedSubjectTests = selectedSubject 
-    ? dummySubjectTests.filter(t => t.subjectId === selectedSubject)
-    : [];
-  
-  // Filter topic-level tests by selected topic
-  const displayedTopicTests = selectedTopic
-    ? dummyTopicTests.filter(t => t.topicId === selectedTopic)
-    : [];
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'high': return 'text-red-600 bg-red-50 border-red-200';
+      case 'medium': return 'text-orange-600 bg-orange-50 border-orange-200';
+      case 'low': return 'text-slate-600 bg-slate-50 border-slate-200';
+      default: return 'text-slate-600 bg-slate-50 border-slate-200';
+    }
+  };
 
-  // Render test card component
-  const renderTestCard = (assessment) => {
-    const isPending = assessment.status === 'pending';
-    const isCompleted = assessment.status === 'completed';
+  // Generate Module Handler
+  const handleGenerateModule = (job, skill) => {
+    setSelectedJob(job);
+    setSelectedSkill(skill);
+    setIsGenerating(true);
+    setGenerationType('module');
+    setReaderMode(true);
     
-    if (isPending) {
-      const daysRemaining = getDaysRemaining(assessment.dueDate);
-      const isUrgent = daysRemaining <= 2;
+    setTimeout(() => {
+      const module = {
+        skillName: skill.name,
+        jobContext: job.title,
+        introduction: `${skill.name} is a crucial skill for ${job.title} roles. This technology enables developers to build modern, efficient applications that meet industry standards. Understanding this skill will help you excel in your career path and stand out in job interviews.`,
+        keyConcepts: [
+          {
+            title: 'Core Fundamentals',
+            content: `The foundation of ${skill.name} involves understanding the basic principles and architecture. These fundamentals form the building blocks for more advanced topics. Mastering these concepts will give you a solid base to build upon.`
+          },
+          {
+            title: 'Best Practices',
+            content: `Industry-standard approaches to ${skill.name} include following established patterns, maintaining code quality, and ensuring scalability. Professional developers follow these practices to write clean, maintainable code.`
+          },
+          {
+            title: 'Common Patterns',
+            content: `Learn the most frequently used patterns and techniques that professionals use when working with ${skill.name} in real-world projects. These patterns solve common problems efficiently.`
+          },
+          {
+            title: 'Real-World Applications',
+            content: `Understanding how ${skill.name} is applied in production environments helps you see the practical value. Top companies use these techniques to build reliable, scalable applications.`
+          }
+        ],
+        practicalExample: `// Example implementation of ${skill.name}\n\nfunction demonstrateSkill() {\n  console.log("Practical example for ${skill.name}");\n  \n  // Core implementation\n  const result = processData();\n  \n  return result;\n}\n\n// Usage\nconst output = demonstrateSkill();\nconsole.log(output);`,
+        summary: [
+          `${skill.name} is essential for ${job.title} roles`,
+          'Understanding core concepts leads to better implementations',
+          'Practice with real-world examples solidifies knowledge',
+          'Following best practices ensures code quality',
+          'Continuous learning keeps skills relevant'
+        ],
+        generatedAt: new Date().toISOString()
+      };
       
-      return (
-        <div
-          key={assessment.id || assessment._id}
-          className={`bg-white rounded-xl shadow-sm border-2 overflow-hidden hover:shadow-lg transition-all ${
-            isUrgent ? 'border-red-300' : 'border-slate-200'
-          }`}
-        >
-          {isUrgent && (
-            <div className="bg-red-500 text-white text-xs font-bold px-4 py-1 text-center">
-              <i className="fas fa-exclamation-triangle mr-1"></i>
-              DUE SOON!
-            </div>
-          )}
-          <div className="p-6">
-            <div className="flex items-start gap-3 mb-4">
-              <div className={`w-12 h-12 bg-gradient-to-br from-${assessment.subjectColor}-500 to-${assessment.subjectColor}-600 rounded-lg flex items-center justify-center flex-shrink-0`}>
-                <span className="text-white font-bold text-xs">{assessment.subjectCode}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-slate-900 text-lg mb-1">{assessment.title}</h3>
-                <p className="text-sm text-slate-600">{assessment.subject}</p>
-              </div>
-            </div>
-            <div className="space-y-2 mb-4 text-sm">
-              <div className="flex items-center gap-2 text-slate-600">
-                <i className="fas fa-user-tie w-4"></i>
-                <span>{assessment.teacher}</span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-600">
-                <i className="fas fa-clock w-4"></i>
-                <span>{assessment.duration} minutes</span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-600">
-                <i className="fas fa-question-circle w-4"></i>
-                <span>{assessment.totalQuestions} questions</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <i className={`fas fa-calendar w-4 ${isUrgent ? 'text-red-600' : 'text-slate-600'}`}></i>
-                <span className={isUrgent ? 'text-red-600 font-semibold' : 'text-slate-600'}>
-                  Due: {new Date(assessment.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  {daysRemaining >= 0 && ` (${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} left)`}
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2 mb-4">
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold bg-${getDifficultyColor(assessment.difficulty)}-100 text-${getDifficultyColor(assessment.difficulty)}-700 capitalize`}>
-                {assessment.difficulty}
-              </span>
-              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
-                Passing: {assessment.passingScore}%
-              </span>
-            </div>
-            <button
-              onClick={() => handleStartAssessment(assessment)}
-              className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
-            >
-              <i className="fas fa-play-circle"></i>
-              Start Assessment
-            </button>
-          </div>
-        </div>
-      );
-    } else if (isCompleted) {
-      return (
-        <div
-          key={assessment.id || assessment._id}
-          className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-all"
-        >
-          <div className="p-6">
-            <div className="flex items-start gap-3 mb-4">
-              <div className={`w-12 h-12 bg-gradient-to-br from-${assessment.subjectColor}-500 to-${assessment.subjectColor}-600 rounded-lg flex items-center justify-center flex-shrink-0`}>
-                <span className="text-white font-bold text-xs">{assessment.subjectCode}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-slate-900 text-lg mb-1">{assessment.title}</h3>
-                <p className="text-sm text-slate-600">{assessment.subject}</p>
-              </div>
-              <div className="text-right">
-                <div className={`text-2xl font-bold ${assessment.score >= assessment.passingScore ? 'text-green-600' : 'text-red-600'}`}>
-                  {assessment.score}%
-                </div>
-              </div>
-            </div>
-            <div className="space-y-2 mb-4 text-sm">
-              <div className="flex items-center gap-2 text-slate-600">
-                <i className="fas fa-calendar-check w-4"></i>
-                <span>Completed: {new Date(assessment.completedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <i className={`fas ${assessment.score >= assessment.passingScore ? 'fa-check-circle text-green-600' : 'fa-times-circle text-red-600'} w-4`}></i>
-                <span className={assessment.score >= assessment.passingScore ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
-                  {assessment.score >= assessment.passingScore ? 'Passed' : 'Failed'}
-                </span>
-              </div>
-            </div>
-            <button
-              onClick={() => handleViewCompletedAssessment(assessment)}
-              className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition-all flex items-center justify-center gap-2"
-            >
-              <i className="fas fa-eye"></i>
-              View Details
-            </button>
-          </div>
-        </div>
-      );
-    }
-    return null;
+      setGeneratedModule(module);
+      setIsGenerating(false);
+      setGenerationType('');
+      toast.success('Learning module generated successfully!');
+    }, 3000);
   };
 
-  if (activeAssessment && isAssessmentStarted && !showResults) {
-    // Assessment Taking View
-    const currentQuestion = activeAssessment.questions[currentQuestionIndex];
-    const progress = ((currentQuestionIndex + 1) / activeAssessment.questions.length) * 100;
-    const isTimeLow = timeRemaining <= 300; // 5 minutes
+  const handleCloseReader = () => {
+    setReaderMode(false);
+    setGeneratedModule(null);
+    setGeneratedVideoScript(null);
+  };
 
-    return (
-      <>
-        <div className="min-h-screen bg-slate-50 flex flex-col">
-          {/* Header with Timer */}
-          <div className="bg-white shadow-md border-b-2 border-slate-200 sticky top-0 z-50">
-            <div className="max-w-4xl mx-auto px-4 py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <h2 className="text-lg font-bold text-slate-900">{activeAssessment.title}</h2>
-                  <p className="text-sm text-slate-600">
-                    Question {currentQuestionIndex + 1} of {activeAssessment.questions.length}
-                  </p>
-                </div>
-                <div className={`text-right ${isTimeLow ? 'animate-pulse' : ''}`}>
-                  <div className={`text-2xl font-bold ${isTimeLow ? 'text-red-600' : 'text-blue-600'}`}>
-                    <i className="fas fa-clock mr-2"></i>
-                    {formatTime(timeRemaining)}
-                  </div>
-                  <p className="text-xs text-slate-600">Time Remaining</p>
-                </div>
+  // Generate Video Script Handler - Show Modal
+  const handleGenerateVideoScript = (job, skill) => {
+    setSelectedJob(job);
+    setSelectedSkill(skill);
+    setScriptIdea('');
+    setVideoLength('5-7');
+    setShowScriptGeneratorModal(true);
+  };
+
+  // Handle Script Generation with Vertex AI
+  const handleGenerateScript = async () => {
+    if (!selectedSkill || !selectedJob) {
+      toast.error('Please select a skill and job');
+      return;
+    }
+
+    setShowScriptGeneratorModal(false);
+    setIsGenerating(true);
+    setGenerationType('script');
+    
+    // Simulating API call to Vertex AI
+    // In production, this will be: const response = await fetch('/api/generate-script', { method: 'POST', body: JSON.stringify({ skill, job, idea, length }) });
+    
+    setTimeout(() => {
+      const durationMap = {
+        '2-3': '2-3 minutes',
+        '5-7': '5-7 minutes',
+        '8-10': '8-10 minutes'
+      };
+
+      const script = {
+        skillName: selectedSkill.name,
+        jobContext: selectedJob.title,
+        duration: durationMap[videoLength],
+        sections: [
+          {
+            time: '0:00 - 0:30',
+            title: 'Hook & Introduction',
+            content: `"Hey everyone! Today I'm going to share everything I've learned about ${selectedSkill.name}${scriptIdea ? `, specifically focusing on ${scriptIdea}` : ''}. If you're preparing for a ${selectedJob.title} role, this is essential knowledge you need to master. By the end of this video, you'll understand the core concepts and how to apply them in real projects."`
+          },
+          {
+            time: '0:30 - 1:30',
+            title: `What is ${selectedSkill.name}?`,
+            content: `"Let me start by explaining what ${selectedSkill.name} actually is and why it matters${scriptIdea ? `, especially when it comes to ${scriptIdea}` : ''}. This is particularly important for ${selectedJob.title} because it's a fundamental skill that employers look for."`
+          },
+          {
+            time: '1:30 - 3:30',
+            title: 'Key Concepts',
+            content: `"Now let's dive into the most important concepts you need to know. I'll walk you through each one with examples that relate to real-world scenarios${scriptIdea ? `, particularly around ${scriptIdea}` : ''}."`
+          },
+          ...(videoLength !== '2-3' ? [
+            {
+              time: videoLength === '5-7' ? '3:30 - 5:00' : '3:30 - 6:00',
+              title: 'Practical Examples',
+              content: `"Let me show you how this works in practice. I'll demonstrate with a real example that shows ${selectedSkill.name} in action${scriptIdea ? `, focusing on ${scriptIdea}` : ''}."`
+            }
+          ] : []),
+          ...(videoLength === '8-10' ? [
+            {
+              time: '6:00 - 8:00',
+              title: 'Best Practices & Tips',
+              content: `"Here are some best practices and pro tips that will help you master ${selectedSkill.name}. These are insights I've learned through my journey and from industry professionals."`
+            }
+          ] : []),
+          {
+            time: videoLength === '2-3' ? '2:30 - 3:00' : videoLength === '5-7' ? '5:00 - 5:30' : '8:00 - 8:30',
+            title: 'Closing',
+            content: `"Thanks for watching! If you found this helpful, please like and subscribe. Drop a comment below with your questions about ${selectedSkill.name}, and I'll answer them. Keep learning and keep building!"`
+          }
+        ],
+        visualSuggestions: [
+          'Use screen recording for demonstrations',
+          'Add text overlays for key points',
+          'Include relevant diagrams',
+          'Show code examples if applicable'
+        ],
+        thumbnailIdeas: [
+          `"${selectedSkill.name} Explained"`,
+          `Professional skill demonstration`,
+          `Clear, engaging title overlay`
+        ],
+        generatedAt: new Date().toISOString(),
+        userIdea: scriptIdea || 'General overview',
+        selectedLength: durationMap[videoLength]
+      };
+      
+      setIsGenerating(false);
+      setGenerationType('');
+      setGeneratedVideoScript(script);
+      setShowVideoScriptModal(true);
+      toast.success('Video script generated successfully!');
+    }, 3000);
+  };
+
+  // Handle Create LinkedIn Post
+  const handleCreateLinkedInPost = (job, skill) => {
+    setSelectedJob(job);
+    setSelectedSkill(skill);
+    setLinkedInPostTopic('');
+    setLinkedInPostContext('');
+    setGeneratedLinkedInPost('');
+    setShowCreateLinkedInPostModal(true);
+  };
+
+  // Handle Add Video
+  const handleAddVideo = (job, skill) => {
+    setSelectedJob(job);
+    setSelectedSkill(skill);
+    setVideoTitle('');
+    setVideoUrl('');
+    setVideoDescription('');
+    setShowAddVideoModal(true);
+  };
+
+  // Save Video
+  const handleSaveVideo = () => {
+    if (!videoTitle.trim() || !videoUrl.trim()) {
+      toast.error('Please enter video title and URL');
+      return;
+    }
+
+    // Validate YouTube URL
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/;
+    if (!youtubeRegex.test(videoUrl)) {
+      toast.error('Please enter a valid YouTube URL');
+      return;
+    }
+
+    const newVideo = {
+      id: Date.now(),
+      title: videoTitle.trim(),
+      url: videoUrl.trim(),
+      description: videoDescription.trim(),
+      addedAt: new Date().toISOString()
+    };
+
+    // Update the plannerJobs state to add the video
+    setPlannerJobs(prevJobs => 
+      prevJobs.map(job => {
+        if (job.id === selectedJob.id) {
+          return {
+            ...job,
+            skills: job.skills.map(skill => {
+              if (skill.name === selectedSkill.name) {
+                return {
+                  ...skill,
+                  youtubeLinks: [...(skill.youtubeLinks || []), newVideo]
+                };
+              }
+              return skill;
+            })
+          };
+        }
+        return job;
+      })
+    );
+
+    setShowAddVideoModal(false);
+    setVideoTitle('');
+    setVideoUrl('');
+    setVideoDescription('');
+    toast.success('Video added successfully!');
+  };
+
+  // Generate LinkedIn Post
+  const handleGenerateLinkedInPost = () => {
+    if (!linkedInPostTopic.trim()) {
+      toast.error('Please enter what your post is about');
+      return;
+    }
+
+    setIsGeneratingPost(true);
+    
+    setTimeout(() => {
+      const companyName = selectedJob?.company || 'MySkillDB';
+      const jobName = selectedJob?.title || 'Career Development';
+      const skillName = selectedSkill?.name || '';
+      
+      const post = `🚀 Excited to share my journey in ${skillName}!
+
+${linkedInPostTopic}
+
+${linkedInPostContext ? linkedInPostContext + '\n\n' : ''}As I work towards my goal of becoming a ${jobName}, mastering ${skillName} has been a game-changer. The learning process has been challenging but incredibly rewarding.
+
+Key takeaways so far:
+✅ Understanding the core fundamentals
+✅ Applying concepts to real-world projects  
+✅ Building a strong foundation for career growth
+
+Grateful for the learning resources and support from the MySkillDB community. Every step forward counts!
+
+#${companyName.replace(/\s+/g, '')} #${jobName.replace(/\s+/g, '')} #${skillName.replace(/\s+/g, '')} #MySkillDB #CareerGrowth #LearningJourney #TechCareers #SkillDevelopment #ProfessionalDevelopment`;
+
+      setGeneratedLinkedInPost(post);
+      setIsGeneratingPost(false);
+      toast.success('LinkedIn post generated successfully!');
+    }, 2000);
+  };
+
+  // Copy LinkedIn Post to Clipboard
+  const handleCopyLinkedInPost = () => {
+    navigator.clipboard.writeText(generatedLinkedInPost);
+    toast.success('Post copied to clipboard!');
+  };
+
+  // Add Certificate
+  const handleSaveCertificate = () => {
+    if (!certificateTitle.trim() || !certificateLink.trim()) {
+      toast.error('Please enter certificate title and link');
+      return;
+    }
+
+    // Basic URL validation
+    try {
+      new URL(certificateLink);
+    } catch {
+      toast.error('Please enter a valid URL');
+      return;
+    }
+
+    const newCertificate = {
+      id: Date.now(),
+      title: certificateTitle.trim(),
+      url: certificateLink.trim(),
+      provider: certificateProvider,
+      addedAt: new Date().toISOString()
+    };
+
+    // Update the plannerJobs state to add the certificate
+    setPlannerJobs(prevJobs => 
+      prevJobs.map(job => {
+        if (job._id === selectedJob._id) {
+          return {
+            ...job,
+            skills: job.skills.map(skill => {
+              if (skill.id === selectedSkill.id) {
+                return {
+                  ...skill,
+                  certificates: [...(skill.certificates || []), newCertificate]
+                };
+              }
+              return skill;
+            })
+          };
+        }
+        return job;
+      })
+    );
+
+    setShowAddCertificateModal(false);
+    setCertificateTitle('');
+    setCertificateLink('');
+    setCertificateProvider('drive');
+    toast.success('Certificate added successfully!');
+  };
+
+  // Delete Certificate
+  const handleDeleteCertificate = (certificateId) => {
+    setPlannerJobs(prevJobs => 
+      prevJobs.map(job => {
+        if (job._id === selectedJob._id) {
+          return {
+            ...job,
+            skills: job.skills.map(skill => {
+              if (skill.id === selectedSkill.id) {
+                return {
+                  ...skill,
+                  certificates: skill.certificates.filter(cert => cert.id !== certificateId)
+                };
+              }
+              return skill;
+            })
+          };
+        }
+        return job;
+      })
+    );
+    toast.success('Certificate deleted successfully!');
+  };
+
+  // Save LinkedIn Post
+  const handleSaveLinkedInPost = () => {
+    // In a real app, this would save to backend
+    toast.success('LinkedIn post saved successfully!');
+    setShowCreateLinkedInPostModal(false);
+    setLinkedInPostTopic('');
+    setLinkedInPostContext('');
+    setGeneratedLinkedInPost('');
+  };
+
+  return (
+    <>
+      <LoaderOverlay isVisible={isLoading} title="Skill Planner" subtitle="Loading your learning journey..." />
+      <StudentMenuNavigation currentPage={currentPage} onPageChange={handlePageChange} />
+      
+      <div className="min-h-screen bg-slate-50 lg:ml-72 p-4 lg:p-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-slate-900 mb-1">Skill Planner</h1>
+          <p className="text-sm text-slate-600 mb-3">work on your skills</p>
+          <button
+            onClick={() => navigate('/student/jobs')}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
+          >
+            Add Job Skills
+          </button>
+        </div>
+
+        {/* Stats Overview */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+            <div className="flex items-center gap-3">
+              <div className="hidden lg:flex w-12 h-12 bg-indigo-100 rounded-lg items-center justify-center">
+                <i className="fas fa-briefcase text-indigo-600 text-xl"></i>
               </div>
-              {/* Progress Bar */}
-              <div className="mt-3 bg-slate-200 rounded-full h-2 overflow-hidden">
-                <div 
-                  className="bg-blue-600 h-full transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                ></div>
+              <div className="flex-1">
+                <p className="text-sm text-slate-600">Jobs</p>
+                <p className="text-sm text-slate-500">Under Planning</p>
+                <p className="text-2xl font-bold text-slate-900 lg:text-slate-900">
+                  <span className="lg:bg-transparent bg-indigo-100 text-indigo-600 lg:text-slate-900 px-3 py-1 rounded-lg inline-block">{getTotalJobs()}</span>
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Warning Message */}
-          {showWarning && (
-            <div className="bg-red-50 border-l-4 border-red-500 p-4 m-4">
-              <div className="flex items-center">
-                <i className="fas fa-exclamation-triangle text-red-600 text-xl mr-3"></i>
-                <div>
-                  <p className="text-red-800 font-semibold">Assessment Restarted</p>
-                  <p className="text-red-700 text-sm">You left the page. Your assessment has been restarted for integrity purposes.</p>
-                </div>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+            <div className="flex items-center gap-3">
+              <div className="hidden lg:flex w-12 h-12 bg-blue-100 rounded-lg items-center justify-center">
+                <i className="fas fa-tasks text-blue-600 text-xl"></i>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-slate-600">Skills</p>
+                <p className="text-sm text-slate-500">Working On</p>
+                <p className="text-2xl font-bold text-slate-900 lg:text-slate-900">
+                  <span className="lg:bg-transparent bg-blue-100 text-blue-600 lg:text-slate-900 px-3 py-1 rounded-lg inline-block">{getTotalSkillsWorkingOn()}</span>
+                </p>
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Question Content */}
-          <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-8">
-            <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6 lg:p-8">
-              {/* Topic Badge */}
-              <div className="mb-4">
-                <span className="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
-                  <i className="fas fa-tag mr-1"></i>
-                  {currentQuestion.topic}
-                </span>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+            <div className="flex items-center gap-3">
+              <div className="hidden lg:flex w-12 h-12 bg-purple-100 rounded-lg items-center justify-center">
+                <i className="fas fa-layer-group text-purple-600 text-xl"></i>
               </div>
-
-              {/* Question */}
-              <h3 className="text-xl lg:text-2xl font-bold text-slate-900 mb-6">
-                {currentQuestion.question}
-              </h3>
-
-              {/* Options */}
-              <div className="space-y-3">
-                {currentQuestion.options.map((option, index) => {
-                  const isSelected = answers[currentQuestion.id] === index;
-                  return (
-                    <button
-                      key={index}
-                      onClick={() => handleAnswerSelect(currentQuestion.id, index)}
-                      className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
-                        isSelected
-                          ? 'border-blue-500 bg-blue-50 shadow-md'
-                          : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                          isSelected
-                            ? 'border-blue-500 bg-blue-500'
-                            : 'border-slate-300'
-                        }`}>
-                          {isSelected && <i className="fas fa-check text-white text-xs"></i>}
-                        </div>
-                        <span className={`text-sm lg:text-base ${isSelected ? 'text-blue-900 font-medium' : 'text-slate-700'}`}>
-                          {option}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
+              <div className="flex-1">
+                <p className="text-sm text-slate-600">Skill Content</p>
+                <p className="text-sm text-slate-500">Created</p>
+                <p className="text-2xl font-bold text-slate-900 lg:text-slate-900">
+                  <span className="lg:bg-transparent bg-purple-100 text-purple-600 lg:text-slate-900 px-3 py-1 rounded-lg inline-block">{getTotalSkillContentCreated()}</span>
+                </p>
               </div>
             </div>
+          </div>
 
-            {/* Navigation Buttons */}
-            <div className="flex items-center justify-between mt-6 gap-4">
-              <button
-                onClick={handlePreviousQuestion}
-                disabled={currentQuestionIndex === 0}
-                className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                  currentQuestionIndex === 0
-                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                    : 'bg-white border-2 border-slate-300 text-slate-700 hover:border-slate-400 hover:shadow-md'
-                }`}
-              >
-                <i className="fas fa-arrow-left mr-2"></i>
-                Previous
-              </button>
-
-              {currentQuestionIndex === activeAssessment.questions.length - 1 ? (
-                <button
-                  onClick={handleSubmitAssessment}
-                  className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
-                >
-                  Submit Assessment
-                  <i className="fas fa-check ml-2"></i>
-                </button>
-              ) : (
-                <button
-                  onClick={handleNextQuestion}
-                  className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
-                >
-                  Next
-                  <i className="fas fa-arrow-right ml-2"></i>
-                </button>
-              )}
-            </div>
-
-            {/* Question Navigator */}
-            <div className="mt-8 bg-white rounded-xl shadow-lg border border-slate-200 p-6">
-              <h4 className="text-sm font-semibold text-slate-700 mb-3">Question Navigator</h4>
-              <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
-                {activeAssessment.questions.map((q, index) => {
-                  const isAnswered = answers[q.id] !== undefined;
-                  const isCurrent = index === currentQuestionIndex;
-                  return (
-                    <button
-                      key={q.id}
-                      onClick={() => setCurrentQuestionIndex(index)}
-                      className={`aspect-square rounded-lg font-semibold text-sm transition-all ${
-                        isCurrent
-                          ? 'bg-blue-600 text-white shadow-md scale-110'
-                          : isAnswered
-                          ? 'bg-green-100 text-green-700 border-2 border-green-300 hover:bg-green-200'
-                          : 'bg-slate-100 text-slate-600 border-2 border-slate-200 hover:bg-slate-200'
-                      }`}
-                    >
-                      {index + 1}
-                    </button>
-                  );
-                })}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+            <div className="flex items-center gap-3">
+              <div className="hidden lg:flex w-12 h-12 bg-amber-100 rounded-lg items-center justify-center">
+                <i className="fas fa-award text-amber-600 text-xl"></i>
               </div>
-              <div className="flex items-center gap-4 mt-4 text-xs text-slate-600">
-                <div className="flex items-center gap-1">
-                  <div className="w-4 h-4 bg-green-100 border-2 border-green-300 rounded"></div>
-                  <span>Answered</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-4 h-4 bg-slate-100 border-2 border-slate-200 rounded"></div>
-                  <span>Not Answered</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-4 h-4 bg-blue-600 rounded"></div>
-                  <span>Current</span>
-                </div>
+              <div className="flex-1">
+                <p className="text-sm text-slate-600">Skills With</p>
+                <p className="text-sm text-slate-500">Testimonials</p>
+                <p className="text-2xl font-bold text-slate-900 lg:text-slate-900">
+                  <span className="lg:bg-transparent bg-amber-100 text-amber-600 lg:text-slate-900 px-3 py-1 rounded-lg inline-block">{getSkillsWithTestimonials()}</span>
+                </p>
               </div>
             </div>
           </div>
         </div>
-      </>
-    );
-  }
 
-  if (showResults && assessmentResults) {
-    // Results View
-    return (
-      <>
-        <StudentMenuNavigation currentPage={currentPage} onPageChange={handlePageChange} />
-        <div className="min-h-screen bg-slate-50 lg:ml-72">
-          <div className="max-w-4xl mx-auto px-4 py-8 pt-20 lg:pt-8">
-            <div className="text-center mb-8">
-              {/* Score Circle */}
-              <div className="inline-block relative">
-                <svg className="w-48 h-48">
-                  <circle
-                    cx="96"
-                    cy="96"
-                    r="88"
-                    fill="none"
-                    stroke="#e2e8f0"
-                    strokeWidth="12"
-                  />
-                  <circle
-                    cx="96"
-                    cy="96"
-                    r="88"
-                    fill="none"
-                    stroke={assessmentResults.passed ? '#10b981' : '#ef4444'}
-                    strokeWidth="12"
-                    strokeDasharray={`${(assessmentResults.score / 100) * 553} 553`}
-                    strokeLinecap="round"
-                    transform="rotate(-90 96 96)"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className={`text-5xl font-bold ${assessmentResults.passed ? 'text-green-600' : 'text-red-600'}`}>
-                    {assessmentResults.score}%
-                  </span>
-                  <span className="text-sm text-slate-600 mt-1">Your Score</span>
-                </div>
-              </div>
-
-              {/* Result Message */}
-              <div className="mt-6">
-                {assessmentResults.passed ? (
-                  <div className="inline-flex items-center gap-2 px-6 py-3 bg-green-100 text-green-800 rounded-full font-semibold">
-                    <i className="fas fa-check-circle text-xl"></i>
-                    Congratulations! You Passed
-                  </div>
-                ) : (
-                  <div className="inline-flex items-center gap-2 px-6 py-3 bg-red-100 text-red-800 rounded-full font-semibold">
-                    <i className="fas fa-times-circle text-xl"></i>
-                    You Did Not Pass
-                  </div>
-                )}
-              </div>
+        {/* Jobs List */}
+        {plannerJobs.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
+            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <i className="fas fa-briefcase text-slate-400 text-3xl"></i>
             </div>
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-center">
-                <i className="fas fa-check-circle text-green-600 text-3xl mb-2"></i>
-                <p className="text-3xl font-bold text-slate-900">{assessmentResults.correctAnswers}</p>
-                <p className="text-sm text-slate-600">Correct Answers</p>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-center">
-                <i className="fas fa-times-circle text-red-600 text-3xl mb-2"></i>
-                <p className="text-3xl font-bold text-slate-900">
-                  {assessmentResults.totalQuestions - assessmentResults.correctAnswers}
-                </p>
-                <p className="text-sm text-slate-600">Incorrect Answers</p>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-center">
-                <i className="fas fa-clipboard-check text-blue-600 text-3xl mb-2"></i>
-                <p className="text-3xl font-bold text-slate-900">{assessmentResults.totalQuestions}</p>
-                <p className="text-sm text-slate-600">Total Questions</p>
-              </div>
-            </div>
-
-            {/* Detailed Review */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <i className="fas fa-list-check text-blue-600"></i>
-                Detailed Review
-              </h3>
-              <div className="space-y-4">
-                {activeAssessment.questions.map((question, index) => {
-                  const userAnswer = assessmentResults.answers[question.id];
-                  const isCorrect = userAnswer === question.correctAnswer;
-                  
-                  return (
-                    <div key={question.id} className={`p-4 rounded-lg border-2 ${isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
-                      <div className="flex items-start gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          isCorrect ? 'bg-green-500' : 'bg-red-500'
-                        }`}>
-                          <i className={`fas ${isCorrect ? 'fa-check' : 'fa-times'} text-white`}></i>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">No Jobs in Your Planner</h3>
+            <p className="text-sm text-slate-600 mb-4">
+              Add jobs from the Job Board to start planning your skill development
+            </p>
+            <button
+              onClick={() => navigate('/student/jobs')}
+              className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
+            >
+              Browse Jobs
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {plannerJobs.map((job) => {
+              const isExpanded = isJobExpanded(job._id);
+              return (
+                <div key={job._id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                  {/* Job Header */}
+                  <div className="border-b border-slate-200">
+                    {/* Mobile Layout */}
+                    <button 
+                      onClick={() => toggleJobExpansion(job._id)}
+                      className="lg:hidden w-full text-left"
+                    >
+                      {/* Top Colored Section - Job & Company */}
+                      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h2 className="text-lg font-bold text-slate-900 mb-1">{job.title}</h2>
+                            <p className="text-sm text-slate-600 mb-2">{job.company}</p>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(getCVStatus(job).link);
+                              }}
+                              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold ${getCVStatus(job).color} hover:opacity-80 transition-opacity`}
+                            >
+                              <i className={`fas ${getCVStatus(job).status === 'generated' ? 'fa-check-circle' : getCVStatus(job).status === 'progress' ? 'fa-clock' : 'fa-play-circle'}`}></i>
+                              {getCVStatus(job).label}
+                            </button>
+                          </div>
+                          <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'} text-slate-400 text-xl ml-2`}></i>
                         </div>
-                        <div className="flex-1">
-                          <p className="font-medium text-slate-900 mb-2">Q{index + 1}. {question.question}</p>
-                          <div className="space-y-1 text-sm">
-                            <p className={userAnswer !== undefined ? (isCorrect ? 'text-green-700' : 'text-red-700') : 'text-slate-600'}>
-                              <strong>Your Answer:</strong> {userAnswer !== undefined ? question.options[userAnswer] : 'Not answered'}
-                            </p>
-                            {!isCorrect && (
-                              <p className="text-green-700">
-                                <strong>Correct Answer:</strong> {question.options[question.correctAnswer]}
-                              </p>
-                            )}
+                      </div>
+                      
+                      {/* Status & Info */}
+                      <div className="p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border ${getPriorityColor(job.priority)}`}>
+                            <i className="fas fa-flag"></i>
+                            {job.priority.toUpperCase()}
+                          </span>
+                          <div className="flex items-center gap-2 text-xs text-slate-600">
+                            <span className="flex items-center gap-1">
+                              <i className="fas fa-calendar"></i>
+                              {job.targetDate}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <i className="fas fa-list-check"></i>
+                              {job.skills.length} Skills
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* Progress Bar */}
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-medium text-slate-700">Progress</span>
+                            <span className="text-xs font-semibold text-indigo-600">
+                              {job.skills.length > 0 ? Math.round((job.skills.filter(s => s.status === 'completed').length / job.skills.length) * 100) : 0}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-200 rounded-full h-2">
+                            <div
+                              className="bg-gradient-to-r from-indigo-500 to-purple-600 h-2 rounded-full transition-all"
+                              style={{ width: `${job.skills.length > 0 ? (job.skills.filter(s => s.status === 'completed').length / job.skills.length) * 100 : 0}%` }}
+                            ></div>
                           </div>
                         </div>
                       </div>
+                    </button>
+
+                    {/* Desktop Layout */}
+                    <button 
+                      onClick={() => toggleJobExpansion(job._id)}
+                      className="hidden lg:block w-full text-left hover:bg-slate-50 transition-colors"
+                    >
+                      {/* Job Title and Company with Background */}
+                      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h2 className="text-xl font-bold text-slate-900 mb-1">{job.title}</h2>
+                            <p className="text-sm text-slate-600 mb-3">{job.company}</p>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(getCVStatus(job).link);
+                              }}
+                              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold ${getCVStatus(job).color} hover:opacity-80 transition-opacity`}
+                            >
+                              <i className={`fas ${getCVStatus(job).status === 'generated' ? 'fa-check-circle' : getCVStatus(job).status === 'progress' ? 'fa-clock' : 'fa-play-circle'}`}></i>
+                              {getCVStatus(job).label}
+                            </button>
+                          </div>
+                          <div className="px-4 py-2 bg-white text-slate-700 rounded-lg font-medium flex items-center gap-2 shadow-sm">
+                            <span>{isExpanded ? 'Collapse' : 'Expand'}</span>
+                            <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'}`}></i>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="p-6">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-slate-700">Overall Progress</span>
+                          <span className="text-sm font-semibold text-slate-900">
+                            {job.skills.length > 0 ? Math.round((job.skills.filter(s => s.status === 'completed').length / job.skills.length) * 100) : 0}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-200 rounded-full h-3">
+                          <div
+                            className="bg-gradient-to-r from-indigo-500 to-purple-600 h-3 rounded-full transition-all"
+                            style={{ width: `${job.skills.length > 0 ? (job.skills.filter(s => s.status === 'completed').length / job.skills.length) * 100 : 0}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Skills List */}
+                  {isExpanded && (
+                    <div className="p-6">
+                      <h3 className="text-lg font-semibold text-slate-900 mb-4">Skills to Master</h3>
+                      <div className="space-y-4">
+                        {job.skills.map((skill) => {
+                          const skillExpanded = isSkillExpanded(job._id, skill.id);
+                          return (
+                            <div key={skill.id} className="border border-slate-200 rounded-lg overflow-hidden">
+                              {/* Skill Header */}
+                              <button
+                                onClick={() => toggleSkillExpansion(job._id, skill.id)}
+                                className="w-full bg-slate-50 p-4 hover:bg-slate-100 transition-colors text-left"
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <h4 className="font-semibold text-slate-900 mb-2">{skill.name}</h4>
+                                    <div className="flex items-center gap-3 flex-wrap">
+                                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(skill.status)}`}>
+                                        {skill.status.replace('-', ' ').toUpperCase()}
+                                      </span>
+                                      {skill.assessmentCompleted && (
+                                        <span className="flex items-center gap-1 text-green-600 font-medium text-xs">
+                                          <i className="fas fa-check-circle"></i>
+                                          Assessment: {skill.assessmentScore}%
+                                        </span>
+                                      )}
+                                      {!skill.assessmentCompleted && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            navigate('/student/job-assessments');
+                                          }}
+                                          className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-medium text-xs underline"
+                                        >
+                                          <i className="fas fa-clipboard-check"></i>
+                                          Take Assessment
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <i className={`fas fa-chevron-${skillExpanded ? 'up' : 'down'} text-slate-400`}></i>
+                                </div>
+                              </button>
+
+                              {/* Skill Details */}
+                              {skillExpanded && (
+                                <div className="p-4 bg-slate-50 border-t border-slate-200">
+                                  <div className="relative">
+                                    {/* Scroll indicator - only visible on mobile */}
+                                    <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-slate-50 to-transparent pointer-events-none z-10 lg:hidden"></div>
+                                    
+                                    <div className="flex lg:grid lg:grid-cols-3 gap-4 lg:gap-6 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 snap-x snap-mandatory scrollbar-hide">
+                                      {/* Learning Resources */}
+                                      <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6 flex-shrink-0 w-[85%] lg:w-auto snap-start">
+                                        <div className="mb-5">
+                                          <h5 className="font-semibold text-slate-900 text-xs tracking-wide flex items-center gap-2">
+                                            <i className="fas fa-graduation-cap text-indigo-600"></i>
+                                            Learning resources
+                                          </h5>
+                                          <p className="text-slate-500 text-[11px] mt-1" style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 100 }}>
+                                            AI-powered content to accelerate your learning
+                                          </p>
+                                        </div>
+                                        
+                                        {/* Reading Modules */}
+                                        <div className="mb-4">
+                                          <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2">
+                                              <i className="fas fa-book text-slate-600 text-sm"></i>
+                                              <span className="text-xs font-medium text-slate-700">Reading Modules</span>
+                                              <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-[9px] font-semibold">AI</span>
+                                            </div>
+                                            <span className="text-xs text-slate-500 font-medium">{skill.readingModules?.length || 0}</span>
+                                          </div>
+                                          <button
+                                            onClick={() => handleGenerateModule(job, skill)}
+                                            className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm"
+                                          >
+                                            Generate
+                                          </button>
+                                        </div>
+
+                                        <div className="border-t border-slate-100 my-4"></div>
+
+                                        {/* Video Scripts */}
+                                        <div className="mb-4">
+                                          <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2">
+                                              <i className="fas fa-video text-slate-600 text-sm"></i>
+                                              <span className="text-xs font-medium text-slate-700">Video Scripts</span>
+                                              <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-[9px] font-semibold">AI</span>
+                                            </div>
+                                            <span className="text-xs text-slate-500 font-medium">{skill.videoScripts?.length || 0}</span>
+                                          </div>
+                                          <button
+                                            onClick={() => handleGenerateVideoScript(job, skill)}
+                                            className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm"
+                                          >
+                                            Generate Script
+                                          </button>
+                                        </div>
+
+                                        {/* View All Resources Link */}
+                                        {(skill.readingModules?.length > 0 || skill.videoScripts?.length > 0) && (
+                                          <>
+                                            <div className="border-t border-slate-100 my-4"></div>
+                                            <button
+                                              onClick={() => {
+                                                setSelectedSkill(skill);
+                                                setSelectedJob(job);
+                                                setShowViewAllResourcesModal(true);
+                                              }}
+                                              className="w-full text-center text-indigo-600 hover:text-indigo-800 text-xs font-medium transition-colors py-2"
+                                            >
+                                              View All Resources ({(skill.readingModules?.length || 0) + (skill.videoScripts?.length || 0)})
+                                            </button>
+                                          </>
+                                        )}
+                                      </div>
+
+                                      {/* Evidence & Proof */}
+                                      <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6 flex-shrink-0 w-[85%] lg:w-auto snap-start">
+                                        <div className="mb-5">
+                                          <h5 className="font-semibold text-slate-900 text-xs tracking-wide flex items-center gap-2">
+                                            <i className="fas fa-certificate text-green-600"></i>
+                                            Evidence & proof
+                                          </h5>
+                                          <p className="text-slate-500 text-[11px] mt-1" style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 100 }}>
+                                            Validate your skills with assessments and testimonials
+                                          </p>
+                                        </div>
+                                        
+                                        {/* Assessments */}
+                                        <div className="mb-4">
+                                          <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2">
+                                              <i className="fas fa-clipboard-check text-slate-600 text-sm"></i>
+                                              <span className="text-xs font-medium text-slate-700">Assessment</span>
+                                            </div>
+                                            {skill.assessmentCompleted && (
+                                              <span className="text-xs font-semibold text-green-600">{skill.assessmentScore}%</span>
+                                            )}
+                                          </div>
+                                          {!skill.assessmentCompleted ? (
+                                            <button
+                                              onClick={() => navigate('/student/job-assessments')}
+                                              className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm"
+                                            >
+                                              Take Assessment
+                                            </button>
+                                          ) : (
+                                            <button
+                                              onClick={() => {
+                                                setSelectedSkill(skill);
+                                                setShowAssessmentReviewModal(true);
+                                              }}
+                                              className="w-full px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs rounded-lg font-medium transition-colors"
+                                            >
+                                              Review Results
+                                            </button>
+                                          )}
+                                        </div>
+
+                                        <div className="border-t border-slate-100 my-4"></div>
+
+                                        {/* Testimonials */}
+                                        <div className="mb-4">
+                                          <div className="mb-3">
+                                            <div className="flex items-center gap-2 mb-1">
+                                              <i className="fas fa-award text-slate-600 text-sm"></i>
+                                              <span className="text-xs font-medium text-slate-700">Testimonials</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-xs">
+                                              <span className="text-slate-500 font-medium">
+                                                {skill.testimonials?.filter(t => t.status === 'approved').length || 0} Approved
+                                              </span>
+                                              <span className="text-slate-300">·</span>
+                                              <span className="text-orange-600 font-semibold">
+                                                {skill.testimonials?.filter(t => t.status === 'pending').length || 0} Pending
+                                              </span>
+                                            </div>
+                                          </div>
+                                          <div className="flex gap-2">
+                                            {skill.testimonials && skill.testimonials.length > 0 && (
+                                              <button
+                                                onClick={() => {
+                                                  setSelectedSkill(skill);
+                                                  setIsViewTestimonialModalOpen(true);
+                                                }}
+                                                className="flex-1 px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                                              >
+                                                <i className="fas fa-eye lg:hidden"></i>
+                                                <span className="hidden lg:inline">View All ({skill.testimonials.length})</span>
+                                              </button>
+                                            )}
+                                            <button
+                                              onClick={() => {
+                                                setSelectedJob(job);
+                                                setSelectedSkill(skill);
+                                                setIsRequestTestimonialModalOpen(true);
+                                              }}
+                                              className={`px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm flex items-center justify-center gap-2 ${skill.testimonials && skill.testimonials.length > 0 ? 'flex-1' : 'w-full'}`}
+                                            >
+                                              <i className="fas fa-plus lg:hidden"></i>
+                                              <span className="hidden lg:inline">Request New</span>
+                                            </button>
+                                          </div>
+                                        </div>
+
+                                        <div className="border-t border-slate-100 my-4"></div>
+
+                                        {/* Certifications */}
+                                        <div className="mb-4">
+                                          <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2">
+                                              <i className="fas fa-file-certificate text-slate-600 text-sm"></i>
+                                              <span className="text-xs font-medium text-slate-700">Certificates</span>
+                                            </div>
+                                            <span className="text-xs text-slate-500 font-medium">{skill.certificates?.length || 0}</span>
+                                          </div>
+                                          <div className="flex gap-2">
+                                            {skill.certificates && skill.certificates.length > 0 && (
+                                              <button
+                                                onClick={() => {
+                                                  setSelectedSkill(skill);
+                                                  setShowCertificatesModal(true);
+                                                }}
+                                                className="flex-1 px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                                              >
+                                                <i className="fas fa-eye lg:hidden"></i>
+                                                <span className="hidden lg:inline">View All ({skill.certificates.length})</span>
+                                              </button>
+                                            )}
+                                            <button
+                                              onClick={() => {
+                                                setSelectedJob(job);
+                                                setSelectedSkill(skill);
+                                                setShowAddCertificateModal(true);
+                                              }}
+                                              className={`px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm flex items-center justify-center gap-2 ${skill.certificates && skill.certificates.length > 0 ? 'flex-1' : 'w-full'}`}
+                                            >
+                                              <i className="fas fa-plus lg:hidden"></i>
+                                              <span className="hidden lg:inline">Add Link</span>
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Content Creation */}
+                                      <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6 flex-shrink-0 w-[85%] lg:w-auto snap-start">
+                                        <div className="mb-5">
+                                          <h5 className="font-semibold text-slate-900 text-xs tracking-wide flex items-center gap-2">
+                                            <i className="fas fa-share-alt text-blue-600"></i>
+                                            Content & sharing
+                                          </h5>
+                                          <p className="text-slate-500 text-[11px] mt-1" style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 100 }}>
+                                            Showcase your expertise and build your presence
+                                          </p>
+                                        </div>
+                                        
+                                        {/* LinkedIn Posts */}
+                                        <div className="mb-4">
+                                          <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2">
+                                              <i className="fab fa-linkedin text-slate-600 text-sm"></i>
+                                              <span className="text-xs font-medium text-slate-700">LinkedIn Posts</span>
+                                              <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-[9px] font-semibold">AI</span>
+                                            </div>
+                                            <span className="text-xs text-slate-500 font-medium">{skill.linkedInPosts?.length || 0}</span>
+                                          </div>
+                                          {skill.linkedInPosts && skill.linkedInPosts.length > 0 ? (
+                                            <button
+                                              onClick={() => {
+                                                setSelectedSkill(skill);
+                                                setShowLinkedInPostsModal(true);
+                                              }}
+                                              className="w-full px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs rounded-lg font-medium transition-colors"
+                                            >
+                                              View Post
+                                            </button>
+                                          ) : (
+                                            <button
+                                              onClick={() => handleCreateLinkedInPost(job, skill)}
+                                              className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm"
+                                            >
+                                              Create Post
+                                            </button>
+                                          )}
+                                        </div>
+
+                                        <div className="border-t border-slate-100 my-4"></div>
+
+                                        {/* Videos */}
+                                        <div className="mb-4">
+                                          <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2">
+                                              <i className="fab fa-youtube text-slate-600 text-sm"></i>
+                                              <span className="text-xs font-medium text-slate-700">Your Videos</span>
+                                            </div>
+                                            <span className="text-xs text-slate-500 font-medium">{skill.youtubeLinks?.length || 0}</span>
+                                          </div>
+                                          <div className="flex gap-2">
+                                            {skill.youtubeLinks && skill.youtubeLinks.length > 0 && (
+                                              <button
+                                                onClick={() => {
+                                                  setSelectedSkill(skill);
+                                                  setShowVideosModal(true);
+                                                }}
+                                                className="flex-1 px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                                              >
+                                                <i className="fas fa-eye lg:hidden"></i>
+                                                <span className="hidden lg:inline">View All ({skill.youtubeLinks.length})</span>
+                                              </button>
+                                            )}
+                                            <button
+                                              onClick={() => handleAddVideo(job, skill)}
+                                              className={`px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm flex items-center justify-center gap-2 ${skill.youtubeLinks && skill.youtubeLinks.length > 0 ? 'flex-1' : 'w-full'}`}
+                                            >
+                                              <i className="fas fa-plus lg:hidden"></i>
+                                              <span className="hidden lg:inline">Add Video</span>
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button
-                onClick={handleBackToList}
-                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
-              >
-                <i className="fas fa-arrow-left mr-2"></i>
-                Back to Assessments
-              </button>
-              {!assessmentResults.passed && (
-                <button
-                  onClick={handleRequestRetake}
-                  className="px-8 py-3 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
-                >
-                  <i className="fas fa-redo mr-2"></i>
-                  Request Retake
-                </button>
-              )}
-            </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-        </div>
-      </>
-    );
-  }
-
-  // Completed Assessment Details View
-  if (viewingCompletedAssessment && !studyPlanModal) {
-    const correctAnswers = viewingCompletedAssessment.questions.filter(
-      q => viewingCompletedAssessment.userAnswers[q.id] === q.correctAnswer
-    ).length;
-
-    return (
-      <>
-        {!playingVideo && (
-          <StudentMenuNavigation currentPage={currentPage} onPageChange={handlePageChange} />
         )}
-        <div className={`min-h-screen bg-slate-50 ${!playingVideo ? 'lg:ml-72' : ''}`}>
-          <div className="max-w-4xl mx-auto px-4 py-8 pt-20 lg:pt-8">
-            {/* Header with Close Button */}
-            <div className="flex items-center justify-between mb-8">
-              <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Review Results</h1>
+      </div>
+
+      {/* Modals remain the same */}
+      <AddResourceModal
+        isOpen={isAddResourceModalOpen}
+        onClose={() => setIsAddResourceModalOpen(false)}
+        resourceType={resourceType}
+        selectedSkill={selectedSkill}
+        resourceTitle={resourceTitle}
+        setResourceTitle={setResourceTitle}
+        resourceUrl={resourceUrl}
+        setResourceUrl={setResourceUrl}
+        resourceNote={resourceNote}
+        setResourceNote={setResourceNote}
+        onAddResource={() => {}}
+      />
+
+      <RequestTestimonialModal
+        isOpen={isRequestTestimonialModalOpen}
+        onClose={() => setIsRequestTestimonialModalOpen(false)}
+        selectedSkill={selectedSkill}
+        testimonialProject={testimonialProject}
+        setTestimonialProject={setTestimonialProject}
+        validatorName={validatorName}
+        setValidatorName={setValidatorName}
+        validatorEmail={validatorEmail}
+        setValidatorEmail={setValidatorEmail}
+        validatorRole={validatorRole}
+        setValidatorRole={setValidatorRole}
+        personalMessage={personalMessage}
+        setPersonalMessage={setPersonalMessage}
+        onRequestTestimonial={() => {}}
+      />
+
+      <ViewTestimonialModal
+        isOpen={isViewTestimonialModalOpen}
+        onClose={() => setIsViewTestimonialModalOpen(false)}
+        selectedTestimonial={selectedTestimonial}
+      />
+
+      <ViewNoteModal
+        isOpen={isViewNoteModalOpen}
+        onClose={() => setIsViewNoteModalOpen(false)}
+        selectedNote={selectedNote}
+      />
+
+      {/* Reader Mode for Learning Modules */}
+      <LearningModuleReader
+        isOpen={readerMode && (generatedModule || isGenerating)}
+        onClose={handleCloseReader}
+        generatedModule={generatedModule}
+        selectedSkill={selectedSkill}
+        selectedJob={selectedJob}
+        isGenerating={isGenerating}
+      />
+
+      {/* Video Script Modal */}
+      <VideoScriptViewer
+        isOpen={showVideoScriptModal}
+        onClose={() => setShowVideoScriptModal(false)}
+        generatedVideoScript={generatedVideoScript}
+        onOpenRecorder={() => setShowCameraRecorder(true)}
+      />
+
+      {/* Assessment Review Modal */}
+      <AssessmentReviewModal
+        isOpen={showAssessmentReviewModal}
+        onClose={() => setShowAssessmentReviewModal(false)}
+        selectedSkill={selectedSkill}
+      />
+
+      {/* View All Testimonials Modal */}
+      <TestimonialsListModal
+        isOpen={isViewTestimonialModalOpen}
+        onClose={() => setIsViewTestimonialModalOpen(false)}
+        selectedSkill={selectedSkill}
+      />
+
+      {/* LinkedIn Posts Modal */}
+      <LinkedInPostsModal
+        isOpen={showLinkedInPostsModal}
+        onClose={() => setShowLinkedInPostsModal(false)}
+        selectedSkill={selectedSkill}
+      />
+
+      {/* Videos Modal */}
+      <VideosListModal
+        isOpen={showVideosModal}
+        onClose={() => setShowVideosModal(false)}
+        selectedSkill={selectedSkill}
+      />
+
+      {/* Add Video Modal */}
+      <AddVideoModal
+        isOpen={showAddVideoModal}
+        onClose={() => setShowAddVideoModal(false)}
+        selectedSkill={selectedSkill}
+        selectedJob={selectedJob}
+        videoTitle={videoTitle}
+        setVideoTitle={setVideoTitle}
+        videoUrl={videoUrl}
+        setVideoUrl={setVideoUrl}
+        videoDescription={videoDescription}
+        setVideoDescription={setVideoDescription}
+        onSave={handleSaveVideo}
+      />
+
+      {/* View Certificates Modal */}
+      {showCertificatesModal && selectedSkill && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900">Certificates</h3>
+                <p className="text-sm text-slate-600">{selectedSkill.name}</p>
+              </div>
               <button
-                onClick={handleBackToList}
-                className="w-10 h-10 flex items-center justify-center bg-white hover:bg-slate-100 border border-slate-200 rounded-full text-slate-600 hover:text-slate-900 transition-all"
-                title="Close"
+                onClick={() => setShowCertificatesModal(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <i className="fas fa-times text-xl"></i>
               </button>
             </div>
-
-            <div className="text-center mb-8">
-              {/* Score Circle */}
-              <div className="inline-block relative">
-                <svg className="w-48 h-48">
-                  <circle
-                    cx="96"
-                    cy="96"
-                    r="88"
-                    fill="none"
-                    stroke="#e2e8f0"
-                    strokeWidth="12"
-                  />
-                  <circle
-                    cx="96"
-                    cy="96"
-                    r="88"
-                    fill="none"
-                    stroke={viewingCompletedAssessment.score >= viewingCompletedAssessment.passingScore ? '#10b981' : '#ef4444'}
-                    strokeWidth="12"
-                    strokeDasharray={`${(viewingCompletedAssessment.score / 100) * 553} 553`}
-                    strokeLinecap="round"
-                    transform="rotate(-90 96 96)"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className={`text-5xl font-bold ${viewingCompletedAssessment.score >= viewingCompletedAssessment.passingScore ? 'text-green-600' : 'text-red-600'}`}>
-                    {viewingCompletedAssessment.score}%
-                  </span>
-                  <span className="text-sm text-slate-600 mt-1">Your Score</span>
-                </div>
-              </div>
-
-              {/* Result Message */}
-              <div className="mt-6">
-                {viewingCompletedAssessment.score >= viewingCompletedAssessment.passingScore ? (
-                  <div className="inline-flex items-center gap-2 px-6 py-3 bg-green-100 text-green-800 rounded-full font-semibold">
-                    <i className="fas fa-check-circle text-xl"></i>
-                    You Passed!
-                  </div>
-                ) : (
-                  <div className="inline-flex items-center gap-2 px-6 py-3 bg-red-100 text-red-800 rounded-full font-semibold">
-                    <i className="fas fa-times-circle text-xl"></i>
-                    You Did Not Pass
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-3 gap-2 md:gap-4 mb-8">
-              <div className="bg-white rounded-lg md:rounded-xl shadow-sm border border-slate-200 p-3 md:p-6 text-center">
-                <i className="fas fa-check-circle text-green-600 text-xl md:text-3xl mb-1 md:mb-2"></i>
-                <p className="text-xl md:text-3xl font-bold text-slate-900">{correctAnswers}</p>
-                <p className="text-xs md:text-sm text-slate-600">Correct</p>
-              </div>
-              <div className="bg-white rounded-lg md:rounded-xl shadow-sm border border-slate-200 p-3 md:p-6 text-center">
-                <i className="fas fa-times-circle text-red-600 text-xl md:text-3xl mb-1 md:mb-2"></i>
-                <p className="text-xl md:text-3xl font-bold text-slate-900">
-                  {viewingCompletedAssessment.totalQuestions - correctAnswers}
-                </p>
-                <p className="text-xs md:text-sm text-slate-600">Incorrect</p>
-              </div>
-              <div className="bg-white rounded-lg md:rounded-xl shadow-sm border border-slate-200 p-3 md:p-6 text-center">
-                <i className="fas fa-clipboard-check text-blue-600 text-xl md:text-3xl mb-1 md:mb-2"></i>
-                <p className="text-xl md:text-3xl font-bold text-slate-900">{viewingCompletedAssessment.totalQuestions}</p>
-                <p className="text-xs md:text-sm text-slate-600">Total</p>
-              </div>
-            </div>
-
-            {/* Detailed Review */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <i className="fas fa-list-check text-blue-600"></i>
-                Detailed Review
-              </h3>
-              <div className="space-y-4">
-                {viewingCompletedAssessment.questions.map((question, index) => {
-                  const userAnswer = viewingCompletedAssessment.userAnswers[question.id];
-                  const isCorrect = userAnswer === question.correctAnswer;
-                  
-                  return (
-                    <div key={question.id} className={`p-4 rounded-lg border-2 ${isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
-                      <div className="flex items-start gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          isCorrect ? 'bg-green-500' : 'bg-red-500'
-                        }`}>
-                          <i className={`fas ${isCorrect ? 'fa-check' : 'fa-times'} text-white`}></i>
-                        </div>
+            
+            <div className="p-6">
+              {selectedSkill.certificates && selectedSkill.certificates.length > 0 ? (
+                <div className="space-y-4">
+                  {selectedSkill.certificates.map((cert) => (
+                    <div key={cert.id} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
-                          <p className="font-medium text-slate-900 mb-2">Q{index + 1}. {question.question}</p>
-                          <div className="space-y-1 text-sm">
-                            <p className={userAnswer !== undefined ? (isCorrect ? 'text-green-700' : 'text-red-700') : 'text-slate-600'}>
-                              <strong>Your Answer:</strong> {userAnswer !== undefined ? question.options[userAnswer] : 'Not answered'}
-                            </p>
-                            {!isCorrect && (
-                              <p className="text-green-700">
-                                <strong>Correct Answer:</strong> {question.options[question.correctAnswer]}
-                              </p>
-                            )}
+                          <div className="flex items-center gap-2 mb-2">
+                            <i className={`fas ${cert.provider === 'drive' ? 'fa-google-drive' : 'fa-dropbox'} text-lg ${cert.provider === 'drive' ? 'text-blue-600' : 'text-blue-500'}`}></i>
+                            <h4 className="font-semibold text-slate-900">{cert.title}</h4>
                           </div>
+                          <a 
+                            href={cert.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:text-blue-700 hover:underline break-all"
+                          >
+                            {cert.url}
+                          </a>
+                          <p className="text-xs text-slate-500 mt-2">
+                            Added: {new Date(cert.addedAt).toLocaleDateString()}
+                          </p>
                         </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
-              <button
-                onClick={handleBackToList}
-                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
-              >
-                <i className="fas fa-arrow-left mr-2"></i>
-                Back to Assessments
-              </button>
-              <button
-                onClick={handleCreateStudyPlan}
-                className="px-8 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all"
-              >
-                <i className="fas fa-book-reader mr-2"></i>
-                Create Study Plan
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Video Player Modal */}
-        <VideoPlayerModal
-          video={playingVideo}
-          onClose={handleCloseVideo}
-        />
-      </>
-    );
-  }
-
-  // Study Plan Modal View
-  if (studyPlanModal) {
-    const wrongQuestions = studyPlanModal.questions.filter(
-      q => studyPlanModal.userAnswers[q.id] !== q.correctAnswer
-    );
-
-    return (
-      <>
-        {!playingVideo && (
-          <StudentMenuNavigation currentPage={currentPage} onPageChange={handlePageChange} />
-        )}
-        <div className={`min-h-screen bg-slate-50 ${!playingVideo ? 'lg:ml-72' : ''}`}>
-          <div className="max-w-6xl mx-auto px-4 py-8 pt-20 lg:pt-8">
-            {/* Header */}
-            <div className="mb-8">
-              <button
-                onClick={handleCloseStudyPlan}
-                className="mb-4 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-all flex items-center gap-2"
-              >
-                <i className="fas fa-arrow-left"></i>
-                Back to Review
-              </button>
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">Study Plan</h1>
-              <p className="text-slate-600">{studyPlanModal.title}</p>
-            </div>
-
-            {/* Questions You Got Wrong */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <i className="fas fa-times-circle text-red-600"></i>
-                Questions You Got Wrong
-              </h3>
-              {wrongQuestions.length > 0 ? (
-                <div className="space-y-3">
-                  {wrongQuestions.map((question, index) => (
-                    <div key={question.id} className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="font-medium text-slate-900 mb-2">Q. {question.question}</p>
-                      <div className="text-sm space-y-1">
-                        <p className="text-red-700">
-                          <strong>Your Answer:</strong> {studyPlanModal.userAnswers[question.id] !== undefined ? question.options[studyPlanModal.userAnswers[question.id]] : 'Not answered'}
-                        </p>
-                        <p className="text-green-700">
-                          <strong>Correct Answer:</strong> {question.options[question.correctAnswer]}
-                        </p>
-                        <p className="text-purple-700">
-                          <strong>Topic:</strong> {question.topic}
-                        </p>
+                        <button
+                          onClick={() => handleDeleteCertificate(cert.id)}
+                          className="text-red-500 hover:text-red-700 transition-colors"
+                        >
+                          <i className="fas fa-trash"></i>
+                        </button>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-center text-slate-600 py-4">You answered all questions correctly! 🎉</p>
+                <div className="text-center py-12">
+                  <i className="fas fa-file-certificate text-5xl text-slate-300 mb-4"></i>
+                  <p className="text-slate-500">No certificates added yet</p>
+                </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
 
-            {/* Focus Areas Section */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <i className="fas fa-clipboard-list text-orange-600"></i>
-                Focus Areas & Study Notes
-              </h3>
-              
-              {/* Add/Edit Note Form */}
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  {editingNoteId ? 'Edit Note' : 'Add a New Note'} (Max 300 characters)
-                </label>
-                <textarea
-                  value={currentNote}
-                  onChange={(e) => {
-                    if (e.target.value.length <= 300) {
-                      setCurrentNote(e.target.value);
-                    }
+      {/* Add Certificate Modal */}
+      {showAddCertificateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-xl max-w-lg w-full">
+            <div className="p-6 border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Add Certificate</h3>
+                  <p className="text-sm text-slate-600">{selectedSkill?.name}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowAddCertificateModal(false);
+                    setCertificateTitle('');
+                    setCertificateLink('');
+                    setCertificateProvider('drive');
                   }}
-                  placeholder="E.g., Need to review audience targeting strategies, confused about attribution windows..."
-                  className="w-full px-4 py-3 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
-                  rows="3"
+                  className="text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <i className="fas fa-times text-xl"></i>
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Certificate Title *
+                </label>
+                <input
+                  type="text"
+                  value={certificateTitle}
+                  onChange={(e) => setCertificateTitle(e.target.value)}
+                  placeholder="e.g., React Developer Certification"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-                <div className="flex justify-between items-center mt-2">
-                  <span className={`text-xs ${currentNote.length >= 300 ? 'text-red-600 font-bold' : 'text-slate-500'}`}>
-                    {currentNote.length}/300 characters
-                  </span>
-                  <div className="flex gap-2">
-                    {editingNoteId && (
-                      <button
-                        onClick={handleCancelEdit}
-                        className="px-4 py-2 bg-slate-400 hover:bg-slate-500 text-white rounded-lg text-sm font-medium transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Storage Provider *
+                </label>
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setCertificateProvider('drive')}
+                    className={`flex-1 px-4 py-3 rounded-lg border-2 transition-all ${
+                      certificateProvider === 'drive'
+                        ? 'border-blue-600 bg-blue-50 text-blue-900'
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <i className="fab fa-google-drive text-2xl mb-1"></i>
+                    <p className="text-sm font-medium">Google Drive</p>
+                  </button>
+                  <button
+                    onClick={() => setCertificateProvider('dropbox')}
+                    className={`flex-1 px-4 py-3 rounded-lg border-2 transition-all ${
+                      certificateProvider === 'dropbox'
+                        ? 'border-blue-600 bg-blue-50 text-blue-900'
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <i className="fab fa-dropbox text-2xl mb-1"></i>
+                    <p className="text-sm font-medium">Dropbox</p>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Certificate Link *
+                </label>
+                <input
+                  type="url"
+                  value={certificateLink}
+                  onChange={(e) => setCertificateLink(e.target.value)}
+                  placeholder={certificateProvider === 'drive' ? 'https://drive.google.com/...' : 'https://www.dropbox.com/...'}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Make sure the link is publicly accessible
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => {
+                    setShowAddCertificateModal(false);
+                    setCertificateTitle('');
+                    setCertificateLink('');
+                    setCertificateProvider('drive');
+                  }}
+                  className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveCertificate}
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  Add Certificate
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View All Resources Modal */}
+      <ViewAllResourcesModal
+        isOpen={showViewAllResourcesModal}
+        onClose={() => setShowViewAllResourcesModal(false)}
+        selectedSkill={selectedSkill}
+        selectedJob={selectedJob}
+        onOpenModule={(module) => {
+          setGeneratedModule(module.content);
+          setReaderMode(true);
+          setShowViewAllResourcesModal(false);
+        }}
+        onOpenScript={(script) => {
+          setGeneratedVideoScript(script.content);
+          setShowVideoScriptModal(true);
+          setShowViewAllResourcesModal(false);
+        }}
+      />
+
+      {/* Create LinkedIn Post Modal */}
+      <CreateLinkedInPostModal
+        isOpen={showCreateLinkedInPostModal}
+        onClose={() => setShowCreateLinkedInPostModal(false)}
+        selectedSkill={selectedSkill}
+        selectedJob={selectedJob}
+        linkedInPostTopic={linkedInPostTopic}
+        setLinkedInPostTopic={setLinkedInPostTopic}
+        linkedInPostContext={linkedInPostContext}
+        setLinkedInPostContext={setLinkedInPostContext}
+        generatedLinkedInPost={generatedLinkedInPost}
+        setGeneratedLinkedInPost={setGeneratedLinkedInPost}
+        isGeneratingPost={isGeneratingPost}
+        onGenerate={handleGenerateLinkedInPost}
+        onCopy={handleCopyLinkedInPost}
+        onSave={handleSaveLinkedInPost}
+      />
+
+      {/* AI Generation Loader */}
+      <AIGenerationLoader
+        isVisible={isGenerating}
+        generationType={generationType}
+      />
+
+      {/* Script Generator Modal */}
+      {showScriptGeneratorModal && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-[9998]"
+            onClick={() => setShowScriptGeneratorModal(false)}
+          ></div>
+
+          {/* Modal */}
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-4 rounded-t-2xl flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                    <i className="fas fa-video text-xl text-white text-opacity-30"></i>
+                  </div>
+                  <h2 className="text-xl font-bold">Generate Video Script</h2>
+                </div>
+                <button
+                  onClick={() => setShowScriptGeneratorModal(false)}
+                  className="w-8 h-8 rounded-full bg-white bg-opacity-20 hover:bg-opacity-30 flex items-center justify-center transition-colors"
+                >
+                  <i className="fas fa-times text-white text-opacity-30"></i>
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 space-y-6">
+                <div>
+                  <p className="text-slate-600 text-sm mb-4">
+                    Creating video script for <span className="font-semibold text-slate-900">{selectedSkill?.name}</span>
+                  </p>
+                </div>
+
+                {/* Specific Idea Input */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Any specific idea or focus? (Optional)
+                  </label>
+                  <textarea
+                    value={scriptIdea}
+                    onChange={(e) => setScriptIdea(e.target.value)}
+                    placeholder="e.g., focus on hooks and state management, or explain async/await patterns..."
+                    rows={3}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-sm"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Leave blank for a general overview of the skill
+                  </p>
+                </div>
+
+                {/* Video Length Selection */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-3">
+                    Video Length
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
                     <button
-                      onClick={() => editingNoteId ? handleUpdateNote(studyPlanModal.id) : handleAddNote(studyPlanModal.id)}
-                      className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                      onClick={() => setVideoLength('2-3')}
+                      className={`px-4 py-4 rounded-lg border-2 transition-all ${
+                        videoLength === '2-3'
+                          ? 'border-purple-600 bg-purple-50 text-purple-900'
+                          : 'border-slate-200 hover:border-slate-300'
+                      }`}
                     >
-                      <i className={`fas ${editingNoteId ? 'fa-check' : 'fa-plus'}`}></i>
-                      {editingNoteId ? 'Update Note' : 'Add Note'}
+                      <div className="text-center">
+                        <i className={`fas fa-clock text-2xl mb-2 ${videoLength === '2-3' ? 'text-purple-600' : 'text-slate-300'}`}></i>
+                        <p className="text-sm font-semibold">2-3 mins</p>
+                        <p className="text-xs text-slate-500 mt-1">Quick</p>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => setVideoLength('5-7')}
+                      className={`px-4 py-4 rounded-lg border-2 transition-all ${
+                        videoLength === '5-7'
+                          ? 'border-purple-600 bg-purple-50 text-purple-900'
+                          : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <i className={`fas fa-clock text-2xl mb-2 ${videoLength === '5-7' ? 'text-purple-600' : 'text-slate-300'}`}></i>
+                        <p className="text-sm font-semibold">5-7 mins</p>
+                        <p className="text-xs text-slate-500 mt-1">Standard</p>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => setVideoLength('8-10')}
+                      className={`px-4 py-4 rounded-lg border-2 transition-all ${
+                        videoLength === '8-10'
+                          ? 'border-purple-600 bg-purple-50 text-purple-900'
+                          : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <i className={`fas fa-clock text-2xl mb-2 ${videoLength === '8-10' ? 'text-purple-600' : 'text-slate-300'}`}></i>
+                        <p className="text-sm font-semibold">8-10 mins</p>
+                        <p className="text-xs text-slate-500 mt-1">Detailed</p>
+                      </div>
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* Saved Notes */}
-              {focusAreas[studyPlanModal.id] && focusAreas[studyPlanModal.id].length > 0 ? (
-                <div>
-                  <p className="text-sm font-medium text-slate-700 mb-3">Your Notes:</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {focusAreas[studyPlanModal.id].map((note) => (
-                      <div
-                        key={note.id}
-                        className="bg-white border border-orange-200 rounded-lg p-3 hover:shadow-md transition-shadow flex flex-col h-full"
-                      >
-                        <div className="flex-1 mb-3">
-                          <p className="text-slate-900 text-sm whitespace-pre-wrap break-words">{note.text}</p>
-                        </div>
-                        <div className="border-t border-orange-100 pt-2 mt-auto">
-                          <p className="text-xs text-slate-500 mb-2 flex items-center gap-1">
-                            <i className="fas fa-clock"></i>
-                            <span className="truncate">
-                              {new Date(note.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                              {note.updatedAt && ' (edited)'}
-                            </span>
-                          </p>
-                          <div className="flex gap-2 justify-center">
-                            <button
-                              onClick={() => handleEditNote(studyPlanModal.id, note.id)}
-                              className="flex-1 p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors text-center"
-                              title="Edit note"
-                            >
-                              <i className="fas fa-edit"></i>
-                            </button>
-                            <button
-                              onClick={() => handleDeleteNote(studyPlanModal.id, note.id)}
-                              className="flex-1 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-center"
-                              title="Delete note"
-                            >
-                              <i className="fas fa-trash"></i>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-center text-slate-600">
-                  <i className="fas fa-sticky-note text-slate-400 text-2xl mb-2"></i>
-                  <p className="text-sm">No notes yet. Add your first note above!</p>
-                </div>
-              )}
-            </div>
-
-            {/* Related Videos Section */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <i className="fas fa-video text-blue-600"></i>
-                Recommended Videos to Review
-              </h3>
-              {studyPlanModal.relatedVideos && studyPlanModal.relatedVideos.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {studyPlanModal.relatedVideos.map((video) => (
-                    <div
-                      key={video.id}
-                      onClick={() => handlePlayVideo(video)}
-                      className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4 cursor-pointer hover:shadow-lg transition-all hover:scale-105"
-                    >
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <i className="fab fa-youtube text-white text-xl"></i>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-slate-900 text-sm truncate">{video.title}</p>
-                          <p className="text-xs text-slate-600">{video.duration}</p>
-                        </div>
-                      </div>
-                      <p className="text-xs text-blue-700 font-medium">
-                        <i className="fas fa-tag mr-1"></i>
-                        {video.topic}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center text-slate-600 py-4">No videos available for this assessment.</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Video Player Modal */}
-        <VideoPlayerModal
-          video={playingVideo}
-          onClose={handleCloseVideo}
-        />
-      </>
-    );
-  }
-
-  // Main Assessment List View
-  return (
-    <>
-      <LoaderOverlay isVisible={isLoading} title="Course Assessments" subtitle="Loading assessments..." />
-      
-      <StudentMenuNavigation currentPage={currentPage} onPageChange={handlePageChange} />
-      
-      <div className="min-h-screen bg-slate-50 lg:ml-72">
-        {/* Header Section */}
-        <div className="bg-white shadow-sm border-b border-slate-200">
-          <div className="px-4 sm:px-6 lg:px-8 py-4 pt-16 lg:pt-4">
-            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 flex items-center gap-3">
-              <i className="fas fa-clipboard-check text-blue-600"></i>
-              Course Assessments
-            </h1>
-            <p className="text-sm text-slate-600 mt-1">
-              Complete your assigned assessments and track your progress
-            </p>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Subject Filter */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Select Subject
-            </label>
-            <select
-              value={selectedSubject}
-              onChange={(e) => {
-                setSelectedSubject(e.target.value);
-                setSelectedTopic(''); // Reset topic when subject changes
-              }}
-              className="w-full md:w-64 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">-- Select a Subject --</option>
-              {dummySubjects.map((subject) => (
-                <option key={subject._id} value={subject._id}>
-                  {subject.name} ({subject.code})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Subject-Level Tests */}
-          {selectedSubject && displayedSubjectTests.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <i className="fas fa-book text-blue-600"></i>
-                Subject-Level Tests
-              </h2>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {displayedSubjectTests.map(assessment => renderTestCard(assessment))}
+              {/* Footer */}
+              <div className="px-6 py-4 bg-slate-50 rounded-b-2xl flex gap-3">
+                <button
+                  onClick={() => setShowScriptGeneratorModal(false)}
+                  className="flex-1 px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-semibold transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleGenerateScript}
+                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  <i className="fas fa-magic text-white text-opacity-80"></i>
+                  Generate Script
+                </button>
               </div>
             </div>
-          )}
+          </div>
+        </>
+      )}
 
-          {/* Topics List */}
-          {selectedSubject && currentTopics.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <i className="fas fa-tags text-purple-600"></i>
-                Topics
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
-                {currentTopics.map((topic) => (
-                  <button
-                    key={topic._id}
-                    onClick={() => setSelectedTopic(topic._id)}
-                    className={`p-4 rounded-lg border-2 text-left transition-all ${
-                      selectedTopic === topic._id
-                        ? 'border-purple-500 bg-purple-50 shadow-md'
-                        : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <i className={`fas fa-tag ${selectedTopic === topic._id ? 'text-purple-600' : 'text-slate-500'}`}></i>
-                      <span className={`font-medium ${selectedTopic === topic._id ? 'text-purple-900' : 'text-slate-700'}`}>
-                        {topic.name}
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Topic-Level Tests */}
-          {selectedTopic && displayedTopicTests.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <i className="fas fa-clipboard-list text-green-600"></i>
-                Topic-Level Tests
-              </h2>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {displayedTopicTests.map(assessment => renderTestCard(assessment))}
-              </div>
-            </div>
-          )}
-
-          {/* Empty States */}
-          {!selectedSubject && !isLoading && (
-            <div className="text-center py-16">
-              <i className="fas fa-clipboard-list text-slate-300 text-6xl mb-4"></i>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Select a Subject</h3>
-              <p className="text-slate-600">Please select a subject to view assessments.</p>
-            </div>
-          )}
-
-          {selectedSubject && displayedSubjectTests.length === 0 && currentTopics.length === 0 && !isLoading && (
-            <div className="text-center py-16">
-              <i className="fas fa-clipboard-list text-slate-300 text-6xl mb-4"></i>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">No Tests Available</h3>
-              <p className="text-slate-600">No tests available for this subject.</p>
-            </div>
-          )}
-
-          {selectedTopic && displayedTopicTests.length === 0 && !isLoading && (
-            <div className="text-center py-16">
-              <i className="fas fa-clipboard-list text-slate-300 text-6xl mb-4"></i>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">No Topic Tests Available</h3>
-              <p className="text-slate-600">No tests available for this topic.</p>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Camera Recorder */}
+      <CameraRecorder
+        isOpen={showCameraRecorder}
+        onClose={() => setShowCameraRecorder(false)}
+        skillName={selectedSkill?.name || 'Video Recording'}
+        videoScript={generatedVideoScript}
+      />
     </>
   );
 };
 
-export default CourseAssessments;
-
+export default SkillPlanner;

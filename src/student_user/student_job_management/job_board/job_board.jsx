@@ -4,7 +4,7 @@ import { toast } from 'react-hot-toast';
 import StudentMenuNavigation from '../../../components/student-components/student-menu-components/StudentMenuNavigation';
 import LoaderOverlay from '../../../components/loader/LoaderOverlay';
 import { MobileJobDetailsModal } from '../../../components/student-components/student-job-management-components/job-board-components';
-import { getRequest } from '../../../api/apiRequests';
+import { getRequest, postRequest } from '../../../api/apiRequests';
 
 const JobBoard = () => {
   const [currentPage, setCurrentPage] = useState('job-board');
@@ -22,10 +22,26 @@ const JobBoard = () => {
   useEffect(() => {
     if (user?.organizationId && assignment?.departmentId) {
       fetchJobs();
+      fetchSkillPlannerJobs();
     } else {
       setIsLoading(false);
     }
-  }, [user?.organizationId, assignment?.departmentId]);
+  }, [user?.organizationId, assignment?.departmentId, user?._id]);
+
+  const fetchSkillPlannerJobs = async () => {
+    if (!user?._id) return;
+    
+    try {
+      const response = await getRequest('/skill-planner');
+      if (response.data?.success && response.data?.data) {
+        const plannerJobIds = response.data.data.map(item => String(item.jobId));
+        // Store job IDs for matching
+        setSkillPlannerJobs(plannerJobIds);
+      }
+    } catch (error) {
+      console.error('Error fetching skill planner jobs:', error);
+    }
+  };
 
   const fetchJobDetails = async (job) => {
     if (!job?._id) return;
@@ -154,18 +170,44 @@ const JobBoard = () => {
     setCurrentPage(page);
   };
 
-  const handleAddToSkillPlanner = (job) => {
-    if (skillPlannerJobs.find(j => j._id === job._id)) {
-      setSkillPlannerJobs(skillPlannerJobs.filter(j => j._id !== job._id));
-      toast.success('Job removed from Skill Planner');
-    } else {
-      setSkillPlannerJobs([...skillPlannerJobs, job]);
-      toast.success(`Added "${job.title}" to Skill Planner with ${job.skills.length} skills to master!`);
+  const handleAddToSkillPlanner = async (job) => {
+    if (!user?._id || !job?._id) {
+      toast.error('Unable to add job to skill planner');
+      return;
+    }
+
+    const isInPlanner = isInSkillPlanner(job._id);
+    
+    if (isInPlanner) {
+      toast.info('Job is already in Skill Planner');
+      return;
+    }
+
+    try {
+      // Add to skill planner
+      const response = await postRequest('/skill-planner', {
+        jobId: job._id
+      });
+      console.log("response", response.data.data);
+      if (response.data?.success) {
+        setSkillPlannerJobs([...skillPlannerJobs, String(job._id)]);
+        toast.success(`Added "${job.title}" to Skill Planner!`);
+      } else {
+        toast.error(response.data?.message || 'Failed to add job to skill planner');
+      }
+    } catch (error) {
+      console.error('Error adding job to skill planner:', error);
+      toast.error('Failed to add job to skill planner');
     }
   };
 
   const isInSkillPlanner = (jobId) => {
-    return skillPlannerJobs.some(j => j._id === jobId);
+    if (!jobId) return false;
+    // Check if jobId is in the array (could be job objects or just IDs)
+    return skillPlannerJobs.some(j => {
+      const id = typeof j === 'string' ? j : (j._id || j);
+      return String(id) === String(jobId);
+    });
   };
 
   const getTimeSincePosted = (dateString) => {
@@ -313,17 +355,21 @@ const JobBoard = () => {
                             Apply Now
                           </button>
                           
-                          <button 
-                            onClick={() => handleAddToSkillPlanner(selectedJob)}
-                            className={`px-6 py-2.5 font-semibold rounded-full transition-colors inline-flex items-center gap-2 ${
-                              isInSkillPlanner(selectedJob._id)
-                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                            }`}
-                          >
-                            <i className={`fas fa-bullseye`}></i>
-                            {isInSkillPlanner(selectedJob._id) ? 'In Skill Planner' : 'Add to Skill Planner'}
-                          </button>
+                          {!isInSkillPlanner(selectedJob._id) && (
+                            <button 
+                              onClick={() => handleAddToSkillPlanner(selectedJob)}
+                              className="px-6 py-2.5 bg-purple-100 text-purple-700 hover:bg-purple-200 font-semibold rounded-full transition-colors inline-flex items-center gap-2"
+                            >
+                              <i className="fas fa-bullseye"></i>
+                              Add to Skill Planner
+                            </button>
+                          )}
+                          {isInSkillPlanner(selectedJob._id) && (
+                            <div className="px-6 py-2.5 bg-green-100 text-green-700 font-semibold rounded-full inline-flex items-center gap-2">
+                              <i className="fas fa-check-circle"></i>
+                              In Skill Planner
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
