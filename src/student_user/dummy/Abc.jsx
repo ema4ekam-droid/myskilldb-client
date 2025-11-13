@@ -5,8 +5,6 @@ import StudentMenuNavigation from '../../components/student-components/student-m
 import LoaderOverlay from '../../components/loader/LoaderOverlay';
 import {
   AddResourceModal,
-  RequestTestimonialModal,
-  ViewTestimonialModal,
   ViewNoteModal,
   CameraRecorder
 } from '../../components/student-components/student-job-management-components/skill-planner-components';
@@ -15,7 +13,6 @@ import {
   AssessmentReviewModal,
   AddVideoModal,
   VideosListModal,
-  TestimonialsListModal,
   LinkedInPostsModal,
   LearningModuleReader,
   VideoScriptViewer,
@@ -31,11 +28,8 @@ const SkillPlanner = () => {
   const [expandedJobs, setExpandedJobs] = useState({});
   const [expandedSkills, setExpandedSkills] = useState({});
   const [isAddResourceModalOpen, setIsAddResourceModalOpen] = useState(false);
-  const [isRequestTestimonialModalOpen, setIsRequestTestimonialModalOpen] = useState(false);
-  const [isViewTestimonialModalOpen, setIsViewTestimonialModalOpen] = useState(false);
   const [isViewNoteModalOpen, setIsViewNoteModalOpen] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState(null);
-  const [selectedTestimonial, setSelectedTestimonial] = useState(null);
   const [selectedNote, setSelectedNote] = useState(null);
   const [resourceType, setResourceType] = useState('youtube');
   const [isLinkedInModalOpen, setIsLinkedInModalOpen] = useState(false);
@@ -84,13 +78,6 @@ const SkillPlanner = () => {
   const [generatedImageUrl, setGeneratedImageUrl] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   
-  // Testimonial form states
-  const [testimonialProject, setTestimonialProject] = useState('');
-  const [validatorName, setValidatorName] = useState('');
-  const [validatorEmail, setValidatorEmail] = useState('');
-  const [validatorRole, setValidatorRole] = useState('');
-  const [personalMessage, setPersonalMessage] = useState('');
-  
   // Dummy data
   const [plannerJobs, setPlannerJobs] = useState([
     {
@@ -132,29 +119,6 @@ const SkillPlanner = () => {
           ],
           certificates: [
             { id: 'cert-1', title: 'React Basics Certificate', url: 'https://drive.google.com/file/example', type: 'drive', addedDate: '2024-10-15' }
-          ],
-          testimonials: [
-            { 
-              id: 'test-1', 
-              project: 'E-commerce Checkout', 
-              skills: ['React'], 
-              validatorName: 'Ms. Priya Sharma', 
-              validatorEmail: 'priya.sharma@company.com', 
-              validatorRole: 'Project Manager, TechSolutions Inc.', 
-              status: 'approved',
-              testimonialText: 'Excellent work on React components. Shows strong understanding of component architecture and state management. Built a clean, maintainable checkout system.',
-              approvedDate: '2024-10-18'
-            },
-            { 
-              id: 'test-2', 
-              project: 'Dashboard Analytics', 
-              skills: ['React'], 
-              validatorName: 'Mr. John Davis', 
-              validatorEmail: 'john@startup.com', 
-              validatorRole: 'Lead Developer, StartupXYZ', 
-              status: 'pending',
-              requestedDate: '2024-10-28'
-            }
           ],
           assessments: [
             {
@@ -326,18 +290,6 @@ function useCounter(initialValue = 0) {
             { id: 'yt-3', title: 'JavaScript ES6 Features', url: 'https://youtu.be/y9Dk6wMc8UM', addedDate: '2024-10-25' }
           ],
           certificates: [],
-          testimonials: [
-            { 
-              id: 'test-3', 
-              project: 'Modern JS App', 
-              skills: ['JavaScript'], 
-              validatorName: 'Ms. Sarah Wilson', 
-              validatorEmail: 'sarah@tech.com', 
-              validatorRole: 'Senior Developer', 
-              status: 'pending',
-              requestedDate: '2024-10-29'
-            }
-          ],
           assessments: [],
           readingModules: [],
           videoScripts: []
@@ -362,7 +314,6 @@ function useCounter(initialValue = 0) {
           linkedInPosts: [],
           youtubeLinks: [],
           certificates: [],
-          testimonials: [],
           assessments: [],
           readingModules: [],
           videoScripts: []
@@ -378,7 +329,6 @@ function useCounter(initialValue = 0) {
           linkedInPosts: [],
           youtubeLinks: [],
           certificates: [],
-          testimonials: [],
           assessments: [],
           readingModules: [],
           videoScripts: []
@@ -394,7 +344,6 @@ function useCounter(initialValue = 0) {
           linkedInPosts: [],
           youtubeLinks: [],
           certificates: [],
-          testimonials: [],
           assessments: [],
           readingModules: [],
           videoScripts: []
@@ -431,19 +380,6 @@ function useCounter(initialValue = 0) {
           certificates: [
             { id: 'cert-2', title: 'Figma Professional Certificate', url: 'https://drive.google.com/file/example2', type: 'drive', addedDate: '2024-02-11' }
           ],
-          testimonials: [
-            { 
-              id: 'test-4', 
-              project: 'Mobile App Design', 
-              skills: ['Figma'], 
-              validatorName: 'Ms. Emily Chen', 
-              validatorEmail: 'emily@designstudio.com', 
-              validatorRole: 'Design Lead, CreativeWorks', 
-              status: 'approved',
-              testimonialText: 'Outstanding design skills in Figma. Created pixel-perfect mockups and maintained excellent design systems.',
-              approvedDate: '2024-02-15'
-            }
-          ],
           assessments: [
             {
               id: 'assess-2',
@@ -472,7 +408,6 @@ function useCounter(initialValue = 0) {
           linkedInPosts: [],
           youtubeLinks: [],
           certificates: [],
-          testimonials: [],
           assessments: [
             {
               id: 'assess-3',
@@ -549,13 +484,6 @@ function useCounter(initialValue = 0) {
     }, 0);
   };
 
-  const getSkillsWithTestimonials = () => {
-    return plannerJobs.reduce((total, job) => {
-      return total + job.skills.filter(skill => 
-        skill.testimonials && skill.testimonials.length > 0
-      ).length;
-    }, 0);
-  };
 
   const getCVStatus = (job) => {
     const totalSkills = job.skills.length;
@@ -952,7 +880,7 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
         </div>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
             <div className="flex items-center gap-3">
               <div className="hidden lg:flex w-12 h-12 bg-indigo-100 rounded-lg items-center justify-center">
@@ -998,20 +926,6 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="hidden lg:flex w-12 h-12 bg-amber-100 rounded-lg items-center justify-center">
-                <i className="fas fa-award text-amber-600 text-xl"></i>
-              </div>
-              <div className="flex-1">
-                <p className="text-sm text-slate-600">Skills With</p>
-                <p className="text-sm text-slate-500">Testimonials</p>
-                <p className="text-2xl font-bold text-slate-900 lg:text-slate-900">
-                  <span className="lg:bg-transparent bg-amber-100 text-amber-600 lg:text-slate-900 px-3 py-1 rounded-lg inline-block">{getSkillsWithTestimonials()}</span>
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Jobs List */}
@@ -1278,7 +1192,7 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                                             Evidence & proof
                                           </h5>
                                           <p className="text-slate-500 text-[11px] mt-1" style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 100 }}>
-                                            Validate your skills with assessments and testimonials
+                                            Validate your skills with assessments
                                           </p>
                                         </div>
                                         
@@ -1311,52 +1225,6 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                                               Review Results
                                             </button>
                                           )}
-                                        </div>
-
-                                        <div className="border-t border-slate-100 my-4"></div>
-
-                                        {/* Testimonials */}
-                                        <div className="mb-4">
-                                          <div className="mb-3">
-                                            <div className="flex items-center gap-2 mb-1">
-                                              <i className="fas fa-award text-slate-600 text-sm"></i>
-                                              <span className="text-xs font-medium text-slate-700">Testimonials</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-xs">
-                                              <span className="text-slate-500 font-medium">
-                                                {skill.testimonials?.filter(t => t.status === 'approved').length || 0} Approved
-                                              </span>
-                                              <span className="text-slate-300">·</span>
-                                              <span className="text-orange-600 font-semibold">
-                                                {skill.testimonials?.filter(t => t.status === 'pending').length || 0} Pending
-                                              </span>
-                                            </div>
-                                          </div>
-                                          <div className="flex gap-2">
-                                            {skill.testimonials && skill.testimonials.length > 0 && (
-                                              <button
-                                                onClick={() => {
-                                                  setSelectedSkill(skill);
-                                                  setIsViewTestimonialModalOpen(true);
-                                                }}
-                                                className="flex-1 px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                                              >
-                                                <i className="fas fa-eye lg:hidden"></i>
-                                                <span className="hidden lg:inline">View All ({skill.testimonials.length})</span>
-                                              </button>
-                                            )}
-                                            <button
-                                              onClick={() => {
-                                                setSelectedJob(job);
-                                                setSelectedSkill(skill);
-                                                setIsRequestTestimonialModalOpen(true);
-                                              }}
-                                              className={`px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm flex items-center justify-center gap-2 ${skill.testimonials && skill.testimonials.length > 0 ? 'flex-1' : 'w-full'}`}
-                                            >
-                                              <i className="fas fa-plus lg:hidden"></i>
-                                              <span className="hidden lg:inline">Request New</span>
-                                            </button>
-                                          </div>
                                         </div>
 
                                         <div className="border-t border-slate-100 my-4"></div>
@@ -1506,29 +1374,6 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
         onAddResource={() => {}}
       />
 
-      <RequestTestimonialModal
-        isOpen={isRequestTestimonialModalOpen}
-        onClose={() => setIsRequestTestimonialModalOpen(false)}
-        selectedSkill={selectedSkill}
-        testimonialProject={testimonialProject}
-        setTestimonialProject={setTestimonialProject}
-        validatorName={validatorName}
-        setValidatorName={setValidatorName}
-        validatorEmail={validatorEmail}
-        setValidatorEmail={setValidatorEmail}
-        validatorRole={validatorRole}
-        setValidatorRole={setValidatorRole}
-        personalMessage={personalMessage}
-        setPersonalMessage={setPersonalMessage}
-        onRequestTestimonial={() => {}}
-      />
-
-      <ViewTestimonialModal
-        isOpen={isViewTestimonialModalOpen}
-        onClose={() => setIsViewTestimonialModalOpen(false)}
-        selectedTestimonial={selectedTestimonial}
-      />
-
       <ViewNoteModal
         isOpen={isViewNoteModalOpen}
         onClose={() => setIsViewNoteModalOpen(false)}
@@ -1557,13 +1402,6 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
       <AssessmentReviewModal
         isOpen={showAssessmentReviewModal}
         onClose={() => setShowAssessmentReviewModal(false)}
-        selectedSkill={selectedSkill}
-      />
-
-      {/* View All Testimonials Modal */}
-      <TestimonialsListModal
-        isOpen={isViewTestimonialModalOpen}
-        onClose={() => setIsViewTestimonialModalOpen(false)}
         selectedSkill={selectedSkill}
       />
 
