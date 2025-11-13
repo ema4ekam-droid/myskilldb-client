@@ -6,8 +6,6 @@ import StudentMenuNavigation from '../../../components/student-components/studen
 import LoaderOverlay from '../../../components/loader/LoaderOverlay';
 import { getRequest, postRequest } from '../../../api/apiRequests';
 import {
-  AddResourceModal,
-  ViewNoteModal,
   CameraRecorder
 } from '../../../components/student-components/student-job-management-components/skill-planner-components';
 
@@ -16,7 +14,6 @@ import {
   AssessmentReviewModal,
   AddVideoModal,
   VideosListModal,
-  LinkedInPostsModal,
   LearningModuleReader,
   VideoScriptViewer,
   ViewAllResourcesModal,
@@ -31,25 +28,16 @@ const SkillPlanner = () => {
   const [selectedJob, setSelectedJob] = useState(null);
   const [expandedJobs, setExpandedJobs] = useState({});
   const [expandedSkills, setExpandedSkills] = useState({});
-  const [isAddResourceModalOpen, setIsAddResourceModalOpen] = useState(false);
-  const [isViewNoteModalOpen, setIsViewNoteModalOpen] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState(null);
-  const [selectedNote, setSelectedNote] = useState(null);
-  const [resourceType, setResourceType] = useState('youtube');
-  const [isLinkedInModalOpen, setIsLinkedInModalOpen] = useState(false);
-  const [selectedLinkedInPost, setSelectedLinkedInPost] = useState(null);
   const [showVideoScriptModal, setShowVideoScriptModal] = useState(false);
-  const [showModuleReaderModal, setShowModuleReaderModal] = useState(false);
   const [showAssessmentReviewModal, setShowAssessmentReviewModal] = useState(false);
   const [showVideosModal, setShowVideosModal] = useState(false);
   const [showAddVideoModal, setShowAddVideoModal] = useState(false);
-  const [showLinkedInPostsModal, setShowLinkedInPostsModal] = useState(false);
   const [showViewAllResourcesModal, setShowViewAllResourcesModal] = useState(false);
   const [showCameraRecorder, setShowCameraRecorder] = useState(false);
   const [showScriptGeneratorModal, setShowScriptGeneratorModal] = useState(false);
   const [showCertificatesModal, setShowCertificatesModal] = useState(false);
   const [showAddCertificateModal, setShowAddCertificateModal] = useState(false);
-  const [showVideoScriptsModal, setShowVideoScriptsModal] = useState(false);
   const [scriptIdea, setScriptIdea] = useState('');
   const [videoLength, setVideoLength] = useState('5-7'); // '2-3', '5-7', or '8-10'
   const [readerMode, setReaderMode] = useState(false);
@@ -73,11 +61,6 @@ const SkillPlanner = () => {
   const [validatorEmail, setValidatorEmail] = useState('');
   const [validatorRole, setValidatorRole] = useState('');
   
-  // Form states
-  const [resourceTitle, setResourceTitle] = useState('');
-  const [resourceUrl, setResourceUrl] = useState('');
-  const [resourceNote, setResourceNote] = useState('');
-  
   // Video Form states
   const [videoTitle, setVideoTitle] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
@@ -89,9 +72,6 @@ const SkillPlanner = () => {
   const [linkedInPostContext, setLinkedInPostContext] = useState('');
   const [generatedLinkedInPost, setGeneratedLinkedInPost] = useState('');
   const [isGeneratingPost, setIsGeneratingPost] = useState(false);
-  const [linkedInTopic, setLinkedInTopic] = useState('');
-  const [generatedPostText, setGeneratedPostText] = useState('');
-  const [generatedImageUrl, setGeneratedImageUrl] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showViewLinkedInPostsModal, setShowViewLinkedInPostsModal] = useState(false);
   const [linkedInPostsList, setLinkedInPostsList] = useState([]);
@@ -1459,27 +1439,6 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
         )}
       </div>
 
-      {/* Modals remain the same */}
-      <AddResourceModal
-        isOpen={isAddResourceModalOpen}
-        onClose={() => setIsAddResourceModalOpen(false)}
-        resourceType={resourceType}
-        selectedSkill={selectedSkill}
-        resourceTitle={resourceTitle}
-        setResourceTitle={setResourceTitle}
-        resourceUrl={resourceUrl}
-        setResourceUrl={setResourceUrl}
-        resourceNote={resourceNote}
-        setResourceNote={setResourceNote}
-        onAddResource={() => {}}
-      />
-
-      <ViewNoteModal
-        isOpen={isViewNoteModalOpen}
-        onClose={() => setIsViewNoteModalOpen(false)}
-        selectedNote={selectedNote}
-      />
-
       {/* Reader Mode for Learning Modules */}
       <LearningModuleReader
         isOpen={readerMode && (generatedModule || isGenerating)}
@@ -1502,13 +1461,6 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
       <AssessmentReviewModal
         isOpen={showAssessmentReviewModal}
         onClose={() => setShowAssessmentReviewModal(false)}
-        selectedSkill={selectedSkill}
-      />
-
-      {/* LinkedIn Posts Modal */}
-      <LinkedInPostsModal
-        isOpen={showLinkedInPostsModal}
-        onClose={() => setShowLinkedInPostsModal(false)}
         selectedSkill={selectedSkill}
       />
 
