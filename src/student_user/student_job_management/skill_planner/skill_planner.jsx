@@ -93,6 +93,12 @@ const SkillPlanner = () => {
   const [generatedPostText, setGeneratedPostText] = useState('');
   const [generatedImageUrl, setGeneratedImageUrl] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showViewLinkedInPostsModal, setShowViewLinkedInPostsModal] = useState(false);
+  const [linkedInPostsList, setLinkedInPostsList] = useState([]);
+  const [currentPostIndex, setCurrentPostIndex] = useState(0);
+  const [isLoadingLinkedInPosts, setIsLoadingLinkedInPosts] = useState(false);
+  const [videosList, setVideosList] = useState([]);
+  const [isLoadingVideos, setIsLoadingVideos] = useState(false);
   
   // Planner jobs data
   const [plannerJobs, setPlannerJobs] = useState([]);
@@ -560,7 +566,7 @@ const SkillPlanner = () => {
   };
 
   // Save Video
-  const handleSaveVideo = () => {
+  const handleSaveVideo = async () => {
     if (!videoTitle.trim() || !videoUrl.trim()) {
       toast.error('Please enter video title and URL');
       return;
@@ -573,52 +579,54 @@ const SkillPlanner = () => {
       return;
     }
 
-    const newVideo = {
-      id: Date.now(),
-      title: videoTitle.trim(),
-      url: videoUrl.trim(),
-      description: videoDescription.trim(),
-      addedAt: new Date().toISOString()
-    };
+    if (!selectedJob?._id || !selectedSkill?.id || !selectedJob?.skillPlannerId) {
+      toast.error('Missing job or skill information');
+      return;
+    }
 
-    // Update the plannerJobs state to add the video
-    setPlannerJobs(prevJobs => 
-      prevJobs.map(job => {
-        if (job.id === selectedJob.id) {
-          return {
-            ...job,
-            skills: job.skills.map(skill => {
-              if (skill.name === selectedSkill.name) {
-                return {
-                  ...skill,
-                  youtubeLinks: [...(skill.youtubeLinks || []), newVideo]
-                };
-              }
-              return skill;
-            })
-          };
-        }
-        return job;
-      })
-    );
+    try {
+      const response = await postRequest('/student-videos', {
+        jobId: selectedJob._id,
+        topicId: selectedSkill.id,
+        skillPlannerId: selectedJob.skillPlannerId,
+        title: videoTitle.trim(),
+        link: videoUrl.trim(),
+        description: videoDescription?.trim() || undefined
+      });
 
-    setShowAddVideoModal(false);
-    setVideoTitle('');
-    setVideoUrl('');
-    setVideoDescription('');
-    toast.success('Video added successfully!');
+      if (response.data?.success) {
+        toast.success('Video added successfully!');
+        // Reset form
+        setShowAddVideoModal(false);
+        setVideoTitle('');
+        setVideoUrl('');
+        setVideoDescription('');
+        // Refresh jobs to show updated videos
+        fetchSkillPlannerJobs();
+      } else {
+        toast.error(response.data?.message || 'Failed to add video');
+      }
+    } catch (error) {
+      console.error('Error adding video:', error);
+      toast.error(error.response?.data?.message || 'Failed to add video');
+    }
   };
 
   // Generate LinkedIn Post
-  const handleGenerateLinkedInPost = () => {
+  const handleGenerateLinkedInPost = async () => {
     if (!linkedInPostTopic.trim()) {
       toast.error('Please enter what your post is about');
       return;
     }
 
+    if (!selectedJob?._id || !selectedSkill?.id || !selectedJob?.skillPlannerId) {
+      toast.error('Missing job or skill information');
+      return;
+    }
+
     setIsGeneratingPost(true);
     
-    setTimeout(() => {
+    try {
       const companyName = selectedJob?.company || 'MySkillDB';
       const jobName = selectedJob?.title || 'Career Development';
       const skillName = selectedSkill?.name || '';
@@ -638,16 +646,101 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
 
 #${companyName.replace(/\s+/g, '')} #${jobName.replace(/\s+/g, '')} #${skillName.replace(/\s+/g, '')} #MySkillDB #CareerGrowth #LearningJourney #TechCareers #SkillDevelopment #ProfessionalDevelopment`;
 
-      setGeneratedLinkedInPost(post);
+      // Save to database
+      const response = await postRequest('/linkedin-posts', {
+        jobId: selectedJob._id,
+        topicId: selectedSkill.id,
+        skillPlannerId: selectedJob.skillPlannerId,
+        topic: skillName,
+        postText: post,
+        userTopic: linkedInPostTopic.trim(),
+        userContext: linkedInPostContext?.trim() || undefined
+      });
+
+      if (response.data?.success) {
+        setGeneratedLinkedInPost(post);
+        toast.success('LinkedIn post generated and saved successfully!');
+      } else {
+        setGeneratedLinkedInPost(post);
+        toast.error(response.data?.message || 'Failed to save LinkedIn post');
+      }
+    } catch (error) {
+      console.error('Error generating LinkedIn post:', error);
+      toast.error(error.response?.data?.message || 'Failed to generate LinkedIn post');
+    } finally {
       setIsGeneratingPost(false);
-      toast.success('LinkedIn post generated successfully!');
-    }, 2000);
+    }
   };
 
   // Copy LinkedIn Post to Clipboard
   const handleCopyLinkedInPost = () => {
     navigator.clipboard.writeText(generatedLinkedInPost);
     toast.success('Post copied to clipboard!');
+  };
+
+  // Fetch LinkedIn Posts
+  const fetchLinkedInPosts = async (skillPlannerId, topicId) => {
+    if (!skillPlannerId || !topicId) {
+      return;
+    }
+
+    try {
+      setIsLoadingLinkedInPosts(true);
+      const response = await getRequest(`/linkedin-posts?skillPlannerId=${skillPlannerId}&topicId=${topicId}`);
+      
+      if (response.data?.success) {
+        setLinkedInPostsList(response.data.data || []);
+        setCurrentPostIndex(0);
+      } else {
+        setLinkedInPostsList([]);
+        toast.error(response.data?.message || 'Failed to fetch LinkedIn posts');
+      }
+    } catch (error) {
+      console.error('Error fetching LinkedIn posts:', error);
+      setLinkedInPostsList([]);
+      toast.error('Failed to fetch LinkedIn posts');
+    } finally {
+      setIsLoadingLinkedInPosts(false);
+    }
+  };
+
+  // Navigate to next post
+  const handleNextPost = () => {
+    if (currentPostIndex < linkedInPostsList.length - 1) {
+      setCurrentPostIndex(currentPostIndex + 1);
+    }
+  };
+
+  // Navigate to previous post
+  const handlePreviousPost = () => {
+    if (currentPostIndex > 0) {
+      setCurrentPostIndex(currentPostIndex - 1);
+    }
+  };
+
+  // Fetch Student Videos
+  const fetchStudentVideos = async (skillPlannerId, topicId) => {
+    if (!skillPlannerId || !topicId) {
+      return;
+    }
+
+    try {
+      setIsLoadingVideos(true);
+      const response = await getRequest(`/student-videos?skillPlannerId=${skillPlannerId}&topicId=${topicId}`);
+      
+      if (response.data?.success) {
+        setVideosList(response.data.data || []);
+      } else {
+        setVideosList([]);
+        toast.error(response.data?.message || 'Failed to fetch videos');
+      }
+    } catch (error) {
+      console.error('Error fetching videos:', error);
+      setVideosList([]);
+      toast.error('Failed to fetch videos');
+    } finally {
+      setIsLoadingVideos(false);
+    }
   };
 
   // Add Certificate
@@ -1291,24 +1384,28 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                                             </div>
                                             <span className="text-xs text-slate-500 font-medium">{skill.linkedInPosts?.length || 0}</span>
                                           </div>
-                                          {skill.linkedInPosts && skill.linkedInPosts.length > 0 ? (
+                                          <div className="flex gap-2">
                                             <button
-                                              onClick={() => {
+                                              onClick={async () => {
                                                 setSelectedSkill(skill);
-                                                setShowLinkedInPostsModal(true);
+                                                setSelectedJob(job);
+                                                setShowViewLinkedInPostsModal(true);
+                                                setCurrentPostIndex(0);
+                                                await fetchLinkedInPosts(job.skillPlannerId, skill.id);
                                               }}
-                                              className="w-full px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs rounded-lg font-medium transition-colors"
+                                              className="flex-1 px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                                             >
-                                              View Post
+                                              <i className="fas fa-eye lg:hidden"></i>
+                                              <span className="hidden lg:inline">View All</span>
                                             </button>
-                                          ) : (
                                             <button
                                               onClick={() => handleCreateLinkedInPost(job, skill)}
-                                              className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm"
+                                              className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm flex items-center justify-center gap-2"
                                             >
-                                              Create Post
+                                              <i className="fas fa-plus lg:hidden"></i>
+                                              <span className="hidden lg:inline">Create Post</span>
                                             </button>
-                                          )}
+                                          </div>
                                         </div>
 
                                         <div className="border-t border-slate-100 my-4"></div>
@@ -1323,21 +1420,21 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                                             <span className="text-xs text-slate-500 font-medium">{skill.youtubeLinks?.length || 0}</span>
                                           </div>
                                           <div className="flex gap-2">
-                                            {skill.youtubeLinks && skill.youtubeLinks.length > 0 && (
-                                              <button
-                                                onClick={() => {
-                                                  setSelectedSkill(skill);
-                                                  setShowVideosModal(true);
-                                                }}
-                                                className="flex-1 px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                                              >
-                                                <i className="fas fa-eye lg:hidden"></i>
-                                                <span className="hidden lg:inline">View All ({skill.youtubeLinks.length})</span>
-                                              </button>
-                                            )}
+                                            <button
+                                              onClick={async () => {
+                                                setSelectedSkill(skill);
+                                                setSelectedJob(job);
+                                                setShowVideosModal(true);
+                                                await fetchStudentVideos(job.skillPlannerId, skill.id);
+                                              }}
+                                              className="flex-1 px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                                            >
+                                              <i className="fas fa-eye lg:hidden"></i>
+                                              <span className="hidden lg:inline">View All</span>
+                                            </button>
                                             <button
                                               onClick={() => handleAddVideo(job, skill)}
-                                              className={`px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm flex items-center justify-center gap-2 ${skill.youtubeLinks && skill.youtubeLinks.length > 0 ? 'flex-1' : 'w-full'}`}
+                                              className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm flex items-center justify-center gap-2"
                                             >
                                               <i className="fas fa-plus lg:hidden"></i>
                                               <span className="hidden lg:inline">Add Video</span>
@@ -1418,8 +1515,13 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
       {/* Videos Modal */}
       <VideosListModal
         isOpen={showVideosModal}
-        onClose={() => setShowVideosModal(false)}
+        onClose={() => {
+          setShowVideosModal(false);
+          setVideosList([]);
+        }}
         selectedSkill={selectedSkill}
+        videosList={videosList}
+        isLoadingVideos={isLoadingVideos}
       />
 
       {/* Add Video Modal */}
@@ -1796,8 +1898,98 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
         isGeneratingPost={isGeneratingPost}
         onGenerate={handleGenerateLinkedInPost}
         onCopy={handleCopyLinkedInPost}
-        onSave={handleSaveLinkedInPost}
       />
+
+      {/* View LinkedIn Posts Modal */}
+      {showViewLinkedInPostsModal && selectedSkill && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900">LinkedIn Posts</h3>
+                <p className="text-sm text-slate-600">{selectedSkill.name}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowViewLinkedInPostsModal(false);
+                  setLinkedInPostsList([]);
+                  setCurrentPostIndex(0);
+                }}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <i className="fas fa-times text-xl"></i>
+              </button>
+            </div>
+            
+            <div className="p-6">
+              {isLoadingLinkedInPosts ? (
+                <div className="text-center py-12">
+                  <i className="fas fa-spinner fa-spin text-3xl text-slate-400 mb-4"></i>
+                  <p className="text-slate-500">Loading LinkedIn posts...</p>
+                </div>
+              ) : linkedInPostsList && linkedInPostsList.length > 0 ? (
+                <div className="space-y-6">
+                  {/* Current Post Display */}
+                  <div className="border border-slate-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                    <div className="flex items-start gap-4 mb-4">
+                      <i className="fab fa-linkedin text-blue-600 text-3xl"></i>
+                      <div className="flex-1">
+                        <h4 className="font-bold text-slate-900 text-lg mb-2">{linkedInPostsList[currentPostIndex].topic}</h4>
+                        <p className="text-sm text-slate-500">
+                          {new Date(linkedInPostsList[currentPostIndex].createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="bg-slate-50 p-4 rounded-lg mb-4">
+                      <pre className="whitespace-pre-wrap text-sm text-slate-700 font-sans leading-relaxed">
+                        {linkedInPostsList[currentPostIndex].postText}
+                      </pre>
+                    </div>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(linkedInPostsList[currentPostIndex].postText);
+                        toast.success('Post copied to clipboard!');
+                      }}
+                      className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      <i className="fas fa-copy"></i>
+                      Copy Post Text
+                    </button>
+                  </div>
+
+                  {/* Navigation */}
+                  <div className="flex items-center justify-between gap-4">
+                    <button
+                      onClick={handlePreviousPost}
+                      disabled={currentPostIndex === 0}
+                      className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed text-slate-700 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      <i className="fas fa-chevron-left"></i>
+                      Previous
+                    </button>
+                    <span className="text-sm text-slate-600 font-medium">
+                      {currentPostIndex + 1} of {linkedInPostsList.length}
+                    </span>
+                    <button
+                      onClick={handleNextPost}
+                      disabled={currentPostIndex === linkedInPostsList.length - 1}
+                      className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed text-slate-700 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      Next
+                      <i className="fas fa-chevron-right"></i>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <i className="fab fa-linkedin text-5xl text-slate-300 mb-4"></i>
+                  <p className="text-slate-500">No LinkedIn posts found</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* AI Generation Loader */}
       <AIGenerationLoader
