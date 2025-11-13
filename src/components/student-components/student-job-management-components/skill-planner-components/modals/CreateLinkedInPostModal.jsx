@@ -13,8 +13,7 @@ const CreateLinkedInPostModal = ({
   setGeneratedLinkedInPost,
   isGeneratingPost,
   onGenerate,
-  onCopy,
-  onSave
+  onCopy
 }) => {
   if (!isOpen || !selectedSkill || !selectedJob) return null;
 
@@ -130,28 +129,12 @@ const CreateLinkedInPostModal = ({
               <div className="flex gap-3">
                 <button
                   onClick={onCopy}
-                  className="flex-1 px-6 py-3 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                  className="w-full px-6 py-3 bg-slate-600 hover:bg-slate-700 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
                 >
                   <i className="fas fa-copy"></i>
                   Copy to Clipboard
                 </button>
-                <button
-                  onClick={onSave}
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
-                >
-                  <i className="fas fa-check"></i>
-                  Save Post
-                </button>
               </div>
-
-              {/* Regenerate Button */}
-              <button
-                onClick={() => setGeneratedLinkedInPost('')}
-                className="w-full px-4 py-2 bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-              >
-                <i className="fas fa-redo"></i>
-                Edit and Regenerate
-              </button>
             </>
           )}
         </div>
