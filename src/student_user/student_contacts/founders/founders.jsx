@@ -356,25 +356,6 @@ Best regards,
             </div>
           )}
         </div>
-
-        {/* Pagination */}
-        <div className="flex items-center justify-center gap-2 mt-6">
-          <button className="px-4 py-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-            <i className="fas fa-chevron-left text-slate-600"></i>
-          </button>
-          <button className="px-4 py-2 bg-orange-600 text-white rounded-lg font-semibold">
-            1
-          </button>
-          <button className="px-4 py-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-            2
-          </button>
-          <button className="px-4 py-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-            3
-          </button>
-          <button className="px-4 py-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-            <i className="fas fa-chevron-right text-slate-600"></i>
-          </button>
-        </div>
       </div>
 
       {/* Add Contact Modal */}
