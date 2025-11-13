@@ -26,6 +26,9 @@ import SkillPlanner from './student_user/student_job_management/skill_planner/sk
 import JobAssessments from './student_user/student_job_management/job_assessments/job_assessments.jsx';
 import JobCV from './student_user/student_job_management/job_cv/job_cv.jsx';
 import Abc from './student_user/dummy/Abc.jsx';
+import Mentors from './student_user/student_contacts/mentors/mentors.jsx';
+import Founders from './student_user/student_contacts/founders/founders.jsx';
+import HRManagers from './student_user/student_contacts/hr_managers/hr_managers.jsx';
 
 function App() {
   return (
@@ -69,9 +72,9 @@ function App() {
           <Route path="/student/skill-planner" element={<SkillPlanner />} />
           <Route path="/student/job-assessments" element={<JobAssessments />} />
           <Route path="/student/cv" element={<JobCV />} />
-          <Route path="/student/contacts/mentors" element={<StudentDashboard />} />
-          <Route path="/student/contacts/hr" element={<StudentDashboard />} />
-          <Route path="/student/contacts/founders" element={<StudentDashboard />} />
+          <Route path="/student/contacts/mentors" element={<Mentors />} />
+          <Route path="/student/contacts/hr" element={<HRManagers />} />
+          <Route path="/student/contacts/founders" element={<Founders />} />
           <Route path="/student/settings" element={<StudentDashboard />} />
         </Route>
         <Route path="/abc" element={<Abc />} />
