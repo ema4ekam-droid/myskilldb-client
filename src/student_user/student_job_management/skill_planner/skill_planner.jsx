@@ -7,8 +7,6 @@ import LoaderOverlay from '../../../components/loader/LoaderOverlay';
 import { getRequest, postRequest } from '../../../api/apiRequests';
 import {
   AddResourceModal,
-  RequestTestimonialModal,
-  ViewTestimonialModal,
   ViewNoteModal,
   CameraRecorder
 } from '../../../components/student-components/student-job-management-components/skill-planner-components';
@@ -18,7 +16,6 @@ import {
   AssessmentReviewModal,
   AddVideoModal,
   VideosListModal,
-  TestimonialsListModal,
   LinkedInPostsModal,
   LearningModuleReader,
   VideoScriptViewer,
@@ -35,11 +32,8 @@ const SkillPlanner = () => {
   const [expandedJobs, setExpandedJobs] = useState({});
   const [expandedSkills, setExpandedSkills] = useState({});
   const [isAddResourceModalOpen, setIsAddResourceModalOpen] = useState(false);
-  const [isRequestTestimonialModalOpen, setIsRequestTestimonialModalOpen] = useState(false);
-  const [isViewTestimonialModalOpen, setIsViewTestimonialModalOpen] = useState(false);
   const [isViewNoteModalOpen, setIsViewNoteModalOpen] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState(null);
-  const [selectedTestimonial, setSelectedTestimonial] = useState(null);
   const [selectedNote, setSelectedNote] = useState(null);
   const [resourceType, setResourceType] = useState('youtube');
   const [isLinkedInModalOpen, setIsLinkedInModalOpen] = useState(false);
@@ -67,6 +61,17 @@ const SkillPlanner = () => {
   const [certificateTitle, setCertificateTitle] = useState('');
   const [certificateLink, setCertificateLink] = useState('');
   const [certificateProvider, setCertificateProvider] = useState('drive'); // 'drive' or 'dropbox'
+  const [certificatesList, setCertificatesList] = useState([]);
+  const [isLoadingCertificates, setIsLoadingCertificates] = useState(false);
+  
+  // Testimonial form states
+  const [showTestimonialsModal, setShowTestimonialsModal] = useState(false);
+  const [showAddTestimonialModal, setShowAddTestimonialModal] = useState(false);
+  const [testimonialsList, setTestimonialsList] = useState([]);
+  const [isLoadingTestimonials, setIsLoadingTestimonials] = useState(false);
+  const [validatorName, setValidatorName] = useState('');
+  const [validatorEmail, setValidatorEmail] = useState('');
+  const [validatorRole, setValidatorRole] = useState('');
   
   // Form states
   const [resourceTitle, setResourceTitle] = useState('');
@@ -88,13 +93,6 @@ const SkillPlanner = () => {
   const [generatedPostText, setGeneratedPostText] = useState('');
   const [generatedImageUrl, setGeneratedImageUrl] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  
-  // Testimonial form states
-  const [testimonialProject, setTestimonialProject] = useState('');
-  const [validatorName, setValidatorName] = useState('');
-  const [validatorEmail, setValidatorEmail] = useState('');
-  const [validatorRole, setValidatorRole] = useState('');
-  const [personalMessage, setPersonalMessage] = useState('');
   
   // Planner jobs data
   const [plannerJobs, setPlannerJobs] = useState([]);
@@ -148,6 +146,28 @@ const SkillPlanner = () => {
                       // Module doesn't exist, which is fine
                     }
 
+                    // Fetch testimonials for this skill
+                    let testimonials = [];
+                    try {
+                      const testimonialsResponse = await getRequest(`/testimonials?skillPlannerId=${skillPlannerId}&topicId=${topic._id}`);
+                      if (testimonialsResponse.data?.success && testimonialsResponse.data?.data) {
+                        testimonials = testimonialsResponse.data.data;
+                      }
+                    } catch (error) {
+                      // Testimonials don't exist, which is fine
+                    }
+
+                    // Fetch certificates for this skill
+                    let certificates = [];
+                    try {
+                      const certificatesResponse = await getRequest(`/certificates?skillPlannerId=${skillPlannerId}&topicId=${topic._id}`);
+                      if (certificatesResponse.data?.success && certificatesResponse.data?.data) {
+                        certificates = certificatesResponse.data.data;
+                      }
+                    } catch (error) {
+                      // Certificates don't exist, which is fine
+                    }
+
                     return {
                       id: topic._id || `skill-${index}`,
                       name: topic.name || topic.title || 'Skill',
@@ -158,8 +178,8 @@ const SkillPlanner = () => {
                       estimatedHoursLeft: 0,
                       linkedInPosts: [],
                       youtubeLinks: [],
-                      certificates: [],
-                      testimonials: [],
+                      certificates: certificates,
+                      testimonials: testimonials,
                       assessments: [],
                       readingModules: hasReadingModule ? [existingModule] : [],
                       videoScripts: [],
@@ -258,13 +278,6 @@ const SkillPlanner = () => {
     }, 0);
   };
 
-  const getSkillsWithTestimonials = () => {
-    return plannerJobs.reduce((total, job) => {
-      return total + job.skills.filter(skill => 
-        skill.testimonials && skill.testimonials.length > 0
-      ).length;
-    }, 0);
-  };
 
   const getPriorityColor = (priority) => {
     switch (priority) {
@@ -638,7 +651,7 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
   };
 
   // Add Certificate
-  const handleSaveCertificate = () => {
+  const handleSaveCertificate = async () => {
     if (!certificateTitle.trim() || !certificateLink.trim()) {
       toast.error('Please enter certificate title and link');
       return;
@@ -652,40 +665,145 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
       return;
     }
 
-    const newCertificate = {
-      id: Date.now(),
-      title: certificateTitle.trim(),
-      url: certificateLink.trim(),
-      provider: certificateProvider,
-      addedAt: new Date().toISOString()
-    };
+    if (!selectedJob?._id || !selectedSkill?.id || !selectedJob?.skillPlannerId) {
+      toast.error('Missing job or skill information');
+      return;
+    }
 
-    // Update the plannerJobs state to add the certificate
-    setPlannerJobs(prevJobs => 
-      prevJobs.map(job => {
-        if (job._id === selectedJob._id) {
-          return {
-            ...job,
-            skills: job.skills.map(skill => {
-              if (skill.id === selectedSkill.id) {
-                return {
-                  ...skill,
-                  certificates: [...(skill.certificates || []), newCertificate]
-                };
-              }
-              return skill;
-            })
-          };
+    // Convert 'drive' to 'google drive' for API
+    const storageProvider = certificateProvider === 'drive' ? 'google drive' : 'dropbox';
+
+    try {
+      const response = await postRequest('/certificates', {
+        jobId: selectedJob._id,
+        topicId: selectedSkill.id,
+        skillPlannerId: selectedJob.skillPlannerId,
+        title: certificateTitle.trim(),
+        link: certificateLink.trim(),
+        storageProvider: storageProvider
+      });
+
+      if (response.data?.success) {
+        toast.success('Certificate added successfully!');
+        // Reset form
+        setShowAddCertificateModal(false);
+        setCertificateTitle('');
+        setCertificateLink('');
+        setCertificateProvider('drive');
+        // Refresh certificates list if modal is open
+        if (showCertificatesModal && selectedJob?.skillPlannerId && selectedSkill?.id) {
+          await fetchCertificates(selectedJob.skillPlannerId, selectedSkill.id);
         }
-        return job;
-      })
-    );
+        // Refresh jobs to show updated certificates
+        fetchSkillPlannerJobs();
+      } else {
+        toast.error(response.data?.message || 'Failed to add certificate');
+      }
+    } catch (error) {
+      console.error('Error adding certificate:', error);
+      toast.error(error.response?.data?.message || 'Failed to add certificate');
+    }
+  };
 
-    setShowAddCertificateModal(false);
-    setCertificateTitle('');
-    setCertificateLink('');
-    setCertificateProvider('drive');
-    toast.success('Certificate added successfully!');
+  // Fetch Certificates
+  const fetchCertificates = async (skillPlannerId, topicId) => {
+    if (!skillPlannerId || !topicId) {
+      return;
+    }
+
+    try {
+      setIsLoadingCertificates(true);
+      const response = await getRequest(`/certificates?skillPlannerId=${skillPlannerId}&topicId=${topicId}`);
+      
+      if (response.data?.success) {
+        setCertificatesList(response.data.data || []);
+      } else {
+        setCertificatesList([]);
+        toast.error(response.data?.message || 'Failed to fetch certificates');
+      }
+    } catch (error) {
+      console.error('Error fetching certificates:', error);
+      setCertificatesList([]);
+      toast.error('Failed to fetch certificates');
+    } finally {
+      setIsLoadingCertificates(false);
+    }
+  };
+
+  // Fetch Testimonials
+  const fetchTestimonials = async (skillPlannerId, topicId) => {
+    if (!skillPlannerId || !topicId) {
+      return;
+    }
+
+    try {
+      setIsLoadingTestimonials(true);
+      const response = await getRequest(`/testimonials?skillPlannerId=${skillPlannerId}&topicId=${topicId}`);
+      
+      if (response.data?.success) {
+        setTestimonialsList(response.data.data || []);
+      } else {
+        setTestimonialsList([]);
+        toast.error(response.data?.message || 'Failed to fetch testimonials');
+      }
+    } catch (error) {
+      console.error('Error fetching testimonials:', error);
+      setTestimonialsList([]);
+      toast.error('Failed to fetch testimonials');
+    } finally {
+      setIsLoadingTestimonials(false);
+    }
+  };
+
+  // Add Testimonial
+  const handleSaveTestimonial = async () => {
+    if (!validatorName.trim() || !validatorEmail.trim() || !validatorRole.trim()) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(validatorEmail.trim())) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    if (!selectedJob?._id || !selectedSkill?.id || !selectedJob?.skillPlannerId) {
+      toast.error('Missing job or skill information');
+      return;
+    }
+
+    try {
+      const response = await postRequest('/testimonials', {
+        jobId: selectedJob._id,
+        topicId: selectedSkill.id,
+        skillPlannerId: selectedJob.skillPlannerId,
+        validatorName: validatorName.trim(),
+        validatorEmail: validatorEmail.trim(),
+        validatorRole: validatorRole.trim()
+      });
+
+      if (response.data?.success) {
+        toast.success('Testimonial added successfully!');
+        // Reset form
+        setShowAddTestimonialModal(false);
+        setValidatorName('');
+        setValidatorEmail('');
+        setValidatorRole('');
+        // Refresh testimonials list if modal is open
+        if (showTestimonialsModal && selectedJob?.skillPlannerId && selectedSkill?.id) {
+          await fetchTestimonials(selectedJob.skillPlannerId, selectedSkill.id);
+        }
+        // Refresh jobs to show updated testimonials
+        fetchSkillPlannerJobs();
+      } else {
+        toast.error(response.data?.message || 'Failed to add testimonial');
+      }
+    } catch (error) {
+      console.error('Error adding testimonial:', error);
+      toast.error(error.response?.data?.message || 'Failed to add testimonial');
+    }
   };
 
   // Delete Certificate
@@ -741,7 +859,7 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
         </div>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
             <div className="flex items-center gap-3">
               <div className="hidden lg:flex w-12 h-12 bg-indigo-100 rounded-lg items-center justify-center">
@@ -787,20 +905,6 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="hidden lg:flex w-12 h-12 bg-amber-100 rounded-lg items-center justify-center">
-                <i className="fas fa-award text-amber-600 text-xl"></i>
-              </div>
-              <div className="flex-1">
-                <p className="text-sm text-slate-600">Skills With</p>
-                <p className="text-sm text-slate-500">Testimonials</p>
-                <p className="text-2xl font-bold text-slate-900 lg:text-slate-900">
-                  <span className="lg:bg-transparent bg-amber-100 text-amber-600 lg:text-slate-900 px-3 py-1 rounded-lg inline-block">{getSkillsWithTestimonials()}</span>
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Jobs List */}
@@ -1042,7 +1146,7 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                                             Evidence & proof
                                           </h5>
                                           <p className="text-slate-500 text-[11px] mt-1" style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 100 }}>
-                                            Validate your skills with assessments and testimonials
+                                            Validate your skills with assessments
                                           </p>
                                         </div>
                                         
@@ -1079,52 +1183,6 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
 
                                         <div className="border-t border-slate-100 my-4"></div>
 
-                                        {/* Testimonials */}
-                                        <div className="mb-4">
-                                          <div className="mb-3">
-                                            <div className="flex items-center gap-2 mb-1">
-                                              <i className="fas fa-award text-slate-600 text-sm"></i>
-                                              <span className="text-xs font-medium text-slate-700">Testimonials</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-xs">
-                                              <span className="text-slate-500 font-medium">
-                                                {skill.testimonials?.filter(t => t.status === 'approved').length || 0} Approved
-                                              </span>
-                                              <span className="text-slate-300">·</span>
-                                              <span className="text-orange-600 font-semibold">
-                                                {skill.testimonials?.filter(t => t.status === 'pending').length || 0} Pending
-                                              </span>
-                                            </div>
-                                          </div>
-                                          <div className="flex gap-2">
-                                            {skill.testimonials && skill.testimonials.length > 0 && (
-                                              <button
-                                                onClick={() => {
-                                                  setSelectedSkill(skill);
-                                                  setIsViewTestimonialModalOpen(true);
-                                                }}
-                                                className="flex-1 px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                                              >
-                                                <i className="fas fa-eye lg:hidden"></i>
-                                                <span className="hidden lg:inline">View All ({skill.testimonials.length})</span>
-                                              </button>
-                                            )}
-                                            <button
-                                              onClick={() => {
-                                                setSelectedJob(job);
-                                                setSelectedSkill(skill);
-                                                setIsRequestTestimonialModalOpen(true);
-                                              }}
-                                              className={`px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm flex items-center justify-center gap-2 ${skill.testimonials && skill.testimonials.length > 0 ? 'flex-1' : 'w-full'}`}
-                                            >
-                                              <i className="fas fa-plus lg:hidden"></i>
-                                              <span className="hidden lg:inline">Request New</span>
-                                            </button>
-                                          </div>
-                                        </div>
-
-                                        <div className="border-t border-slate-100 my-4"></div>
-
                                         {/* Certifications */}
                                         <div className="mb-4">
                                           <div className="flex items-center justify-between mb-3">
@@ -1135,28 +1193,77 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                                             <span className="text-xs text-slate-500 font-medium">{skill.certificates?.length || 0}</span>
                                           </div>
                                           <div className="flex gap-2">
-                                            {skill.certificates && skill.certificates.length > 0 && (
-                                              <button
-                                                onClick={() => {
-                                                  setSelectedSkill(skill);
-                                                  setShowCertificatesModal(true);
-                                                }}
-                                                className="flex-1 px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                                              >
-                                                <i className="fas fa-eye lg:hidden"></i>
-                                                <span className="hidden lg:inline">View All ({skill.certificates.length})</span>
-                                              </button>
-                                            )}
+                                            <button
+                                              onClick={async () => {
+                                                setSelectedSkill(skill);
+                                                setSelectedJob(job);
+                                                setShowCertificatesModal(true);
+                                                await fetchCertificates(job.skillPlannerId, skill.id);
+                                              }}
+                                              className="flex-1 px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                                            >
+                                              <i className="fas fa-eye lg:hidden"></i>
+                                              <span className="hidden lg:inline">
+                                                {skill.certificates && skill.certificates.length > 0 
+                                                  ? `View All (${skill.certificates.length})` 
+                                                  : 'View Certificates'}
+                                              </span>
+                                            </button>
                                             <button
                                               onClick={() => {
                                                 setSelectedJob(job);
                                                 setSelectedSkill(skill);
                                                 setShowAddCertificateModal(true);
                                               }}
-                                              className={`px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm flex items-center justify-center gap-2 ${skill.certificates && skill.certificates.length > 0 ? 'flex-1' : 'w-full'}`}
+                                              className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm flex items-center justify-center gap-2"
                                             >
                                               <i className="fas fa-plus lg:hidden"></i>
                                               <span className="hidden lg:inline">Add Link</span>
+                                            </button>
+                                          </div>
+                                        </div>
+
+                                        <div className="border-t border-slate-100 my-4"></div>
+
+                                        {/* Testimonials */}
+                                        <div className="mb-4">
+                                          <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2">
+                                              <i className="fas fa-award text-slate-600 text-sm"></i>
+                                              <span className="text-xs font-medium text-slate-700">Testimonials</span>
+                                            </div>
+                                            <span className="text-xs text-slate-500 font-medium">{skill.testimonials?.length || 0}</span>
+                                          </div>
+                                          <div className="flex gap-2">
+                                            <button
+                                              onClick={async () => {
+                                                setSelectedSkill(skill);
+                                                setSelectedJob(job);
+                                                setShowTestimonialsModal(true);
+                                                await fetchTestimonials(job.skillPlannerId, skill.id);
+                                              }}
+                                              className="flex-1 px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                                            >
+                                              <i className="fas fa-eye lg:hidden"></i>
+                                              <span className="hidden lg:inline">
+                                                {skill.testimonials && skill.testimonials.length > 0 
+                                                  ? `View All (${skill.testimonials.length})` 
+                                                  : 'View Testimonials'}
+                                              </span>
+                                            </button>
+                                            <button
+                                              onClick={() => {
+                                                setSelectedJob(job);
+                                                setSelectedSkill(skill);
+                                                setValidatorName('');
+                                                setValidatorEmail('');
+                                                setValidatorRole('');
+                                                setShowAddTestimonialModal(true);
+                                              }}
+                                              className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm flex items-center justify-center gap-2"
+                                            >
+                                              <i className="fas fa-plus lg:hidden"></i>
+                                              <span className="hidden lg:inline">Add New</span>
                                             </button>
                                           </div>
                                         </div>
@@ -1270,29 +1377,6 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
         onAddResource={() => {}}
       />
 
-      <RequestTestimonialModal
-        isOpen={isRequestTestimonialModalOpen}
-        onClose={() => setIsRequestTestimonialModalOpen(false)}
-        selectedSkill={selectedSkill}
-        testimonialProject={testimonialProject}
-        setTestimonialProject={setTestimonialProject}
-        validatorName={validatorName}
-        setValidatorName={setValidatorName}
-        validatorEmail={validatorEmail}
-        setValidatorEmail={setValidatorEmail}
-        validatorRole={validatorRole}
-        setValidatorRole={setValidatorRole}
-        personalMessage={personalMessage}
-        setPersonalMessage={setPersonalMessage}
-        onRequestTestimonial={() => {}}
-      />
-
-      <ViewTestimonialModal
-        isOpen={isViewTestimonialModalOpen}
-        onClose={() => setIsViewTestimonialModalOpen(false)}
-        selectedTestimonial={selectedTestimonial}
-      />
-
       <ViewNoteModal
         isOpen={isViewNoteModalOpen}
         onClose={() => setIsViewNoteModalOpen(false)}
@@ -1321,13 +1405,6 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
       <AssessmentReviewModal
         isOpen={showAssessmentReviewModal}
         onClose={() => setShowAssessmentReviewModal(false)}
-        selectedSkill={selectedSkill}
-      />
-
-      {/* View All Testimonials Modal */}
-      <TestimonialsListModal
-        isOpen={isViewTestimonialModalOpen}
-        onClose={() => setIsViewTestimonialModalOpen(false)}
         selectedSkill={selectedSkill}
       />
 
@@ -1370,7 +1447,10 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                 <p className="text-sm text-slate-600">{selectedSkill.name}</p>
               </div>
               <button
-                onClick={() => setShowCertificatesModal(false)}
+                onClick={() => {
+                  setShowCertificatesModal(false);
+                  setCertificatesList([]);
+                }}
                 className="text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <i className="fas fa-times text-xl"></i>
@@ -1378,30 +1458,35 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
             </div>
             
             <div className="p-6">
-              {selectedSkill.certificates && selectedSkill.certificates.length > 0 ? (
+              {isLoadingCertificates ? (
+                <div className="text-center py-12">
+                  <i className="fas fa-spinner fa-spin text-3xl text-slate-400 mb-4"></i>
+                  <p className="text-slate-500">Loading certificates...</p>
+                </div>
+              ) : certificatesList && certificatesList.length > 0 ? (
                 <div className="space-y-4">
-                  {selectedSkill.certificates.map((cert) => (
-                    <div key={cert.id} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                  {certificatesList.map((cert) => (
+                    <div key={cert._id} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <i className={`fas ${cert.provider === 'drive' ? 'fa-google-drive' : 'fa-dropbox'} text-lg ${cert.provider === 'drive' ? 'text-blue-600' : 'text-blue-500'}`}></i>
+                            <i className={`fas ${cert.storageProvider === 'google drive' ? 'fa-google-drive' : 'fa-dropbox'} text-lg ${cert.storageProvider === 'google drive' ? 'text-blue-600' : 'text-blue-500'}`}></i>
                             <h4 className="font-semibold text-slate-900">{cert.title}</h4>
                           </div>
                           <a 
-                            href={cert.url} 
+                            href={cert.link} 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="text-sm text-blue-600 hover:text-blue-700 hover:underline break-all"
                           >
-                            {cert.url}
+                            {cert.link}
                           </a>
                           <p className="text-xs text-slate-500 mt-2">
-                            Added: {new Date(cert.addedAt).toLocaleDateString()}
+                            Added: {new Date(cert.createdAt).toLocaleDateString()}
                           </p>
                         </div>
                         <button
-                          onClick={() => handleDeleteCertificate(cert.id)}
+                          onClick={() => handleDeleteCertificate(cert._id)}
                           className="text-red-500 hover:text-red-700 transition-colors"
                         >
                           <i className="fas fa-trash"></i>
@@ -1522,6 +1607,155 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                   className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
                 >
                   Add Certificate
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Testimonials Modal */}
+      {showTestimonialsModal && selectedSkill && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900">Testimonials</h3>
+                <p className="text-sm text-slate-600">{selectedSkill.name}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowTestimonialsModal(false);
+                  setTestimonialsList([]);
+                }}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <i className="fas fa-times text-xl"></i>
+              </button>
+            </div>
+            
+            <div className="p-6">
+              {isLoadingTestimonials ? (
+                <div className="text-center py-12">
+                  <i className="fas fa-spinner fa-spin text-3xl text-slate-400 mb-4"></i>
+                  <p className="text-slate-500">Loading testimonials...</p>
+                </div>
+              ) : testimonialsList && testimonialsList.length > 0 ? (
+                <div className="space-y-4">
+                  {testimonialsList.map((testimonial) => (
+                    <div key={testimonial._id} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <i className="fas fa-award text-amber-600 text-lg"></i>
+                            <h4 className="font-semibold text-slate-900">{testimonial.validatorName}</h4>
+                          </div>
+                          <p className="text-sm text-slate-700 mb-1">
+                            <span className="font-medium">Role:</span> {testimonial.validatorRole}
+                          </p>
+                          <p className="text-sm text-slate-600 mb-2">
+                            <span className="font-medium">Email:</span> {testimonial.validatorEmail}
+                          </p>
+                          <p className="text-xs text-slate-500 mt-2">
+                            Added: {new Date(testimonial.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <i className="fas fa-award text-5xl text-slate-300 mb-4"></i>
+                  <p className="text-slate-500">No testimonials added yet</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Testimonial Modal */}
+      {showAddTestimonialModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-xl max-w-lg w-full">
+            <div className="p-6 border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Add Testimonial</h3>
+                  <p className="text-sm text-slate-600">{selectedSkill?.name}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowAddTestimonialModal(false);
+                    setValidatorName('');
+                    setValidatorEmail('');
+                    setValidatorRole('');
+                  }}
+                  className="text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <i className="fas fa-times text-xl"></i>
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Validator's Name *
+                </label>
+                <input
+                  type="text"
+                  value={validatorName}
+                  onChange={(e) => setValidatorName(e.target.value)}
+                  placeholder="e.g., Ms. Priya Sharma"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Validator's Email *
+                </label>
+                <input
+                  type="email"
+                  value={validatorEmail}
+                  onChange={(e) => setValidatorEmail(e.target.value)}
+                  placeholder="e.g., priya.sharma@company.com"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Validator's Role/Title *
+                </label>
+                <input
+                  type="text"
+                  value={validatorRole}
+                  onChange={(e) => setValidatorRole(e.target.value)}
+                  placeholder="e.g., Project Manager, TechSolutions Inc."
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => {
+                    setShowAddTestimonialModal(false);
+                    setValidatorName('');
+                    setValidatorEmail('');
+                    setValidatorRole('');
+                  }}
+                  className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveTestimonial}
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  Add Testimonial
                 </button>
               </div>
             </div>
