@@ -1,6 +1,6 @@
 import React from 'react';
 
-const ContactTable = ({ contacts, onEdit, onViewDetail }) => {
+const ContactTable = ({ contacts, onViewDetail }) => {
   if (contacts.length === 0) {
     return (
       <div className="text-center py-12">
@@ -72,13 +72,6 @@ const ContactTable = ({ contacts, onEdit, onViewDetail }) => {
                       <i className="fas fa-envelope text-purple-600"></i>
                     </a>
                   )}
-                  <button
-                    onClick={() => onEdit(contact)}
-                    className="p-2 hover:bg-purple-100 rounded-lg transition-colors"
-                    title="Edit Contact"
-                  >
-                    <i className="fas fa-edit text-purple-600"></i>
-                  </button>
                   <button
                     onClick={() => onViewDetail(contact)}
                     className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-semibold transition-colors"

@@ -5,7 +5,6 @@ const AddEditContactModal = ({
   onClose, 
   formData, 
   setFormData, 
-  editingContact, 
   onSubmit 
 }) => {
   if (!isOpen) return null;
@@ -15,9 +14,9 @@ const AddEditContactModal = ({
       <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-4 rounded-t-2xl flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-indigo-500 hover:bg-fuchsia-700 bg-opacity-40 rounded-full flex items-center justify-center">
-            <i className={`fas ${editingContact ? 'fa-edit' : 'fa-user-plus'} text-md`}></i>
+            <i className="fas fa-user-plus text-md"></i>
           </div>
-          <h2 className="text-xl font-bold">{editingContact ? 'Edit Mentor' : 'Add New Mentor'}</h2>
+          <h2 className="text-xl font-bold">Add New Mentor</h2>
         </div>
         <button
           onClick={onClose}
@@ -134,7 +133,7 @@ const AddEditContactModal = ({
           onClick={onSubmit}
           className="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg font-semibold transition-colors"
         >
-          {editingContact ? 'Update Mentor' : 'Add Mentor'}
+          Add Mentor
         </button>
       </div>
     </div>

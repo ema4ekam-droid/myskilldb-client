@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { getRequest, postRequest, putRequest } from '../../../api/apiRequests';
+import { getRequest, postRequest } from '../../../api/apiRequests';
 import StudentMenuNavigation from '../../../components/student-components/student-menu-components/StudentMenuNavigation';
 import LoaderOverlay from '../../../components/loader/LoaderOverlay';
 import { ContactTable } from '../../../components/student-components/student-contacts-components/mentors-components';
@@ -15,7 +15,6 @@ const Mentors = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [modalView, setModalView] = useState(null);
   const [selectedContact, setSelectedContact] = useState(null);
-  const [editingContact, setEditingContact] = useState(null);
   const [contacts, setContacts] = useState([]);
   
   const [formData, setFormData] = useState({
@@ -33,7 +32,7 @@ const Mentors = () => {
     const fetchContacts = async () => {
       try {
         setIsLoading(true);
-        const response = await getRequest(`/contacts?designation=${DESIGNATION}`);
+        const response = await getRequest(`/contacts/${DESIGNATION}`);
         
         if (response.data?.success && response.data?.data) {
           const transformedContacts = response.data.data.map((contact) => ({
@@ -77,46 +76,28 @@ const Mentors = () => {
     }
   
     try {
-      if (editingContact) {
-        // Update existing contact
-        const { data } = await putRequest(
-          `/contacts/${DESIGNATION}/${editingContact.id}`,
-          formData
-        );
-  
-        const updatedContacts = contacts.map(contact =>
-          contact.id === editingContact.id ? data.data : contact
-        );
-        setContacts(updatedContacts);
-        toast.success(`${DESIGNATION} contact updated successfully!`);
-      } else {
-        console.log(formData)
-        // Add new contact
-        const response = await postRequest(`/contacts/add/${DESIGNATION}`, formData);
-        console.log("hello ", response)
-  
-        setContacts([data.data, ...contacts]);
-        toast.success(`${DESIGNATION} contact added successfully!`);
-      }
+      // Prepare payload - remove organizationLink and clean empty strings
+      const payload = {
+        name: formData.name.trim(),
+        designation: DESIGNATION,
+        ...(formData.email?.trim() && { email: formData.email.trim() }),
+        ...(formData.mobile?.trim() && { mobile: formData.mobile.trim() }),
+        ...(formData.organization?.trim() && { organization: formData.organization.trim() }),
+        ...(formData.linkedin?.trim() && { linkedin: formData.linkedin.trim() }),
+        ...(formData.note?.trim() && { note: formData.note.trim() }),
+      };
+
+      // Add new contact
+      const { data } = await postRequest(`/contacts/`, payload);
+
+      setContacts([data.data, ...contacts]);
+      toast.success(`${DESIGNATION} contact added successfully!`);
   
       closeModal();
     } catch (error) {
+      console.error('Error adding contact:', error);
       toast.error(error.response?.data?.message || 'Something went wrong');
     }
-  };
-
-  const handleEditContact = (contact) => {
-    setEditingContact(contact);
-    setFormData({
-      name: contact.name || '',
-      organization: contact.organization || '',
-      organizationLink: contact.organizationLink || '',
-      email: contact.email || '',
-      mobile: contact.mobile || '',
-      linkedin: contact.linkedin || '',
-      note: contact.note || ''
-    });
-    setModalView('add');
   };
 
   const handleViewDetail = (contact) => {
@@ -127,7 +108,6 @@ const Mentors = () => {
   const closeModal = () => {
     setModalView(null);
     setSelectedContact(null);
-    setEditingContact(null);
     setFormData({
       name: '',
       organization: '',
@@ -164,10 +144,7 @@ const Mentors = () => {
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <button
-            onClick={() => {
-              setEditingContact(null);
-              setModalView('add');
-            }}
+            onClick={() => setModalView('add')}
             className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
           >
             <i className="fas fa-plus-circle"></i>
@@ -186,7 +163,6 @@ const Mentors = () => {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <ContactTable
             contacts={filteredContacts}
-            onEdit={handleEditContact}
             onViewDetail={handleViewDetail}
           />
         </div>
@@ -198,7 +174,6 @@ const Mentors = () => {
         onClose={closeModal}
         formData={formData}
         setFormData={setFormData}
-        editingContact={editingContact}
         onSubmit={handleAddContact}
         selectedContact={selectedContact}
         emailTemplates={emailTemplates}
