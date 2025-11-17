@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
-import { getRequest } from "../../../../api/apiRequests";
+import { getRequest } from "../../../api/apiRequests";
 
 const OrganizationModal = ({
   isOpen,

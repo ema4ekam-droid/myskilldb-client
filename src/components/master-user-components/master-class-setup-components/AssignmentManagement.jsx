@@ -1,21 +1,77 @@
+import { useState } from "react";
+
 const AssignmentManagement = ({
   departments,
-  classes,
-  sections,
+  organizationId,
   loadingEntities,
-  assignmentFilters,
-  appliedFilters,
-  groupedAssignments,
-  expandedDepartments,
   onAddAssignment,
-  onApplyFilters,
-  onClearFilters,
-  onFilterChange,
-  onToggleDepartment,
   onDeleteAssignment,
+  onFetchClassesByDepartment,
+  onFetchSectionsByAssignment,
   getSelectedOrganizationInfo,
   inputBaseClass
 }) => {
+  const [selectedDepartment, setSelectedDepartment] = useState("");
+  const [classesByDepartment, setClassesByDepartment] = useState([]);
+  const [sectionsByClass, setSectionsByClass] = useState({}); // { classId: [{ _id, section }] }
+  const [openClassDropdown, setOpenClassDropdown] = useState(null); // Track which class dropdown is open
+  const [loadingClasses, setLoadingClasses] = useState(false);
+  const [loadingSections, setLoadingSections] = useState({});
+
+  const handleDepartmentChange = async (departmentId) => {
+    setSelectedDepartment(departmentId);
+    setClassesByDepartment([]);
+    setSectionsByClass({});
+    setOpenClassDropdown(null);
+
+    if (departmentId && organizationId) {
+      try {
+        setLoadingClasses(true);
+        const classes = await onFetchClassesByDepartment(organizationId, departmentId);
+        setClassesByDepartment(classes || []);
+      } catch (error) {
+        console.error("Error fetching classes:", error);
+      } finally {
+        setLoadingClasses(false);
+      }
+    }
+  };
+
+  const handleClassClick = async (classId, departmentId) => {
+    // Close other class dropdowns
+    if (openClassDropdown === classId) {
+      setOpenClassDropdown(null);
+      return;
+    }
+
+    setOpenClassDropdown(classId);
+
+    if (organizationId && departmentId && classId) {
+      try {
+        setLoadingSections(prev => ({ ...prev, [classId]: true }));
+        const sections = await onFetchSectionsByAssignment(organizationId, departmentId, classId);
+        setSectionsByClass(prev => ({ ...prev, [classId]: sections || [] }));
+      } catch (error) {
+        console.error("Error fetching sections:", error);
+      } finally {
+        setLoadingSections(prev => ({ ...prev, [classId]: false }));
+      }
+    }
+  };
+
+  const handleDeleteSection = async (assignmentId, classId, departmentId) => {
+    try {
+      await onDeleteAssignment(assignmentId);
+      // After successful deletion, refresh sections for this class
+      if (organizationId && departmentId && classId) {
+        const sections = await onFetchSectionsByAssignment(organizationId, departmentId, classId);
+        setSectionsByClass(prev => ({ ...prev, [classId]: sections || [] }));
+      }
+    } catch (error) {
+      console.error("Error deleting assignment:", error);
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
       <div className="flex items-center justify-between mb-6">
@@ -33,156 +89,128 @@ const AssignmentManagement = ({
         </button>
       </div>
 
-      {/* Assignment Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Filter by Department</label>
-          <select
-            value={assignmentFilters.departmentId}
-            onChange={(e) => onFilterChange(prev => ({ ...prev, departmentId: e.target.value }))}
-            className={inputBaseClass}
-          >
-            <option value="">All Departments</option>
-            {departments.map(dept => (
-              <option key={dept._id} value={dept._id}>{dept.name}</option>
-            ))}
-          </select>
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Filter by Class</label>
-          <select
-            value={assignmentFilters.classId}
-            onChange={(e) => onFilterChange(prev => ({ ...prev, classId: e.target.value }))}
-            className={inputBaseClass}
-          >
-            <option value="">All Classes</option>
-            {classes.map(cls => (
-              <option key={cls._id} value={cls._id}>{cls.name}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex items-end">
-          <button
-            onClick={onApplyFilters}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2 w-full"
-            disabled={loadingEntities.assignments}
-          >
-            <i className="fas fa-filter"></i>
-            Apply Filters
-          </button>
-        </div>
-
-        <div className="flex items-end">
-          <button
-            onClick={onClearFilters}
-            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2 w-full"
-            disabled={loadingEntities.assignments}
-          >
-            <i className="fas fa-times"></i>
-            Clear Filters
-          </button>
-        </div>
+      {/* Department Dropdown */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-slate-700 mb-2">
+          Select Department
+        </label>
+        <select
+          value={selectedDepartment}
+          onChange={(e) => handleDepartmentChange(e.target.value)}
+          className={inputBaseClass}
+          disabled={loadingEntities.departments}
+        >
+          <option value="">Select Department</option>
+          {departments.map(dept => (
+            <option key={dept._id} value={dept._id}>{dept.name}</option>
+          ))}
+        </select>
       </div>
 
-      {/* Active filters indicator */}
-      {(appliedFilters.departmentId || appliedFilters.classId) && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-center gap-2 mb-2">
-            <i className="fas fa-filter text-blue-600"></i>
-            <span className="font-medium text-blue-900">Active Filters:</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {appliedFilters.departmentId && (
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                Department: {departments.find(d => d._id === appliedFilters.departmentId)?.name}
-              </span>
-            )}
-            {appliedFilters.classId && (
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                Class: {classes.find(c => c._id === appliedFilters.classId)?.name}
-              </span>
-            )}
-          </div>
+      {/* Loading state for classes */}
+      {loadingClasses && (
+        <div className="flex items-center justify-center py-4">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+          <span className="ml-3 text-slate-600 text-sm">Loading classes...</span>
         </div>
       )}
 
-      {/* Loading state for assignments */}
-      {loadingEntities.assignments ? (
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-          <span className="ml-3 text-slate-600">Loading assignments...</span>
-        </div>
-      ) : (
-        /* Hierarchical Assignments View */
+      {/* Classes List - Only show when department is selected */}
+      {selectedDepartment && !loadingClasses && (
         <div className="space-y-4">
-          {Object.keys(groupedAssignments).length === 0 ? (
+          {classesByDepartment.length === 0 ? (
             <div className="text-center py-8 text-slate-500">
-              <i className="fas fa-inbox text-4xl mb-4"></i>
-              <p>No assignments found. Create your first assignment or adjust your filters to see results.</p>
+              <i className="fas fa-graduation-cap text-4xl mb-4"></i>
+              <p>No classes found for this department.</p>
             </div>
           ) : (
-            Object.entries(groupedAssignments).map(([deptId, deptData]) => (
-              <div key={deptId} className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-                {/* Department Header */}
-                <div 
-                  className="bg-gradient-to-r from-blue-50 to-blue-100 border-b border-blue-200 p-4 cursor-pointer hover:bg-blue-50 transition-colors"
-                  onClick={() => onToggleDepartment(deptId)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <i className={`fas fa-chevron-${expandedDepartments[deptId] ? 'down' : 'right'} text-blue-600 transition-transform`}></i>
-                      <h3 className="text-lg font-semibold text-blue-900">{deptData.name}</h3>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm text-blue-700 bg-blue-200 px-2 py-1 rounded-full">
-                        {Object.keys(deptData.classes).length} classes
-                      </span>
-                    </div>
-                  </div>
-                </div>
+            classesByDepartment.map((classItem) => {
+              const sections = sectionsByClass[classItem._id] || [];
+              const isLoadingSections = loadingSections[classItem._id];
+              const isOpen = openClassDropdown === classItem._id;
 
-                {/* Classes and Sections - Collapsible */}
-                {expandedDepartments[deptId] && (
-                  <div className="divide-y divide-slate-100">
-                    {Object.entries(deptData.classes).map(([classId, classData]) => (
-                      <div key={classId} className="p-4 bg-slate-50">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <i className="fas fa-graduation-cap text-green-600"></i>
-                            <h4 className="font-semibold text-slate-900">{classData.name}</h4>
-                            <span className="text-sm text-slate-600 bg-slate-200 px-2 py-1 rounded-full">
-                              {classData.sections.length} sections
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Sections Grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                          {classData.sections.map((section) => (
-                            <div key={section.id} className="bg-white border border-slate-200 rounded-lg p-3 flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <i className="fas fa-layer-group text-purple-500"></i>
-                                <span className="font-medium text-slate-700">{section.name}</span>
-                              </div>
-                              <button
-                                onClick={() => onDeleteAssignment(section.assignmentData)}
-                                className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
-                                title="Delete assignment"
-                              >
-                                <i className="fas fa-times"></i>
-                              </button>
-                            </div>
-                          ))}
-                        </div>
+              return (
+                <div key={classItem._id} className="border border-slate-200 rounded-lg overflow-hidden">
+                  {/* Class Header - Clickable */}
+                  <div
+                    className="bg-slate-50 hover:bg-slate-100 p-4 cursor-pointer transition-colors"
+                    onClick={() => handleClassClick(classItem._id, selectedDepartment)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <i className={`fas fa-chevron-${isOpen ? 'down' : 'right'} text-slate-600 transition-transform`}></i>
+                        <i className="fas fa-graduation-cap text-green-600"></i>
+                        <h3 className="font-semibold text-slate-900">{classItem.name}</h3>
                       </div>
-                    ))}
+                      <div className="flex items-center gap-3">
+                        {isOpen && sections.length > 0 && (
+                          <span className="text-sm text-slate-600 bg-slate-200 px-2 py-1 rounded-full">
+                            {sections.length} section{sections.length !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {isLoadingSections && (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
-            ))
+
+                  {/* Sections Dropdown - Only show when this class is open */}
+                  {isOpen && (
+                    <div className="p-4 bg-white border-t border-slate-200">
+                      {isLoadingSections ? (
+                        <div className="flex items-center justify-center py-4">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
+                          <span className="ml-2 text-slate-600 text-sm">Loading sections...</span>
+                        </div>
+                      ) : sections.length === 0 ? (
+                        <div className="text-center py-4 text-slate-500 text-sm">
+                          <i className="fas fa-inbox mb-2"></i>
+                          <p>No sections assigned to this class.</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {sections.map((sectionItem) => {
+                            // Handle both { _id, section } format and populated format
+                            const sectionName = sectionItem.section?.name || sectionItem.section || sectionItem.sectionId?.name || "Unknown";
+                            return (
+                              <div
+                                key={sectionItem._id}
+                                className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex items-center justify-between"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <i className="fas fa-layer-group text-purple-500"></i>
+                                  <span className="font-medium text-slate-700">{sectionName}</span>
+                                </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteSection(sectionItem._id, classItem._id, selectedDepartment);
+                                  }}
+                                  className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors"
+                                  title="Delete assignment"
+                                >
+                                  <i className="fas fa-times text-sm"></i>
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
+        </div>
+      )}
+
+      {/* Empty state when no department selected */}
+      {!selectedDepartment && (
+        <div className="text-center py-12 text-slate-500">
+          <i className="fas fa-building text-4xl mb-4"></i>
+          <p>Please select a department to view class assignments.</p>
         </div>
       )}
     </div>

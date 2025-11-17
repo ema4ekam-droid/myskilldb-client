@@ -1,22 +1,21 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSelector } from 'react-redux';
 import LoaderOverlay from '../../components/loader/LoaderOverlay';
 import OrgMenuNavigation from '../../components/org-admin-components/org-admin-menu_components/OrgMenuNavigation';
-import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
+import { getRequest, postRequest } from '../../api/apiRequests';
 
 const AdminAccessManage = () => {
-  const API_BASE_URL = useMemo(() => `${import.meta.env.VITE_SERVER_API_URL}/api`, []);
+  // Get organization data from Redux
+  const organization = useSelector((state) => state.organization);
 
   // State for data
   const [departments, setDepartments] = useState([]);
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
   const [users, setUsers] = useState([]);
-  // Filters & pagination
-  const [userSearch, setUserSearch] = useState("");
+  // Filters
   const [roleFilter, setRoleFilter] = useState(""); // '', 'HOD', 'Teacher', 'Student'
-  const [userPage, setUserPage] = useState(1);
-  const pageSize = 10;
 
   // Modal states
   const [isLoginFormOpen, setIsLoginFormOpen] = useState(false);
@@ -27,8 +26,7 @@ const AdminAccessManage = () => {
     mobileNumber: '',
     departmentId: '',
     classId: '',
-    sectionId: '',
-    password: ''
+    sectionId: ''
   });
 
   // Loading states
@@ -40,124 +38,113 @@ const AdminAccessManage = () => {
     users: false
   });
 
-  // Current organization ID (would come from context/auth in real app)
-  const [currentOrganizationId, setCurrentOrganizationId] = useState('org-123');
-
   // --- API CALLS ---
 
   const fetchDepartments = async () => {
+    if (!organization?._id) return;
+    
     try {
       setLoadingEntities(prev => ({ ...prev, departments: true }));
       
-      const dummyDepartments = [
-        { _id: 'dept-1', name: 'Nursery', description: 'Nursery Level' },
-        { _id: 'dept-2', name: 'Lower Primary', description: 'Lower Primary Level (Grades 1-5)' },
-        { _id: 'dept-3', name: 'Upper Primary', description: 'Upper Primary Level (Grades 6-7)' },
-        { _id: 'dept-4', name: 'High School', description: 'High School Level (Grades 8-10)' },
-        { _id: 'dept-5', name: 'Higher Secondary', description: 'Higher Secondary Level (Grades 11-12)' }
-      ];
-      
-      await new Promise(resolve => setTimeout(resolve, 300));
-      setDepartments(dummyDepartments);
-      
+      const response = await getRequest(
+        `/organization-setup/departments/${organization._id}`
+      );
+
+      if (response.data.success) {
+        setDepartments(response.data.data || []);
+      } else {
+        setDepartments([]);
+        console.error("Failed to fetch departments:", response.data.message);
+        toast.error('Failed to fetch departments');
+      }
     } catch (error) {
       console.error('Error fetching departments:', error);
+      setDepartments([]);
       toast.error('Failed to fetch departments');
     } finally {
       setLoadingEntities(prev => ({ ...prev, departments: false }));
     }
   };
 
-  const fetchClasses = async () => {
+  const fetchClasses = async (departmentId) => {
+    if (!organization?._id || !departmentId) return;
+    
     try {
       setLoadingEntities(prev => ({ ...prev, classes: true }));
       
-      const dummyClasses = [
-        // Nursery
-        { _id: 'class-1', name: 'LKG', description: 'Lower Kindergarten', departmentId: 'dept-1' },
-        { _id: 'class-2', name: 'UKG', description: 'Upper Kindergarten', departmentId: 'dept-1' },
-        // Lower Primary
-        { _id: 'class-3', name: 'Grade 1', description: 'First Grade', departmentId: 'dept-2' },
-        { _id: 'class-4', name: 'Grade 2', description: 'Second Grade', departmentId: 'dept-2' },
-        { _id: 'class-5', name: 'Grade 3', description: 'Third Grade', departmentId: 'dept-2' },
-        { _id: 'class-6', name: 'Grade 4', description: 'Fourth Grade', departmentId: 'dept-2' },
-        { _id: 'class-7', name: 'Grade 5', description: 'Fifth Grade', departmentId: 'dept-2' },
-        // Upper Primary
-        { _id: 'class-8', name: 'Grade 6', description: 'Sixth Grade', departmentId: 'dept-3' },
-        { _id: 'class-9', name: 'Grade 7', description: 'Seventh Grade', departmentId: 'dept-3' },
-        // High School
-        { _id: 'class-10', name: 'Grade 8', description: 'Eighth Grade', departmentId: 'dept-4' },
-        { _id: 'class-11', name: 'Grade 9', description: 'Ninth Grade', departmentId: 'dept-4' },
-        { _id: 'class-12', name: 'Grade 10', description: 'Tenth Grade', departmentId: 'dept-4' },
-        // Higher Secondary
-        { _id: 'class-13', name: 'Grade 11 Bio Math', description: 'Biology with Mathematics Stream', departmentId: 'dept-5' },
-        { _id: 'class-14', name: 'Grade 11 Bio Language', description: 'Biology with Language Stream', departmentId: 'dept-5' },
-        { _id: 'class-15', name: 'Grade 11 Computer Maths', description: 'Computer Science with Mathematics Stream', departmentId: 'dept-5' },
-        { _id: 'class-16', name: 'Grade 11 Commerce', description: 'Commerce Stream', departmentId: 'dept-5' },
-        { _id: 'class-17', name: 'Grade 12 Bio Math', description: 'Biology with Mathematics Stream', departmentId: 'dept-5' },
-        { _id: 'class-18', name: 'Grade 12 Bio Language', description: 'Biology with Language Stream', departmentId: 'dept-5' },
-        { _id: 'class-19', name: 'Grade 12 Computer Maths', description: 'Computer Science with Mathematics Stream', departmentId: 'dept-5' },
-        { _id: 'class-20', name: 'Grade 12 Commerce', description: 'Commerce Stream', departmentId: 'dept-5' }
-      ];
-      
-      await new Promise(resolve => setTimeout(resolve, 300));
-      setClasses(dummyClasses);
-      
+      const response = await getRequest(
+        `/organization-setup/classes/${organization._id}/${departmentId}`
+      );
+
+      if (response.data.success) {
+        setClasses(response.data.data || []);
+      } else {
+        setClasses([]);
+        console.error("Failed to fetch classes:", response.data.message);
+        toast.error('Failed to fetch classes');
+      }
     } catch (error) {
       console.error('Error fetching classes:', error);
+      setClasses([]);
       toast.error('Failed to fetch classes');
     } finally {
       setLoadingEntities(prev => ({ ...prev, classes: false }));
     }
   };
 
-  const fetchSections = async () => {
+  const fetchSections = async (departmentId, classId) => {
+    if (!organization?._id || !departmentId || !classId) return;
+    
     try {
       setLoadingEntities(prev => ({ ...prev, sections: true }));
       
-      const dummySections = [
-        { _id: 'section-1', name: 'Section A', description: 'Section A' },
-        { _id: 'section-2', name: 'Section B', description: 'Section B' }
-      ];
-      
-      await new Promise(resolve => setTimeout(resolve, 300));
-      setSections(dummySections);
-      
+      const response = await getRequest(
+        `/organization-setup/sections/${organization._id}/${departmentId}/${classId}`
+      );
+
+      if (response.data.success) {
+        setSections(response.data.data || []);
+      } else {
+        setSections([]);
+        console.error("Failed to fetch sections:", response.data.message);
+        toast.error('Failed to fetch sections');
+      }
     } catch (error) {
       console.error('Error fetching sections:', error);
+      setSections([]);
       toast.error('Failed to fetch sections');
     } finally {
       setLoadingEntities(prev => ({ ...prev, sections: false }));
     }
   };
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (role = null) => {
+    if (!organization?._id) return;
+    
     try {
       setLoadingEntities(prev => ({ ...prev, users: true }));
       
-      // Dummy data for existing users
-      const dummyUsers = [
-        { _id: 'user-1', name: 'Dr. Sarah Johnson', email: 'sarah.johnson@school.edu', role: 'HOD', departmentId: 'dept-4', status: 'active' },
-        { _id: 'user-2', name: 'Ms. Priya Nair', email: 'priya.nair@school.edu', role: 'Teacher', departmentId: 'dept-2', status: 'active' },
-        { _id: 'user-3', name: 'Mr. Rajan Kumar', email: 'rajan.kumar@school.edu', role: 'Teacher', departmentId: 'dept-2', status: 'active' },
-        { _id: 'user-4', name: 'Mrs. Lakshmi Menon', email: 'lakshmi.menon@school.edu', role: 'Teacher', departmentId: 'dept-3', status: 'active' },
-        { _id: 'user-5', name: 'Mr. Suresh Pillai', email: 'suresh.pillai@school.edu', role: 'Teacher', departmentId: 'dept-3', status: 'active' },
-        { _id: 'user-6', name: 'Dr. Anjali Varma', email: 'anjali.varma@school.edu', role: 'Teacher', departmentId: 'dept-4', status: 'active' },
-        { _id: 'user-7', name: 'Prof. Ramesh Iyer', email: 'ramesh.iyer@school.edu', role: 'Teacher', departmentId: 'dept-4', status: 'active' },
-        { _id: 'user-8', name: 'Dr. Kavita Sharma', email: 'kavita.sharma@school.edu', role: 'Teacher', departmentId: 'dept-5', status: 'active' },
-        { _id: 'user-9', name: 'Mr. Arun Krishnan', email: 'arun.krishnan@school.edu', role: 'Teacher', departmentId: 'dept-5', status: 'active' },
-        { _id: 'user-10', name: 'Ms. Divya Thomas', email: 'divya.thomas@school.edu', role: 'Teacher', departmentId: 'dept-5', status: 'active' },
-        { _id: 'user-11', name: 'Dr. Vinod Menon', email: 'vinod.menon@school.edu', role: 'Teacher', departmentId: 'dept-5', status: 'active' },
-        { _id: 'user-12', name: 'Mr. John Smith', email: 'john.smith@student.com', role: 'Student', departmentId: 'dept-2', classId: 'class-3', sectionId: 'section-1', status: 'active' },
-        { _id: 'user-13', name: 'Mrs. Mary Johnson', email: 'mary.johnson@student.com', role: 'Student', departmentId: 'dept-3', classId: 'class-8', sectionId: 'section-2', status: 'active' },
-        { _id: 'user-14', name: 'Mr. David Wilson', email: 'david.wilson@student.com', role: 'Student', departmentId: 'dept-4', classId: 'class-11', sectionId: 'section-1', status: 'active' }
-      ];
+      // Build query parameters
+      const queryParams = new URLSearchParams();
+      queryParams.append('organizationId', organization._id);
       
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setUsers(dummyUsers);
+      // Only add role parameter if a specific role is requested
+      if (role) {
+        queryParams.append('role', role.toLowerCase());
+      }
       
+      const response = await getRequest(`/users?${queryParams.toString()}`);
+      
+      if (response.data.success) {
+        setUsers(response.data.data || []);
+      } else {
+        setUsers([]);
+        console.error("Failed to fetch users:", response.data.message);
+        toast.error('Failed to fetch users');
+      }
     } catch (error) {
       console.error('Error fetching users:', error);
+      setUsers([]);
       toast.error('Failed to fetch users');
     } finally {
       setLoadingEntities(prev => ({ ...prev, users: false }));
@@ -165,10 +152,10 @@ const AdminAccessManage = () => {
   };
 
   const fetchAllData = async () => {
+    if (!organization?._id) return;
+    
     await Promise.all([
       fetchDepartments(),
-      fetchClasses(),
-      fetchSections(),
       fetchUsers()
     ]);
   };
@@ -189,8 +176,7 @@ const AdminAccessManage = () => {
       mobileNumber: '',
       departmentId: '',
       classId: '',
-      sectionId: '',
-      password: ''
+      sectionId: ''
     });
     setIsLoginFormOpen(true);
   };
@@ -204,17 +190,13 @@ const AdminAccessManage = () => {
       mobileNumber: '',
       departmentId: '',
       classId: '',
-      sectionId: '',
-      password: ''
+      sectionId: ''
     });
   };
 
   const handleLoginFormSubmit = async (formData) => {
     try {
       setIsLoading(true);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Basic validation for Student role: require department, class, and section
       if (formData.role === 'Student') {
@@ -225,21 +207,37 @@ const AdminAccessManage = () => {
         }
       }
 
-      // Create new user
-      const newUser = {
-        _id: `user-${Date.now()}`,
+      // Prepare user data for API
+      const userData = {
         name: formData.name,
         email: formData.email,
-        role: formData.role,
-        departmentId: formData.departmentId || '',
-        classId: formData.classId || '',
-        sectionId: formData.sectionId || '',
-        status: 'active'
+        mobileNumber: formData.mobileNumber,
+        role: formData.role.toLowerCase(), // Convert to lowercase
+        departmentId: formData.departmentId,
+        organizationId: organization._id
       };
+
+      // Add assignmentId for students, departmentId for all roles
+      if (formData.role === 'Student') {
+        const selectedSection = sections.find(s => s._id === formData.sectionId);
+        if (selectedSection?.assignmentId) {
+          userData.assignmentId = selectedSection.assignmentId;
+        }
+        userData.classId = formData.classId;
+        userData.sectionId = formData.sectionId;
+      }
+
+      // Make API call to create user
+      const response = await postRequest('/users', userData);
       
-      setUsers(prev => [...prev, newUser]);
-      toast.success(`Successfully created ${formData.role} login for ${formData.name}`);
-      closeLoginForm();
+      if (response.data.success) {
+        toast.success(`Successfully created ${formData.role} login for ${formData.name}`);
+        closeLoginForm();
+        // Optionally refresh users list
+        fetchUsers();
+      } else {
+        toast.error(response.data.message || 'Failed to create user');
+      }
       
     } catch (error) {
       console.error('Error creating user:', error);
@@ -251,36 +249,7 @@ const AdminAccessManage = () => {
 
   // --- COMPUTED VALUES ---
 
-  const userStats = useMemo(() => {
-    const total = users.length;
-    const hod = users.filter(u => u.role === 'HOD').length;
-    const teachers = users.filter(u => u.role === 'Teacher').length;
-    const students = users.filter(u => u.role === 'Student').length;
-    
-    return { total, hod, teachers, students };
-  }, [users]);
-
-  // Filtered + paginated users
-  const filteredUsers = useMemo(() => {
-    let list = [...users];
-    if (roleFilter) {
-      list = list.filter(u => u.role === roleFilter);
-    }
-    if (userSearch.trim()) {
-      const term = userSearch.toLowerCase();
-      list = list.filter(u =>
-        u.name.toLowerCase().includes(term) ||
-        (u.email || '').toLowerCase().includes(term)
-      );
-    }
-    return list;
-  }, [users, roleFilter, userSearch]);
-
-  const totalUserPages = useMemo(() => Math.max(Math.ceil(filteredUsers.length / pageSize), 1), [filteredUsers.length]);
-  const pagedUsers = useMemo(() => {
-    const start = (userPage - 1) * pageSize;
-    return filteredUsers.slice(start, start + pageSize);
-  }, [filteredUsers, userPage]);
+  // Users are now filtered on the server side
 
   // --- STYLES ---
   const inputBaseClass = "w-full bg-slate-100 border-slate-200 rounded-md p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-200 disabled:cursor-not-allowed";
@@ -326,36 +295,12 @@ const AdminAccessManage = () => {
           </header>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-500 text-sm font-medium">Total Users</p>
-                  <p className="text-2xl font-bold text-slate-900">{userStats.total}</p>
-                </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-users text-blue-600 text-xl"></i>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-500 text-sm font-medium">HOD</p>
-                  <p className="text-2xl font-bold text-slate-900">{userStats.hod}</p>
-                </div>
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-user-tie text-purple-600 text-xl"></i>
-                </div>
-              </div>
-            </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-slate-500 text-sm font-medium">Teachers</p>
-                  <p className="text-2xl font-bold text-slate-900">{userStats.teachers}</p>
+                  <p className="text-2xl font-bold text-slate-900">{organization?.totalTeachers || 0}</p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                   <i className="fas fa-chalkboard-teacher text-green-600 text-xl"></i>
@@ -367,7 +312,7 @@ const AdminAccessManage = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-slate-500 text-sm font-medium">Students</p>
-                  <p className="text-2xl font-bold text-slate-900">{userStats.students}</p>
+                  <p className="text-2xl font-bold text-slate-900">{organization?.totalStudents || 0}</p>
                 </div>
                 <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                   <i className="fas fa-user-graduate text-orange-600 text-xl"></i>
@@ -466,28 +411,24 @@ const AdminAccessManage = () => {
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                   <h3 className="text-lg font-semibold text-slate-900">Users</h3>
-                  <p className="text-slate-500 text-sm">Search and filter user accounts</p>
+                  <p className="text-slate-500 text-sm">Filter user accounts by role</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                    <input
-                      type="text"
-                      value={userSearch}
-                      onChange={(e) => { setUserSearch(e.target.value); setUserPage(1); }}
-                      placeholder="Search user by name or email..."
-                      className="pl-10 pr-3 py-2 bg-slate-100 border border-slate-200 rounded-md text-sm"
-                    />
-                  </div>
                   <select
                     value={roleFilter}
-                    onChange={(e) => { setRoleFilter(e.target.value); setUserPage(1); }}
+                    onChange={(e) => {
+                      const selectedRole = e.target.value;
+                      setRoleFilter(selectedRole);
+                      // Fetch users with the selected role filter
+                      fetchUsers(selectedRole || null);
+                    }}
                     className="bg-slate-100 border border-slate-200 rounded-md p-2 text-sm"
                   >
                     <option value="">All Roles</option>
-                    <option value="HOD">HOD</option>
-                    <option value="Teacher">Teacher</option>
-                    <option value="Student">Student</option>
+                    <option value="org_admin">Org Admin</option>
+                    <option value="hod">HOD</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="student">Student</option>
                   </select>
                 </div>
               </div>
@@ -499,14 +440,11 @@ const AdminAccessManage = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Name</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Email</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Role</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Department</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Class</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Section</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-200">
-                  {pagedUsers.map((user) => (
+                  {users.map((user) => (
                     <tr key={user._id} className="hover:bg-slate-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
@@ -526,9 +464,6 @@ const AdminAccessManage = () => {
                           {user.role}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{user.departmentId ? (departments.find(d => d._id === user.departmentId)?.name || 'Unknown') : '-'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{user.classId ? (classes.find(c => c._id === user.classId)?.name || 'Unknown') : '-'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{user.sectionId ? (sections.find(s => s._id === user.sectionId)?.name || 'Unknown') : '-'}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
                           {user.status}
@@ -538,27 +473,6 @@ const AdminAccessManage = () => {
                   ))}
                 </tbody>
               </table>
-            </div>
-            {/* Pagination */}
-            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 bg-slate-50">
-              <p className="text-xs text-slate-500">Showing {(userPage - 1) * pageSize + 1}-{Math.min(userPage * pageSize, filteredUsers.length)} of {filteredUsers.length}</p>
-              <div className="flex items-center gap-2">
-                <button
-                  className="px-3 py-1 bg-slate-200 hover:bg-slate-300 rounded-md text-sm"
-                  onClick={() => setUserPage(p => Math.max(p - 1, 1))}
-                  disabled={userPage === 1}
-                >
-                  Prev
-                </button>
-                <span className="text-sm text-slate-600">Page {userPage} of {totalUserPages}</span>
-                <button
-                  className="px-3 py-1 bg-slate-200 hover:bg-slate-300 rounded-md text-sm"
-                  onClick={() => setUserPage(p => Math.min(p + 1, totalUserPages))}
-                  disabled={userPage === totalUserPages}
-                >
-                  Next
-                </button>
-              </div>
             </div>
           </div>
         </main>
@@ -624,7 +538,16 @@ const AdminAccessManage = () => {
                   <select
                     className={inputBaseClass}
                     value={loginFormData.departmentId}
-                    onChange={(e) => setLoginFormData(prev => ({ ...prev, departmentId: e.target.value, classId: '', sectionId: '' }))}
+                    onChange={(e) => {
+                      const departmentId = e.target.value;
+                      setLoginFormData(prev => ({ ...prev, departmentId, classId: '', sectionId: '' }));
+                      if (departmentId) {
+                        fetchClasses(departmentId);
+                      } else {
+                        setClasses([]);
+                        setSections([]);
+                      }
+                    }}
                     required
                   >
                     <option value="">Select Department</option>
@@ -642,12 +565,20 @@ const AdminAccessManage = () => {
                     <select
                       className={inputBaseClass}
                       value={loginFormData.classId || ''}
-                      onChange={(e) => setLoginFormData(prev => ({ ...prev, classId: e.target.value, sectionId: '' }))}
+                      onChange={(e) => {
+                        const classId = e.target.value;
+                        setLoginFormData(prev => ({ ...prev, classId, sectionId: '' }));
+                        if (classId) {
+                          fetchSections(loginFormData.departmentId, classId);
+                        } else {
+                          setSections([]);
+                        }
+                      }}
                       disabled={!loginFormData.departmentId}
                       required
                     >
                       <option value="">Select Class</option>
-                      {classes.filter(c => c.departmentId === loginFormData.departmentId).map(cls => (
+                      {classes.map(cls => (
                         <option key={cls._id} value={cls._id}>{cls.name}</option>
                       ))}
                     </select>
@@ -671,17 +602,6 @@ const AdminAccessManage = () => {
                 </>
               )}
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Temporary Password *</label>
-                <input
-                  type="password"
-                  className={inputBaseClass}
-                  value={loginFormData.password}
-                  onChange={(e) => setLoginFormData(prev => ({ ...prev, password: e.target.value }))}
-                  required
-                />
-                <p className="text-xs text-slate-500 mt-1">User will be prompted to change this on first login</p>
-              </div>
 
               <div className="flex gap-3 pt-4">
                 <button type="submit" className={btnTealClass} disabled={isLoading}>

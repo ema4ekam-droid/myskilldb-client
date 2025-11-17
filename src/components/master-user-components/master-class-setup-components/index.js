@@ -1,15 +1,4 @@
-export { default as ClassModal } from "./ClassModal";
-export { default as DepartmentModal } from "./DepartmentModal";
-export { default as SectionModal } from "./SectionModal";
-export { default as SubjectModal } from "./SubjectModal";
-export { default as DeleteConfirmationModal } from "./DeleteConfirmationModal";
 export { default as OrganizationSelection } from "./OrganizationSelection";
 export { default as EntityManagement } from "./EntityManagement";
 export { default as AssignmentManagement } from "./AssignmentManagement";
-export { default as AssignmentModal } from "./AssignmentModal";
-export { default as ViewModal } from "./ViewModal";
-export { default as EditListModal } from "./EditListModal";
 export { default as SectionsViewModal } from "./SectionsViewModal";
-export { default as HeaderSection } from "./HeaderSection";
-export { default as QuickEditSection } from "./QuickEditSection";
-export { default as Aai } from "../../org-admin-components/calss-setup-components/EntityManagement";

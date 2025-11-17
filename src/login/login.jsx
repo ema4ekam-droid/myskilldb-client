@@ -51,6 +51,8 @@ function Login() {
         navigate("/master/dashboard");
       } else if (data.data.role === "org_admin") {
         navigate("/admin/dashboard");
+      }  else if (data.data.role === "student") {
+        navigate("/student/dashboard");
       } else {
         // For now, do nothing or show an error
         console.warn("Unknown role:", data.data.role);

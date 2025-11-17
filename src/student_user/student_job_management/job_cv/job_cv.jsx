@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { toast } from 'react-hot-toast';
 import StudentMenuNavigation from '../../../components/student-components/student-menu-components/StudentMenuNavigation';
 import LoaderOverlay from '../../../components/loader/LoaderOverlay';
+import { getRequest, putRequest, postRequest, deleteRequest } from '../../../api/apiRequests';
 
 const JobCV = () => {
+  const user = useSelector((state) => state.user);
+  const assignment = useSelector((state) => state.assignment);
   const [currentPage, setCurrentPage] = useState('job-cv');
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState('jobs'); // 'jobs', 'profile', 'preview'
@@ -12,58 +16,17 @@ const JobCV = () => {
   
   // Profile data (saved once, used for all CVs)
   const [profile, setProfile] = useState({
-    fullName: 'John Doe',
-    email: 'john.doe@example.com',
-    phone: '+91 98765 43210',
-    address: 'Bangalore, Karnataka, India',
-    photo: 'https://ui-avatars.com/api/?name=John+Doe&size=200&background=4F46E5&color=fff',
-    linkedin: 'linkedin.com/in/johndoe',
-    github: 'github.com/johndoe',
-    portfolio: 'johndoe.dev',
-    aboutMe: 'Passionate developer with strong problem-solving skills and experience in building scalable web applications.',
-    education: [
-      {
-        id: 'edu-1',
-        degree: 'B.Tech in Computer Science',
-        institution: 'XYZ University',
-        location: 'Bangalore, India',
-        startYear: '2019',
-        endYear: '2023',
-        gpa: '8.5/10'
-      }
-    ],
-    workExperience: [
-      {
-        id: 'exp-1',
-        title: 'Frontend Developer Intern',
-        company: 'Tech Startup Inc.',
-        location: 'Bangalore, India',
-        startDate: 'Jun 2022',
-        endDate: 'Dec 2022',
-        current: false,
-        description: 'Built responsive UI with React and Tailwind CSS, implemented reusable components, integrated REST APIs and auth, and improved performance metrics by optimizing bundle size and lazy-loading routes.'
-      },
-      {
-        id: 'exp-2',
-        title: 'Web Development Trainee',
-        company: 'Digital Solutions Ltd.',
-        location: 'Bangalore, India',
-        startDate: 'Jan 2022',
-        endDate: 'May 2022',
-        current: false,
-        description: 'Completed intensive bootcamp covering HTML5, CSS3, JavaScript and React. Delivered 5+ mobile-first landing pages, collaborated in Agile sprints, and practiced Git workflow and code reviews.'
-      },
-      {
-        id: 'exp-3',
-        title: 'Volunteer Developer',
-        company: 'Open Source Community',
-        location: 'Remote',
-        startDate: 'Aug 2021',
-        endDate: 'Dec 2021',
-        current: false,
-        description: 'Contributed bug fixes and documentation to a React component library; added unit tests and accessibility improvements following WCAG guidelines.'
-      }
-    ]
+    fullName: user?.name || '',
+    email: user?.email || '',
+    phone: user?.mobile || '',
+    address: '',
+    photo: user?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}&size=200&background=4F46E5&color=fff`,
+    linkedin: '',
+    github: '',
+    portfolio: '',
+    aboutMe: '',
+    education: [],
+    workExperience: []
   });
 
   // Jobs with assessment status
@@ -72,225 +35,277 @@ const JobCV = () => {
   const [generatedCV, setGeneratedCV] = useState(null);
 
   useEffect(() => {
-    fetchJobsAndAssessments();
-  }, []);
+    if (user?._id) {
+      fetchCVData();
+    }
+  }, [user?._id]);
+
+  useEffect(() => {
+    if (user?._id && (user?.organizationId || assignment?.departmentId)) {
+      fetchJobsAndAssessments();
+    } else if (user?._id) {
+      setIsLoading(false);
+    }
+  }, [user?._id, user?.organizationId, assignment?.departmentId]);
+
+  const fetchCVData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch CV profile
+      const profileResponse = await getRequest('/cv/profile');
+      const cvProfile = profileResponse.data.data;
+      
+      // Fetch education
+      const educationResponse = await getRequest('/cv/education');
+      const education = educationResponse.data.data || [];
+      
+      // Fetch experience
+      const experienceResponse = await getRequest('/cv/experience');
+      const experience = experienceResponse.data.data || [];
+      
+      // Update profile state
+      setProfile(prev => ({
+        ...prev,
+        fullName: user?.name || prev.fullName,
+        email: user?.email || prev.email,
+        phone: user?.mobile || prev.phone,
+        address: cvProfile?.address || '',
+        linkedin: cvProfile?.linkedIn || '',
+        github: cvProfile?.github || '',
+        portfolio: cvProfile?.portfolio || '',
+        aboutMe: cvProfile?.aboutMe || '',
+        education: education.map(edu => ({
+          id: edu._id,
+          degree: edu.title,
+          institution: edu.institution,
+          location: edu.location,
+          startYear: edu.startYear,
+          endYear: edu.endYear,
+          gpa: edu.gpa || ''
+        })),
+        workExperience: experience.map(exp => ({
+          id: exp._id,
+          title: exp.jobTitle,
+          company: exp.company,
+          location: exp.location,
+          startDate: exp.startDate,
+          endDate: exp.endDate || '',
+          current: exp.isCurrent,
+          description: exp.description
+        }))
+      }));
+    } catch (error) {
+      console.error('Error fetching CV data:', error);
+      // Set default values from user if profile doesn't exist
+      setProfile(prev => ({
+        ...prev,
+        fullName: user?.name || prev.fullName,
+        email: user?.email || prev.email,
+        phone: user?.mobile || prev.phone,
+      }));
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const fetchJobsAndAssessments = async () => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Jobs with skills and assessment completion status
-      const jobsData = [
-        {
-          id: 'job-1',
-          title: 'Frontend Developer',
-          company: 'TechCorp Solutions',
-          location: 'Bangalore, India',
-          jobType: 'Full-time',
-          skills: [
-            {
-              id: 'skill-1',
-              name: 'React',
-              assessmentCompleted: true,
-              score: 91.7,
-              completedDate: '2024-01-28',
-              testimonials: [
-                {
-                  id: 'test-1',
-                  project: 'E-commerce Platform',
-                  validatorName: 'Ms. Priya Sharma',
-                  validatorRole: 'Project Manager, TechSolutions Inc.',
-                  status: 'approved',
-                  testimonialText: 'John demonstrated exceptional React skills while building our e-commerce platform. His understanding of component architecture and state management was impressive.'
-                }
-              ],
-              certificates: [
-                {
-                  id: 'cert-1',
-                  name: 'React - The Complete Guide',
-                  issuer: 'Udemy',
-                  link: 'https://udemy.com/certificate/UC-12345678'
-                }
-              ],
-              videos: [
-                {
-                  id: 'vid-1',
-                  title: 'React Hooks Deep Dive',
-                  link: 'https://youtu.be/y9Dk6wMc8UM'
-                },
-                {
-                  id: 'vid-2',
-                  title: 'Optimizing React Performance',
-                  link: 'https://youtu.be/dpw9EHDh2bM'
-                }
-              ]
-            },
-            {
-              id: 'skill-2',
-              name: 'JavaScript/TypeScript',
-              assessmentCompleted: true,
-              score: 87.5,
-              completedDate: '2024-01-27',
-              testimonials: [],
-              certificates: [
-                {
-                  id: 'cert-2',
-                  name: 'Modern JavaScript',
-                  issuer: 'Coursera',
-                  link: 'https://coursera.org/verify/ABCD1234'
-                }
-              ],
-              videos: [
-                {
-                  id: 'vid-3',
-                  title: 'Async/Await in Depth',
-                  link: 'https://youtu.be/V_Kr9OSfDeU'
-                },
-                {
-                  id: 'vid-4',
-                  title: 'TypeScript for React Devs',
-                  link: 'https://youtu.be/zQnBQ4tB3ZA'
-                },
-                {
-                  id: 'vid-5',
-                  title: 'JavaScript ES6 Features',
-                  link: 'https://youtu.be/WZQc7RUAg18'
-                }
-              ]
-            },
-            {
-              id: 'skill-3',
-              name: 'CSS/Tailwind',
-              assessmentCompleted: true,
-              score: 100,
-              completedDate: '2024-01-25',
-              testimonials: [],
-              certificates: [
-                {
-                  id: 'cert-3',
-                  name: 'Advanced CSS Grid & Flexbox',
-                  issuer: 'Udemy',
-                  link: 'https://udemy.com/certificate/EFGH5678'
-                }
-              ],
-              videos: [
-                {
-                  id: 'vid-6',
-                  title: 'Tailwind CSS Crash Course',
-                  link: 'https://youtu.be/dFgzHOX84xQ'
-                }
-              ]
-            }
-          ]
-        },
-        {
-          id: 'job-2',
-          title: 'Full Stack Developer',
-          company: 'Innovation Labs',
-          location: 'Remote',
-          jobType: 'Full-time',
-          skills: [
-            {
-              id: 'skill-4',
-              name: 'Node.js',
-              assessmentCompleted: false,
-              score: null,
-              testimonials: [],
-              certificates: [],
-              videos: 0
-            },
-            {
-              id: 'skill-5',
-              name: 'REST APIs',
-              assessmentCompleted: false,
-              score: null,
-              testimonials: [],
-              certificates: [],
-              videos: 0
-            },
-            {
-              id: 'skill-2',
-              name: 'JavaScript/TypeScript',
-              assessmentCompleted: true,
-              score: 87.5,
-              completedDate: '2024-01-27',
-              testimonials: [],
-              certificates: [
-                {
-                  id: 'cert-2',
-                  name: 'Modern JavaScript',
-                  issuer: 'Coursera',
-                  link: 'https://coursera.org/verify/ABCD1234'
-                }
-              ],
-              videos: [
-                {
-                  id: 'vid-3',
-                  title: 'Async/Await in Depth',
-                  link: 'https://youtu.be/V_Kr9OSfDeU'
-                },
-                {
-                  id: 'vid-4',
-                  title: 'TypeScript for React Devs',
-                  link: 'https://youtu.be/zQnBQ4tB3ZA'
-                },
-                {
-                  id: 'vid-5',
-                  title: 'JavaScript ES6 Features',
-                  link: 'https://youtu.be/WZQc7RUAg18'
-                }
-              ]
-            }
-          ]
-        },
-        {
-          id: 'job-3',
-          title: 'UI/UX Developer',
-          company: 'Design Studio',
-          location: 'Bangalore, India',
-          jobType: 'Contract',
-          skills: [
-            {
-              id: 'skill-6',
-              name: 'Figma',
-              assessmentCompleted: false,
-              score: null,
-              testimonials: [],
-              certificates: [],
-              videos: 0
-            },
-            {
-              id: 'skill-3',
-              name: 'CSS/Tailwind',
-              assessmentCompleted: true,
-              score: 100,
-              completedDate: '2024-01-25',
-              testimonials: [],
-              certificates: [
-                {
-                  id: 'cert-3',
-                  name: 'Advanced CSS Grid & Flexbox',
-                  issuer: 'Udemy',
-                  link: 'https://udemy.com/certificate/EFGH5678'
-                }
-              ],
-              videos: [
-                {
-                  id: 'vid-6',
-                  title: 'Tailwind CSS Crash Course',
-                  link: 'https://youtu.be/dFgzHOX84xQ'
-                }
-              ]
-            }
-          ]
-        }
-      ];
+      if (!user?._id || !user?.organizationId) {
+        setIsLoading(false);
+        return;
+      }
 
-      setJobs(jobsData);
-      setIsLoading(false);
+      setIsLoading(true);
+      
+      // Fetch jobs by department or organization
+      let jobsResponse;
+      if (assignment?.departmentId) {
+        try {
+          jobsResponse = await getRequest(`/jobs/departments/${user.organizationId}/${assignment.departmentId}`);
+        } catch (error) {
+          // Fallback to organization endpoint if department endpoint fails
+          console.warn('Department endpoint failed, using organization endpoint:', error);
+          jobsResponse = await getRequest(`/jobs/organization/${user.organizationId}`);
+        }
+      } else {
+        jobsResponse = await getRequest(`/jobs/organization/${user.organizationId}`);
+      }
+
+      if (!jobsResponse.data?.success || !jobsResponse.data?.data) {
+        setJobs([]);
+        setIsLoading(false);
+        return;
+      }
+
+      const apiJobs = jobsResponse.data.data || [];
+      
+      // Fetch skill planner entries to get skillPlannerId for each job
+      let skillPlannerMap = {};
+      try {
+        const plannerResponse = await getRequest('/skill-planner');
+        if (plannerResponse.data?.success && plannerResponse.data?.data) {
+          plannerResponse.data.data.forEach(entry => {
+            skillPlannerMap[entry.jobId] = entry._id; // skillPlannerId
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching skill planner:', error);
+      }
+
+      // Transform jobs and fetch skills with assessment data
+      const transformedJobs = await Promise.all(
+        apiJobs.map(async (job) => {
+          const jobId = job._id;
+          const skillPlannerId = skillPlannerMap[jobId];
+          
+          // Fetch topics (skills) for this job
+          let skills = [];
+          try {
+            const topicsResponse = await getRequest(`/topics/job/${jobId}`);
+            if (topicsResponse.data?.success && topicsResponse.data?.data) {
+              const topics = topicsResponse.data.data || [];
+              
+              // For each topic, fetch assessment status and related data
+              skills = await Promise.all(
+                topics.map(async (topic, index) => {
+                  const topicId = topic._id;
+                  
+                  // Fetch average test score for this topic
+                  let assessmentCompleted = false;
+                  let score = null;
+                  let completedDate = null;
+                  
+                  try {
+                    const averageScoreResponse = await getRequest(
+                      `/student-test-history/topic-average/${jobId}/${topicId}?studentId=${user._id}&organizationId=${user.organizationId}`
+                    );
+                    
+                    if (averageScoreResponse.data?.success && averageScoreResponse.data?.data) {
+                      const averageData = averageScoreResponse.data.data;
+                      if (averageData.averageScore !== null && averageData.averageScore !== undefined) {
+                        assessmentCompleted = true;
+                        score = averageData.averageScore;
+                        // Get the most recent completed date from individual assessments
+                        try {
+                          const assessmentResponse = await getRequest(
+                            `/student-test-history/tests/job/${jobId}?studentId=${user._id}&organizationId=${user.organizationId}&topicId=${topicId}`
+                          );
+                          if (assessmentResponse.data?.success && assessmentResponse.data?.data) {
+                            const assessments = assessmentResponse.data.data || [];
+                            const completedAssessments = assessments.filter(a => a.status === 'Completed' && a.completedAt);
+                            if (completedAssessments.length > 0) {
+                              // Get the most recent completed date
+                              const dates = completedAssessments.map(a => new Date(a.completedAt));
+                              const latestDate = new Date(Math.max(...dates.map(d => d.getTime())));
+                              completedDate = latestDate.toISOString().split('T')[0];
+                            }
+                          }
+                        } catch (error) {
+                          console.error(`Error fetching assessment dates for topic ${topicId}:`, error);
+                        }
+                      }
+                    }
+                  } catch (error) {
+                    console.error(`Error fetching average score for topic ${topicId}:`, error);
+                  }
+
+                  // Fetch testimonials
+                  let testimonials = [];
+                  if (skillPlannerId) {
+                    try {
+                      const testimonialsResponse = await getRequest(
+                        `/testimonials?skillPlannerId=${skillPlannerId}&topicId=${topicId}`
+                      );
+                      if (testimonialsResponse.data?.success && testimonialsResponse.data?.data) {
+                        testimonials = testimonialsResponse.data.data.map(testimonial => ({
+                          id: testimonial._id,
+                          project: testimonial.project || '',
+                          validatorName: testimonial.validatorName || '',
+                          validatorRole: testimonial.validatorRole || '',
+                          status: testimonial.status || 'pending',
+                          testimonialText: testimonial.testimonialText || ''
+                        }));
+                      }
+                    } catch (error) {
+                      // Testimonials don't exist, which is fine
+                    }
+                  }
+
+                  // Fetch certificates
+                  let certificates = [];
+                  if (skillPlannerId) {
+                    try {
+                      const certificatesResponse = await getRequest(
+                        `/certificates?skillPlannerId=${skillPlannerId}&topicId=${topicId}`
+                      );
+                      if (certificatesResponse.data?.success && certificatesResponse.data?.data) {
+                        certificates = certificatesResponse.data.data.map(cert => ({
+                          id: cert._id,
+                          name: cert.title || cert.name || '',
+                          issuer: cert.storageProvider || cert.issuer || '',
+                          link: cert.link || ''
+                        }));
+                      }
+                    } catch (error) {
+                      // Certificates don't exist, which is fine
+                    }
+                  }
+
+                  // Fetch videos
+                  let videos = [];
+                  if (skillPlannerId) {
+                    try {
+                      const videosResponse = await getRequest(
+                        `/student-videos?skillPlannerId=${skillPlannerId}&topicId=${topicId}`
+                      );
+                      if (videosResponse.data?.success && videosResponse.data?.data) {
+                        videos = videosResponse.data.data.map(video => ({
+                          id: video._id,
+                          title: video.title || '',
+                          link: video.link || video.url || ''
+                        }));
+                      }
+                    } catch (error) {
+                      // Videos don't exist, which is fine
+                    }
+                  }
+
+                  return {
+                    id: topicId || `skill-${index}`,
+                    name: topic.name || topic.title || 'Skill',
+                    assessmentCompleted,
+                    score,
+                    completedDate,
+                    testimonials,
+                    certificates,
+                    videos
+                  };
+                })
+              );
+            }
+          } catch (error) {
+            console.error(`Error fetching topics for job ${jobId}:`, error);
+          }
+
+          return {
+            id: jobId,
+            _id: jobId,
+            title: job.name || job.title || 'Job Title',
+            company: job.companyName || job.company || 'Company',
+            location: job.place || job.location || 'Location',
+            jobType: job.jobType || 'Full-time',
+            skills: skills
+          };
+        })
+      );
+
+      setJobs(transformedJobs);
     } catch (error) {
-      console.error('Error fetching data:', error);
-      toast.error('Failed to load data');
+      console.error('Error fetching jobs and assessments:', error);
+      toast.error('Failed to load jobs');
+      setJobs([]);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -300,23 +315,26 @@ const JobCV = () => {
   };
 
   const calculateJobReadiness = (job) => {
-    const completedSkills = job.skills.filter(s => s.assessmentCompleted).length;
-    const totalSkills = job.skills.length;
+    if (!job || !job.skills || job.skills.length === 0) {
+      return {
+        completed: 0,
+        total: 0,
+        percentage: 0
+      };
+    }
+
+    const completed = job.skills.filter(skill => skill.assessmentCompleted).length;
+    const total = job.skills.length;
+    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+
     return {
-      completed: completedSkills,
-      total: totalSkills,
-      percentage: Math.round((completedSkills / totalSkills) * 100)
+      completed,
+      total,
+      percentage
     };
   };
 
   const handleGenerateCV = (job) => {
-    const readiness = calculateJobReadiness(job);
-    
-    if (readiness.percentage < 100) {
-      toast.error('Please complete all skill assessments before generating CV');
-      return;
-    }
-
     // Generate CV with profile data + completed assessments
     const cv = {
       job: job,
@@ -399,43 +417,137 @@ const JobCV = () => {
     setProfile({ ...profile, [field]: value });
   };
 
-  const addEducation = () => {
+  const addEducation = async () => {
+    const newEducation = {
+      id: `temp-${Date.now()}`,
+      degree: '',
+      institution: '',
+      location: '',
+      startYear: '',
+      endYear: '',
+      gpa: ''
+    };
+    
     setProfile({
       ...profile,
-      education: [
-        ...profile.education,
-        {
-          id: `edu-${Date.now()}`,
-          degree: '',
-          institution: '',
-          location: '',
-          startYear: '',
-          endYear: '',
-          gpa: ''
+      education: [...profile.education, newEducation]
+    });
+  };
+
+  const removeEducation = async (id) => {
+    try {
+      // If it's a temporary ID (starts with 'temp-'), just remove from state
+      if (id.startsWith('temp-')) {
+        setProfile({
+          ...profile,
+          education: profile.education.filter(edu => edu.id !== id)
+        });
+        return;
+      }
+      
+      // Otherwise, delete from API
+      await deleteRequest(`/cv/education/${id}`);
+      setProfile({
+        ...profile,
+        education: profile.education.filter(edu => edu.id !== id)
+      });
+      toast.success('Education removed successfully');
+    } catch (error) {
+      console.error('Error removing education:', error);
+      toast.error('Failed to remove education');
+    }
+  };
+
+  const updateEducation = async (id, field, value) => {
+    const updatedEducation = profile.education.map(edu =>
+      edu.id === id ? { ...edu, [field]: value } : edu
+    );
+    
+    setProfile({
+      ...profile,
+      education: updatedEducation
+    });
+    
+    // If it's not a temporary ID, save to API
+    if (!id.startsWith('temp-')) {
+      const edu = updatedEducation.find(e => e.id === id);
+      if (edu) {
+        try {
+          await putRequest(`/cv/education/${id}`, {
+            title: edu.degree,
+            institution: edu.institution,
+            location: edu.location,
+            startYear: edu.startYear,
+            endYear: edu.endYear,
+            gpa: edu.gpa
+          });
+        } catch (error) {
+          console.error('Error updating education:', error);
         }
-      ]
-    });
+      }
+    }
   };
 
-  const removeEducation = (id) => {
-    setProfile({
-      ...profile,
-      education: profile.education.filter(edu => edu.id !== id)
-    });
-  };
-
-  const updateEducation = (id, field, value) => {
-    setProfile({
-      ...profile,
-      education: profile.education.map(edu =>
-        edu.id === id ? { ...edu, [field]: value } : edu
-      )
-    });
-  };
-
-  const saveProfile = () => {
-    toast.success('Profile saved successfully!');
-    setView('jobs');
+  const saveProfile = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Update user info (name, email, phone)
+      if (user?._id) {
+        await putRequest('/users/me', {
+          name: profile.fullName,
+          email: profile.email,
+          mobile: profile.phone
+        });
+      }
+      
+      // Update or create CV profile
+      await putRequest('/cv/profile', {
+        address: profile.address,
+        linkedIn: profile.linkedin,
+        github: profile.github,
+        portfolio: profile.portfolio,
+        aboutMe: profile.aboutMe
+      });
+      
+      // Save new education entries (those with temp IDs)
+      const newEducationEntries = profile.education.filter(edu => edu.id.startsWith('temp-'));
+      for (const edu of newEducationEntries) {
+        await postRequest('/cv/education', {
+          title: edu.degree,
+          institution: edu.institution,
+          location: edu.location,
+          startYear: edu.startYear,
+          endYear: edu.endYear,
+          gpa: edu.gpa || ''
+        });
+      }
+      
+      // Save new experience entries (those with temp IDs)
+      const newExperienceEntries = profile.workExperience.filter(exp => exp.id.startsWith('temp-'));
+      for (const exp of newExperienceEntries) {
+        await postRequest('/cv/experience', {
+          jobTitle: exp.title,
+          company: exp.company,
+          location: exp.location,
+          startDate: exp.startDate,
+          endDate: exp.endDate || '',
+          isCurrent: exp.current,
+          description: exp.description
+        });
+      }
+      
+      // Refresh CV data to get updated IDs
+      await fetchCVData();
+      
+      toast.success('Profile saved successfully!');
+      setView('jobs');
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      toast.error('Failed to save profile. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handlePhotoUpload = (e) => {
@@ -450,39 +562,77 @@ const JobCV = () => {
     }
   };
 
-  const addWorkExperience = () => {
+  const addWorkExperience = async () => {
+    const newExperience = {
+      id: `temp-${Date.now()}`,
+      title: '',
+      company: '',
+      location: '',
+      startDate: '',
+      endDate: '',
+      current: false,
+      description: ''
+    };
+    
     setProfile({
       ...profile,
-      workExperience: [
-        ...profile.workExperience,
-        {
-          id: `exp-${Date.now()}`,
-          title: '',
-          company: '',
-          location: '',
-          startDate: '',
-          endDate: '',
-          current: false,
-          description: ''
+      workExperience: [...profile.workExperience, newExperience]
+    });
+  };
+
+  const removeWorkExperience = async (id) => {
+    try {
+      // If it's a temporary ID (starts with 'temp-'), just remove from state
+      if (id.startsWith('temp-')) {
+        setProfile({
+          ...profile,
+          workExperience: profile.workExperience.filter(exp => exp.id !== id)
+        });
+        return;
+      }
+      
+      // Otherwise, delete from API
+      await deleteRequest(`/cv/experience/${id}`);
+      setProfile({
+        ...profile,
+        workExperience: profile.workExperience.filter(exp => exp.id !== id)
+      });
+      toast.success('Experience removed successfully');
+    } catch (error) {
+      console.error('Error removing experience:', error);
+      toast.error('Failed to remove experience');
+    }
+  };
+
+  const updateWorkExperience = async (id, field, value) => {
+    const updatedExperience = profile.workExperience.map(exp =>
+      exp.id === id ? { ...exp, [field]: value } : exp
+    );
+    
+    setProfile({
+      ...profile,
+      workExperience: updatedExperience
+    });
+    
+    // If it's not a temporary ID, save to API
+    if (!id.startsWith('temp-')) {
+      const exp = updatedExperience.find(e => e.id === id);
+      if (exp) {
+        try {
+          await putRequest(`/cv/experience/${id}`, {
+            jobTitle: exp.title,
+            company: exp.company,
+            location: exp.location,
+            startDate: exp.startDate,
+            endDate: exp.endDate,
+            isCurrent: exp.current,
+            description: exp.description
+          });
+        } catch (error) {
+          console.error('Error updating experience:', error);
         }
-      ]
-    });
-  };
-
-  const removeWorkExperience = (id) => {
-    setProfile({
-      ...profile,
-      workExperience: profile.workExperience.filter(exp => exp.id !== id)
-    });
-  };
-
-  const updateWorkExperience = (id, field, value) => {
-    setProfile({
-      ...profile,
-      workExperience: profile.workExperience.map(exp =>
-        exp.id === id ? { ...exp, [field]: value } : exp
-      )
-    });
+      }
+    }
   };
 
   // Profile Settings View
@@ -510,37 +660,6 @@ const JobCV = () => {
 
             {/* Profile Form */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-6">
-              {/* Profile Photo */}
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-4">Profile Photo</h3>
-                <div className="flex items-center gap-6">
-                  {profile.photo ? (
-                    <img
-                      src={profile.photo}
-                      alt="Profile"
-                      className="w-32 h-32 rounded-full object-cover border-4 border-indigo-100"
-                    />
-                  ) : (
-                    <div className="w-32 h-32 rounded-full bg-slate-200 flex items-center justify-center">
-                      <i className="fas fa-user text-4xl text-slate-400"></i>
-                    </div>
-                  )}
-                  <div>
-                    <label className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors cursor-pointer inline-block">
-                      <i className="fas fa-upload mr-2"></i>
-                      Upload Photo
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePhotoUpload}
-                        className="hidden"
-                      />
-                    </label>
-                    <p className="text-xs text-slate-600 mt-2">Recommended: Square image, at least 200x200px</p>
-                  </div>
-                </div>
-              </div>
-
               {/* Personal Information */}
               <div>
                 <h3 className="text-lg font-bold text-slate-900 mb-4">Personal Information</h3>
@@ -1045,75 +1164,72 @@ const JobCV = () => {
             {/* CV Content - A4 Size with Mobile Scroll */}
             <div className="overflow-x-auto">
               <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-8 w-[210mm] mx-auto" style={{ minHeight: '297mm' }}>
-              {/* Header Section with Photo */}
+              {/* Header Section */}
               <div className="mb-8 pb-6 border-b-2 border-slate-200">
-                <div className="flex flex-row items-start gap-6">
-                  {/* Profile Photo */}
-                  {generatedCV.profile.photo && (
-                    <img
-                      src={generatedCV.profile.photo}
-                      alt={generatedCV.profile.fullName}
-                      className="w-32 h-32 rounded-full object-cover border-4 border-indigo-100 shadow-lg flex-shrink-0"
-                    />
-                  )}
-                  
-                  {/* Contact Information */}
-                  <div className="flex-1 text-left">
-                    <h1 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-2">
-                      {generatedCV.profile.fullName}
-                    </h1>
-                    <p className="text-lg font-semibold text-indigo-600 mb-2">
-                      {generatedCV.job.title}
-                    </p>
-                    <p className="text-slate-600 mb-3">{generatedCV.profile.address}</p>
-                    
-                    <div className="flex flex-wrap justify-start gap-x-6 gap-y-2 text-sm text-slate-600 mb-2">
-                      <span className="flex items-center gap-2">
-                        <i className="fas fa-phone text-indigo-600"></i>
-                        {generatedCV.profile.phone}
-                      </span>
-                      <span className="flex items-center gap-2">
-                        <i className="fas fa-envelope text-indigo-600"></i>
-                        {generatedCV.profile.email}
-                      </span>
-                    </div>
-                    
-                    <div className="flex flex-wrap justify-start gap-x-6 gap-y-2 text-sm">
-                      {generatedCV.profile.linkedin && (
-                        <a 
-                          href={`https://${generatedCV.profile.linkedin}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700"
-                        >
-                          <i className="fab fa-linkedin"></i>
-                          LinkedIn
-                        </a>
-                      )}
-                      {generatedCV.profile.github && (
-                        <a 
-                          href={`https://${generatedCV.profile.github}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700"
-                        >
-                          <i className="fab fa-github"></i>
-                          GitHub
-                        </a>
-                      )}
-                      {generatedCV.profile.portfolio && (
-                        <a 
-                          href={`https://${generatedCV.profile.portfolio}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700"
-                        >
-                          <i className="fas fa-globe"></i>
-                          Portfolio
-                        </a>
-                      )}
-                    </div>
+                {/* Name and Job Title */}
+                <div className="mb-4">
+                  <h1 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-2">
+                    {generatedCV.profile.fullName}
+                  </h1>
+                  <p className="text-xl font-semibold text-indigo-600">
+                    {generatedCV.job.title}
+                  </p>
+                </div>
+                
+                {/* Contact Information - Horizontal Layout */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <i className="fas fa-map-marker-alt text-indigo-600 w-5"></i>
+                    <span className="text-sm">{generatedCV.profile.address}</span>
                   </div>
+                  
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <i className="fas fa-phone text-indigo-600 w-5"></i>
+                    <span className="text-sm">{generatedCV.profile.phone}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <i className="fas fa-envelope text-indigo-600 w-5"></i>
+                    <span className="text-sm">{generatedCV.profile.email}</span>
+                  </div>
+                  
+                  {(generatedCV.profile.linkedin || generatedCV.profile.github || generatedCV.profile.portfolio) && (
+                    <div className="flex items-center gap-2 text-slate-700">
+                      <i className="fas fa-link text-indigo-600 w-5"></i>
+                      <div className="flex flex-wrap gap-3 text-sm">
+                        {generatedCV.profile.linkedin && (
+                          <a 
+                            href={`https://${generatedCV.profile.linkedin}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-indigo-600 hover:text-indigo-700 font-medium"
+                          >
+                            LinkedIn
+                          </a>
+                        )}
+                        {generatedCV.profile.github && (
+                          <a 
+                            href={`https://${generatedCV.profile.github}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-indigo-600 hover:text-indigo-700 font-medium"
+                          >
+                            GitHub
+                          </a>
+                        )}
+                        {generatedCV.profile.portfolio && (
+                          <a 
+                            href={`https://${generatedCV.profile.portfolio}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-indigo-600 hover:text-indigo-700 font-medium"
+                          >
+                            Portfolio
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1162,22 +1278,22 @@ const JobCV = () => {
                   VERIFIED TECHNICAL SKILLS
                 </h2>
                 <p className="text-xs text-slate-600 mb-3">All skills verified through assessments and backed by certifications</p>
-                <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-3">
                   {generatedCV.skills.map(skill => (
                     <div key={skill.id} className="bg-white rounded-lg p-3 border border-slate-200 shadow-sm avoid-break">
                       <div className="mb-2">
                         <h3 className="text-base font-bold text-slate-900 mb-1">{skill.name}</h3>
                         
-                        {/* Assessment Score Progress Bar */}
+                        {/* Average Assessment Score Progress Bar */}
                         <div className="mb-2">
                           <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs font-medium text-slate-700">Assessment Score</span>
-                            <span className="text-xs font-bold text-indigo-600">{skill.score}%</span>
+                            <span className="text-xs font-medium text-slate-700">Average Assessment Score</span>
+                            <span className="text-xs font-bold text-indigo-600">{skill.score?.toFixed(1)}%</span>
                           </div>
                           <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
                             <div 
                               className="h-full rounded-full transition-all bg-indigo-600"
-                              style={{ width: `${skill.score}%` }}
+                              style={{ width: `${skill.score || 0}%` }}
                             ></div>
                           </div>
                         </div>
@@ -1464,86 +1580,18 @@ const JobCV = () => {
                           style={{ width: `${readiness.percentage}%` }}
                         ></div>
                       </div>
-                      <p className="text-xs text-slate-600 mt-1">
-                        {readiness.completed} of {readiness.total} skills verified
-                      </p>
-                    </div>
-
-                    {/* Skills Breakdown */}
-                    <div className="space-y-3">
-                      {/* Completed Skills */}
-                      {completedSkills.length > 0 && (
-                        <div>
-                          <p className="text-xs font-semibold text-green-700 mb-2 flex items-center gap-2">
-                            <i className="fas fa-check-circle"></i>
-                            Verified Skills ({completedSkills.length})
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            {completedSkills.map(skill => (
-                              <span
-                                key={skill.id}
-                                className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium border border-green-300"
-                                title={`Score: ${skill.score}% • ${skill.certificates.length} certificates • ${skill.testimonials.length} testimonials`}
-                              >
-                                <i className="fas fa-check mr-1"></i>
-                                {skill.name}
-                                {skill.testimonials.length > 0 && (
-                                  <i className="fas fa-award ml-1 text-yellow-600" title="Has testimonial"></i>
-                                )}
-                                {skill.certificates.length > 0 && (
-                                  <i className="fas fa-certificate ml-1 text-blue-600" title="Has certificate"></i>
-                                )}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Pending Skills */}
-                      {pendingSkills.length > 0 && (
-                        <div>
-                          <p className="text-xs font-semibold text-orange-700 mb-2 flex items-center gap-2">
-                            <i className="fas fa-clock"></i>
-                            Pending Assessments ({pendingSkills.length})
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            {pendingSkills.map(skill => (
-                              <span
-                                key={skill.id}
-                                className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium border border-orange-300"
-                              >
-                                <i className="fas fa-exclamation-circle mr-1"></i>
-                                {skill.name}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
 
                   {/* Right Section - Actions */}
                   <div className="flex flex-col gap-2">
-                    {readiness.percentage === 100 ? (
-                      <button
-                        onClick={() => handleGenerateCV(job)}
-                        className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors whitespace-nowrap"
-                      >
-                        <i className="fas fa-file-download mr-2"></i>
-                        Generate CV
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          toast.info(`Complete ${pendingSkills.length} more assessment(s) to generate CV`);
-                        }}
-                        className="px-6 py-3 bg-slate-300 text-slate-600 rounded-lg font-semibold cursor-not-allowed whitespace-nowrap"
-                        disabled
-                      >
-                        <i className="fas fa-lock mr-2"></i>
-                        Complete Assessments
-                      </button>
-                    )}
+                    <button
+                      onClick={() => handleGenerateCV(job)}
+                      className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors whitespace-nowrap"
+                    >
+                      <i className="fas fa-file-download mr-2"></i>
+                      Generate CV
+                    </button>
                     <a
                       href="/student/job-assessments"
                       className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors text-center whitespace-nowrap"

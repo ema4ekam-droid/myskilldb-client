@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { toast } from 'react-hot-toast';
 import StudentMenuNavigation from '../../../components/student-components/student-menu-components/StudentMenuNavigation';
 import LoaderOverlay from '../../../components/loader/LoaderOverlay';
 import { MobileJobDetailsModal } from '../../../components/student-components/student-job-management-components/job-board-components';
+import { getRequest, postRequest } from '../../../api/apiRequests';
 
 const JobBoard = () => {
   const [currentPage, setCurrentPage] = useState('job-board');
@@ -11,175 +13,153 @@ const JobBoard = () => {
   const [jobs, setJobs] = useState([]);
   const [skillPlannerJobs, setSkillPlannerJobs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingJobDetails, setIsLoadingJobDetails] = useState(false);
   
-  // Student's department - would be fetched from user profile
-  const [studentDepartment] = useState({
-    _id: 'dept-1',
-    name: 'Web Development'
-  });
+  // Redux state
+  const user = useSelector((state) => state.user);
+  const assignment = useSelector((state) => state.assignment);
 
   useEffect(() => {
-    fetchJobs();
-  }, []);
+    if (user?.organizationId && assignment?.departmentId) {
+      fetchJobs();
+      fetchSkillPlannerJobs();
+    } else {
+      setIsLoading(false);
+    }
+  }, [user?.organizationId, assignment?.departmentId, user?._id]);
+
+  const fetchSkillPlannerJobs = async () => {
+    if (!user?._id) return;
+    
+    try {
+      const response = await getRequest('/skill-planner');
+      if (response.data?.success && response.data?.data) {
+        const plannerJobIds = response.data.data.map(item => String(item.jobId));
+        // Store job IDs for matching
+        setSkillPlannerJobs(plannerJobIds);
+      }
+    } catch (error) {
+      console.error('Error fetching skill planner jobs:', error);
+    }
+  };
+
+  const fetchJobDetails = async (job) => {
+    if (!job?._id) return;
+
+    // Fetch full job details from API
+    try {
+      setIsLoadingJobDetails(true);
+      const response = await getRequest(`/jobs/${job._id}`);
+      
+      if (response.data?.success && response.data?.data) {
+        const jobData = response.data.data;
+        
+        // Fetch topics (skills) for this job
+        let skills = job.skills || [];
+        try {
+          const topicsResponse = await getRequest(`/topics/job/${job._id}`);
+          if (topicsResponse.data?.success && topicsResponse.data?.data) {
+            // Transform topics to skills (extract topic names)
+            skills = topicsResponse.data.data.map(topic => topic.name || topic.title).filter(Boolean);
+          }
+        } catch (error) {
+          console.error('Error fetching topics:', error);
+          // Use existing skills if topics fetch fails
+        }
+        
+        // Transform API data to match component's expected format
+        const detailedJob = {
+          _id: jobData._id,
+          title: jobData.name || jobData.title || job.title,
+          company: jobData.companyName || jobData.company || job.company,
+          companyLogo: jobData.companyLogo || job.companyLogo || '🏢',
+          location: jobData.place || jobData.location || job.location,
+          workMode: jobData.workMode || job.workMode || 'Remote',
+          jobType: jobData.jobType || job.jobType || 'Full-time',
+          departmentId: jobData.departmentId || job.departmentId,
+          postedDate: jobData.createdAt || jobData.postedDate || job.postedDate,
+          applicants: jobData.applicants || job.applicants || 0,
+          description: jobData.description || job.description || '',
+          requirements: jobData.requirements || job.requirements || [],
+          skills: skills.length > 0 ? skills : (jobData.skills || []),
+          salaryRange: jobData.salaryRange || job.salaryRange || 'Not specified',
+          jobPostingLink: jobData.jobPostingLink || jobData.externalLink || job.jobPostingLink || '#',
+        };
+        
+        setSelectedJob(detailedJob);
+      } else {
+        toast.error('Failed to load job details');
+      }
+    } catch (error) {
+      console.error('Error fetching job details:', error);
+      toast.error('Failed to load job details');
+    } finally {
+      setIsLoadingJobDetails(false);
+    }
+  };
 
   const fetchJobs = async () => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
+      if (!user?.organizationId || !assignment?.departmentId) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
       
-      // All jobs (in real app, filter on backend by studentDepartment._id)
-      const allJobs = [
-        {
-          _id: 'job-1',
-          title: 'Frontend Developer',
-          company: 'TechCorp Solutions',
-          companyLogo: '🏢',
-          location: 'Bangalore, India',
-          workMode: 'Remote',
-          jobType: 'Full-time',
-          departmentId: 'dept-1',
-          postedDate: '2024-01-20T10:00:00Z',
-          applicants: 150,
-          description: 'We are looking for a talented Frontend Developer to join our team. You will be responsible for building beautiful and responsive web applications using React, TypeScript, and modern CSS frameworks.',
-          requirements: [
-            '3+ years of experience with React',
-            'Strong knowledge of JavaScript/TypeScript',
-            'Experience with Tailwind CSS or similar frameworks',
-            'Good understanding of REST APIs',
-          ],
-          skills: ['React', 'TypeScript', 'Tailwind CSS', 'REST APIs'],
-          salaryRange: '₹8-12 LPA',
-          jobPostingLink: 'https://example.com/job-1',
-        },
-        {
-          _id: 'job-2',
-          title: 'Senior Data Scientist',
-          company: 'Analytics Pro',
-          companyLogo: '📊',
-          location: 'Mumbai, India',
-          workMode: 'Hybrid',
-          jobType: 'Full-time',
-          departmentId: 'dept-2',
-          postedDate: '2024-01-19T14:00:00Z',
-          applicants: 89,
-          description: 'Join our data science team to work on cutting-edge machine learning projects. You will develop predictive models, analyze large datasets, and provide actionable insights.',
-          requirements: [
-            '5+ years in data science',
-            'Expert in Python and ML libraries',
-            'Experience with deep learning frameworks',
-            'Strong statistical background',
-          ],
-          skills: ['Python', 'TensorFlow', 'PyTorch', 'SQL', 'Statistics'],
-          salaryRange: '₹15-25 LPA',
-          jobPostingLink: 'https://example.com/job-2',
-        },
-        {
-          _id: 'job-3',
-          title: 'React Native Developer',
-          company: 'MobileFirst Inc',
-          companyLogo: '📱',
-          location: 'Hyderabad, India',
-          workMode: 'On-site',
-          jobType: 'Contract',
-          departmentId: 'dept-3',
-          postedDate: '2024-01-18T09:00:00Z',
-          applicants: 67,
-          description: 'Develop cross-platform mobile applications using React Native. Work closely with designers and backend teams to deliver high-quality mobile experiences.',
-          requirements: [
-            '2+ years with React Native',
-            'Published apps on App Store/Play Store',
-            'Knowledge of native modules',
-            'Experience with Redux or MobX',
-          ],
-          skills: ['React Native', 'JavaScript', 'Redux', 'Native Modules'],
-          salaryRange: '₹6-10 LPA',
-          jobPostingLink: 'https://example.com/job-3',
-        },
-        {
-          _id: 'job-4',
-          title: 'DevOps Engineer',
-          company: 'CloudScale Systems',
-          companyLogo: '☁️',
-          location: 'Pune, India',
-          workMode: 'Remote',
-          jobType: 'Full-time',
-          departmentId: 'dept-4',
-          postedDate: '2024-01-21T11:00:00Z',
-          applicants: 112,
-          description: 'Manage and automate our cloud infrastructure. Work with Docker, Kubernetes, and CI/CD pipelines to ensure smooth deployments and high availability.',
-          requirements: [
-            '3+ years in DevOps',
-            'Strong AWS/Azure experience',
-            'Docker & Kubernetes expertise',
-            'CI/CD pipeline experience',
-          ],
-          skills: ['AWS', 'Docker', 'Kubernetes', 'Jenkins', 'Terraform'],
-          salaryRange: '₹10-18 LPA',
-          jobPostingLink: 'https://example.com/job-4',
-        },
-        {
-          _id: 'job-5',
-          title: 'UI/UX Designer',
-          company: 'DesignHub Studio',
-          companyLogo: '🎨',
-          location: 'Bangalore, India',
-          workMode: 'Hybrid',
-          jobType: 'Full-time',
-          departmentId: 'dept-5',
-          postedDate: '2024-01-17T15:00:00Z',
-          applicants: 203,
-          description: 'Create intuitive and beautiful user interfaces. Conduct user research, create wireframes, and design high-fidelity prototypes.',
-          requirements: [
-            '4+ years in UI/UX design',
-            'Proficient in Figma/Adobe XD',
-            'Strong portfolio required',
-            'Understanding of design systems',
-          ],
-          skills: ['Figma', 'Adobe XD', 'User Research', 'Prototyping'],
-          salaryRange: '₹8-14 LPA',
-          jobPostingLink: 'https://example.com/job-5',
-        },
-        {
-          _id: 'job-6',
-          title: 'Full Stack Developer',
-          company: 'StartupXYZ',
-          companyLogo: '🚀',
-          location: 'Delhi, India',
-          workMode: 'Remote',
-          jobType: 'Full-time',
-          departmentId: 'dept-1',
-          postedDate: '2024-01-22T08:00:00Z',
-          applicants: 94,
-          description: 'Build end-to-end web applications using MERN stack. Take ownership of features from concept to deployment.',
-          requirements: [
-            '2+ years full stack development',
-            'MERN stack expertise',
-            'RESTful API design',
-            'Database optimization',
-          ],
-          skills: ['MongoDB', 'Express', 'React', 'Node.js', 'AWS'],
-          salaryRange: '₹7-11 LPA',
-          jobPostingLink: 'https://example.com/job-6',
-        },
-      ];
-      
-      // Filter jobs by student's department
-      const departmentJobs = allJobs.filter(job => job.departmentId === studentDepartment._id);
-      
-      setJobs(departmentJobs);
-      setSelectedJob(departmentJobs[0]);
-      setIsLoading(false);
+      // Fetch jobs by department
+      const response = await getRequest(`/jobs/departments/${user.organizationId}/${assignment.departmentId}`);
+      if (response.data?.success && response.data?.data) {
+        const apiJobs = response.data.data || [];
+        
+        // Transform API data to match component's expected format
+        const transformedJobs = apiJobs.map((job) => ({
+          _id: job._id,
+          title: job.name || job.title,
+          company: job.companyName || job.company || 'Company',
+          companyLogo: job.companyLogo || '🏢',
+          location: job.place || job.location || 'Location',
+          workMode: job.workMode || 'Remote',
+          jobType: job.jobType || 'Full-time',
+          departmentId: job.departmentId || assignment.departmentId,
+          postedDate: job.createdAt || job.postedDate || new Date().toISOString(),
+          applicants: job.applicants || 0,
+          description: job.description || '',
+          requirements: job.requirements || [],
+          skills: job.skills || [],
+          salaryRange: job.salaryRange || 'Not specified',
+          jobPostingLink: job.jobPostingLink || job.externalLink || '#',
+        }));
+        
+        setJobs(transformedJobs);
+        if (transformedJobs.length > 0) {
+          const firstJob = transformedJobs[0];
+          setSelectedJob(firstJob);
+          // Automatically fetch full details for the first job
+          fetchJobDetails(firstJob);
+        }
+      } else {
+        setJobs([]);
+      }
     } catch (error) {
       console.error('Error fetching jobs:', error);
+      toast.error('Failed to load jobs');
+      setJobs([]);
+    } finally {
       setIsLoading(false);
     }
   };
 
-  const handleJobClick = (job) => {
+  const handleJobClick = async (job) => {
+    // Set basic job info immediately for better UX
     setSelectedJob(job);
     // Only set isJobDetailOpen on mobile (triggers full-screen modal)
     if (window.innerWidth < 1024) { // lg breakpoint
       setIsJobDetailOpen(true);
     }
+
+    // Fetch full job details from API
+    await fetchJobDetails(job);
   };
 
   const handleCloseJobDetail = () => {
@@ -190,18 +170,44 @@ const JobBoard = () => {
     setCurrentPage(page);
   };
 
-  const handleAddToSkillPlanner = (job) => {
-    if (skillPlannerJobs.find(j => j._id === job._id)) {
-      setSkillPlannerJobs(skillPlannerJobs.filter(j => j._id !== job._id));
-      toast.success('Job removed from Skill Planner');
-    } else {
-      setSkillPlannerJobs([...skillPlannerJobs, job]);
-      toast.success(`Added "${job.title}" to Skill Planner with ${job.skills.length} skills to master!`);
+  const handleAddToSkillPlanner = async (job) => {
+    if (!user?._id || !job?._id) {
+      toast.error('Unable to add job to skill planner');
+      return;
+    }
+
+    const isInPlanner = isInSkillPlanner(job._id);
+    
+    if (isInPlanner) {
+      toast.info('Job is already in Skill Planner');
+      return;
+    }
+
+    try {
+      // Add to skill planner
+      const response = await postRequest('/skill-planner', {
+        jobId: job._id
+      });
+      console.log("response", response.data.data);
+      if (response.data?.success) {
+        setSkillPlannerJobs([...skillPlannerJobs, String(job._id)]);
+        toast.success(`Added "${job.title}" to Skill Planner!`);
+      } else {
+        toast.error(response.data?.message || 'Failed to add job to skill planner');
+      }
+    } catch (error) {
+      console.error('Error adding job to skill planner:', error);
+      toast.error('Failed to add job to skill planner');
     }
   };
 
   const isInSkillPlanner = (jobId) => {
-    return skillPlannerJobs.some(j => j._id === jobId);
+    if (!jobId) return false;
+    // Check if jobId is in the array (could be job objects or just IDs)
+    return skillPlannerJobs.some(j => {
+      const id = typeof j === 'string' ? j : (j._id || j);
+      return String(id) === String(jobId);
+    });
   };
 
   const getTimeSincePosted = (dateString) => {
@@ -248,7 +254,7 @@ const JobBoard = () => {
             <div className={`lg:col-span-1 space-y-3 ${isJobDetailOpen ? 'hidden lg:block' : ''}`}>
               <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
                 <h2 className="text-lg font-bold text-slate-900 mb-1">
-                  {studentDepartment.name} Jobs
+                  Department Jobs
                 </h2>
                 <p className="text-xs text-slate-600 mb-2">
                   Job opportunities in your department
@@ -300,12 +306,20 @@ const JobBoard = () => {
               <div className="hidden lg:block lg:col-span-2">
                 <div className="bg-white rounded-lg shadow-sm border border-slate-200 sticky top-24">
                   <div className="p-6">
-                    {/* Header */}
-                    <div className="flex items-start justify-between gap-4 mb-6">
-                      <div className="flex-1 text-left">
-                        <h1 className="text-xl font-bold text-slate-900 mb-1">
-                          {selectedJob.title}
-                        </h1>
+                    {isLoadingJobDetails && (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span className="ml-3 text-sm text-slate-600">Loading job details...</span>
+                      </div>
+                    )}
+                    {!isLoadingJobDetails && (
+                      <>
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-4 mb-6">
+                          <div className="flex-1 text-left">
+                            <h1 className="text-xl font-bold text-slate-900 mb-1">
+                              {selectedJob.title}
+                            </h1>
                         <p className="text-sm text-slate-700 mb-2">{selectedJob.company}</p>
                         <div className="flex flex-wrap gap-2 text-xs text-slate-600 mb-2">
                           <span className="inline-flex items-center gap-1">
@@ -332,27 +346,30 @@ const JobBoard = () => {
 
                         {/* Action Buttons */}
                         <div className="flex flex-wrap gap-3">
-                          <a 
-                            href={selectedJob.jobPostingLink} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full transition-colors inline-flex items-center gap-2"
+                          <button 
+                            disabled
+                            className="px-6 py-2.5 bg-slate-400 text-white font-semibold rounded-full transition-colors inline-flex items-center gap-2 cursor-not-allowed opacity-60"
+                            title="Apply functionality coming soon"
                           >
                             <i className="fas fa-external-link-alt text-xs"></i>
                             Apply Now
-                          </a>
-                          
-                          <button 
-                            onClick={() => handleAddToSkillPlanner(selectedJob)}
-                            className={`px-6 py-2.5 font-semibold rounded-full transition-colors inline-flex items-center gap-2 ${
-                              isInSkillPlanner(selectedJob._id)
-                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                            }`}
-                          >
-                            <i className={`fas fa-bullseye`}></i>
-                            {isInSkillPlanner(selectedJob._id) ? 'In Skill Planner' : 'Add to Skill Planner'}
                           </button>
+                          
+                          {!isInSkillPlanner(selectedJob._id) && (
+                            <button 
+                              onClick={() => handleAddToSkillPlanner(selectedJob)}
+                              className="px-6 py-2.5 bg-purple-100 text-purple-700 hover:bg-purple-200 font-semibold rounded-full transition-colors inline-flex items-center gap-2"
+                            >
+                              <i className="fas fa-bullseye"></i>
+                              Add to Skill Planner
+                            </button>
+                          )}
+                          {isInSkillPlanner(selectedJob._id) && (
+                            <div className="px-6 py-2.5 bg-green-100 text-green-700 font-semibold rounded-full inline-flex items-center gap-2">
+                              <i className="fas fa-check-circle"></i>
+                              In Skill Planner
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -391,6 +408,8 @@ const JobBoard = () => {
                         <p className="text-sm text-green-800">{selectedJob.salaryRange}</p>
                       </div>
                     </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

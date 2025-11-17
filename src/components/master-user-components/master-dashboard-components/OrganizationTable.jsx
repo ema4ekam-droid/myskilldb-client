@@ -4,7 +4,6 @@ function OrganizationTable({
   isLoading = false,
   onView = null,
   onEdit = null,
-  onDelete = null,
   onApprove = null,
   showActions = true,
   showCheckboxes = false,
@@ -51,8 +50,7 @@ function OrganizationTable({
               )}
               <th className="p-4 text-left font-semibold">Organization Name</th>
               <th className="p-4 text-left font-semibold">Status</th>
-              <th className="p-4 text-left font-semibold">Mobile</th>
-              <th className="p-4 text-left font-semibold">Date Registered</th>
+              <th className="p-4 text-left font-semibold">Location</th>
               {showActions && (
                 <th className="p-4 text-center font-semibold">Actions</th>
               )}
@@ -75,9 +73,10 @@ function OrganizationTable({
                 <td className="p-4">
                   <StatusPill status={organization.status} />
                 </td>
-                <td className="p-4 text-slate-600">{organization.mobileNumber}</td>
                 <td className="p-4 text-slate-600">
-                  {new Date(organization.createdAt).toLocaleDateString()}
+                  {[organization.district, organization.state, organization.country]
+                    .filter(Boolean)
+                    .join(', ')}
                 </td>
                 {showActions && (
                   <td className="p-4 text-center">
@@ -101,17 +100,9 @@ function OrganizationTable({
                       {onApprove && organization.status === 'pending' && (
                         <button
                           onClick={() => onApprove(organization._id)}
-                          className="px-3 py-2 text-xs font-medium text-green-600 bg-white border-t border-b border-slate-200 hover:bg-slate-100"
+                          className="px-3 py-2 text-xs font-medium text-green-600 bg-white border border-slate-200 rounded-r-md hover:bg-slate-100"
                         >
                           Approve
-                        </button>
-                      )}
-                      {onDelete && (
-                        <button
-                          onClick={() => onDelete(organization._id)}
-                          className="px-3 py-2 text-xs font-medium text-rose-600 bg-white border border-slate-200 rounded-r-md hover:bg-slate-100"
-                        >
-                          Delete
                         </button>
                       )}
                     </div>
@@ -121,7 +112,7 @@ function OrganizationTable({
             )) : (
               <tr>
                 <td 
-                  colSpan={showCheckboxes && showActions ? 6 : showCheckboxes || showActions ? 5 : 4} 
+                  colSpan={showCheckboxes && showActions ? 5 : showCheckboxes || showActions ? 4 : 3} 
                   className="text-center p-8 text-slate-500"
                 >
                   {isLoading ? 'Loading organizations...' : 'No organizations found.'}

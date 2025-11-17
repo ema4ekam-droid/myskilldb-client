@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { setUser } from "../redux/userSlice";
 import { setOrganization } from "../redux/organizationSlice";
+import { setAssignment } from "../redux/assignmentSlice";
 import { getRequest } from "../api/apiRequests";
 
 const ProtectedWrapper = ({ allowedRoles = [] }) => {
@@ -25,6 +26,13 @@ const ProtectedWrapper = ({ allowedRoles = [] }) => {
         if (userData.organizationId) {
           const orgResponse = await getRequest(`/organization/${userData.organizationId}`);
           dispatch(setOrganization(orgResponse.data.data));
+        }
+
+        // ✅ Fetch assignment if assignmentId exists
+        if (userData.assignmentId) {
+          const assignmentResponse = await getRequest(`/organization-setup/assignments/${userData.assignmentId}`);
+          console.log(assignmentResponse.data.data);
+          dispatch(setAssignment(assignmentResponse.data.data));
         }
 
       } catch (err) {

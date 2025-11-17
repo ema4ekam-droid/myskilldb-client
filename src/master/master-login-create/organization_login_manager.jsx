@@ -11,7 +11,6 @@ import {
   postRequest,
 } from "../../api/apiRequests";
 function OrganizationLoginManager() {
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [organizations, setOrganizations] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -191,24 +190,7 @@ function OrganizationLoginManager() {
 
   useEffect(() => {
     fetchData();
-
-    const onWindowClick = (e) => {
-      const menuButton = document.getElementById("profile-button");
-      const menu = document.getElementById("profile-menu");
-      if (
-        isUserMenuOpen &&
-        menuButton &&
-        menu &&
-        !menuButton.contains(e.target) &&
-        !menu.contains(e.target)
-      ) {
-        setIsUserMenuOpen(false);
-      }
-    };
-
-    window.addEventListener("click", onWindowClick);
-    return () => window.removeEventListener("click", onWindowClick);
-  }, [isUserMenuOpen]);
+  }, []);
 
   // --- EVENT HANDLERS ---
   const handleFilterSubmit = () => {
@@ -328,41 +310,6 @@ function OrganizationLoginManager() {
               <p className="text-slate-500 text-sm">
                 Create, edit and manage organization user logins
               </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <button
-                  id="profile-button"
-                  onClick={() => setIsUserMenuOpen((v) => !v)}
-                >
-                  <img
-                    src="https://api.dicebear.com/8.x/initials/svg?seed=Master+Admin"
-                    className="w-14 h-14 rounded-full border-2 border-white object-cover shadow-md hover:ring-2 hover:ring-indigo-400 transition-all"
-                    alt="Admin Profile"
-                  />
-                </button>
-                {isUserMenuOpen && (
-                  <div
-                    id="profile-menu"
-                    className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-lg shadow-xl z-20"
-                  >
-                    <a
-                      href="#"
-                      className="flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-100"
-                    >
-                      <i className="fas fa-plus w-4 text-slate-500"></i>
-                      Organization Sign Up Page
-                    </a>
-                    <a
-                      href="#"
-                      className="flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-slate-100 border-t border-slate-200"
-                    >
-                      <i className="fas fa-sign-out-alt w-4 text-red-500"></i>
-                      Logout
-                    </a>
-                  </div>
-                )}
-              </div>
             </div>
           </header>
 

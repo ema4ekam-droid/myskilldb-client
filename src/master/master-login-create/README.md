@@ -1,6 +1,6 @@
 # School Login Management System
 
-A comprehensive system for managing school user logins including principals, HODs, teachers, and parent/student accounts.
+A comprehensive system for managing school user logins including HODs, teachers, and student accounts.
 
 ## Features
 
@@ -10,10 +10,9 @@ A comprehensive system for managing school user logins including principals, HOD
 - Bulk operations across multiple schools
 
 ### 👥 User Login Creation
-- **Principal Login**: Name, Email, Mobile Number (optional)
 - **HOD Login**: Name, Email, Mobile Number, Department (required)
 - **Teacher Login**: Name, Email, Mobile Number (optional)
-- **Parent/Student Login**: Name, Email, Mobile Number (optional)
+- **Student Login**: Name, Email, Mobile Number (optional)
 
 ### 📊 Bulk Operations
 - **Bulk Upload**: Excel-based bulk creation of user logins
@@ -90,7 +89,7 @@ The system is accessible via the "School Logins" menu option in the master navig
 1. Navigate to the School Logins page
 2. Find the desired school in the table
 3. Click "Create Login" dropdown
-4. Select the user type (Principal, HOD, Teacher, Parent/Student)
+4. Select the user type (HOD, Teacher, Student)
 5. Fill in the required information
 6. Submit to create the login
 
@@ -125,7 +124,7 @@ The system is accessible via the "School Logins" menu option in the master navig
 
 ## Excel Template Format
 
-### Principal/Teacher/Parent Template
+### Teacher/Student Template
 | Name | Email | Mobile Number |
 |------|-------|---------------|
 | John Doe | john.doe@school.com | +1234567890 |

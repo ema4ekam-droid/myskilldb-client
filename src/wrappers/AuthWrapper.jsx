@@ -39,6 +39,8 @@ const AuthWrapper = () => {
         return <Navigate to="/master/dashboard" replace />;
       case "org_admin":
         return <Navigate to="/admin/dashboard" replace />;
+      case "student":
+        return <Navigate to="/student/dashboard" replace />;
       default:
         return <Outlet />; // unknown role, stay in current route
     }

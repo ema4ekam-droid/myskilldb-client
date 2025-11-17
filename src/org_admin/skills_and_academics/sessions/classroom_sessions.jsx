@@ -1,209 +1,180 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useSelector } from 'react-redux';
 import OrgMenuNavigation from '../../../components/org-admin-components/org-admin-menu_components/OrgMenuNavigation';
 import AddRecordingModal from '../../../components/org-admin-components/session-components/AddRecordingModal';
 import toast, { Toaster } from 'react-hot-toast';
+import { getRequest, postRequest, deleteRequest } from '../../../api/apiRequests';
 
 const ClassroomRecordings = () => {
+  // Redux
+  const organization = useSelector((state) => state.organization);
+  
+  // Page navigation
   const [currentPage, setCurrentPage] = useState('classroom-sessions');
+  
+  // Filter states
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState('');
+  const [selectedSubjectId, setSelectedSubjectId] = useState('');
+  
+  // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isFABModalOpen, setIsFABModalOpen] = useState(false);
   const [selectedRecordingContext, setSelectedRecordingContext] = useState(null);
   
-  // Accordion states
-  const [expandedDepartments, setExpandedDepartments] = useState(new Set());
-  const [expandedSemesters, setExpandedSemesters] = useState(new Set());
-  const [expandedSections, setExpandedSections] = useState(new Set());
-  const [expandedSubjects, setExpandedSubjects] = useState(new Set());
+  // UI states
+  const [expandedTopics, setExpandedTopics] = useState(new Set());
   const [isExplainerOpen, setIsExplainerOpen] = useState(false);
-  
-  // Video player states
   const [playingVideo, setPlayingVideo] = useState(null);
   
-  // FAB modal selection states
-  const [fabFormData, setFABFormData] = useState({
-    departmentId: '',
-    semesterId: '',
-    sectionId: '',
-    subjectId: '',
-    teacherId: '',
-    topicId: '',
-  });
-  
   // Data states
+  const [departments, setDepartments] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+  const [topics, setTopics] = useState([]);
   const [recordings, setRecordings] = useState([]);
-  
-  // Search state
   const [searchTerm, setSearchTerm] = useState('');
   const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
 
-  // Dummy data
-  const departments = [
-    { id: 1, name: 'Computer Science' },
-    { id: 2, name: 'Electronics' },
-    { id: 3, name: 'Mechanical' },
-  ];
-
-  const semesters = [
-    { id: 1, name: 'Semester 1', departmentId: 1 },
-    { id: 2, name: 'Semester 2', departmentId: 1 },
-    { id: 3, name: 'Semester 3', departmentId: 1 },
-    { id: 4, name: 'Semester 4', departmentId: 1 },
-    { id: 5, name: 'Semester 1', departmentId: 2 },
-    { id: 6, name: 'Semester 2', departmentId: 2 },
-    { id: 7, name: 'Semester 1', departmentId: 3 },
-    { id: 8, name: 'Semester 2', departmentId: 3 },
-  ];
-
-  const sections = [
-    { id: 1, name: 'Section A', semesterId: 1 },
-    { id: 2, name: 'Section B', semesterId: 1 },
-    { id: 3, name: 'Section A', semesterId: 2 },
-    { id: 4, name: 'Section B', semesterId: 2 },
-    { id: 5, name: 'Section A', semesterId: 3 },
-    { id: 6, name: 'Section A', semesterId: 4 },
-    { id: 7, name: 'Section A', semesterId: 5 },
-    { id: 8, name: 'Section B', semesterId: 5 },
-    { id: 9, name: 'Section A', semesterId: 6 },
-    { id: 10, name: 'Section A', semesterId: 7 },
-    { id: 11, name: 'Section A', semesterId: 8 },
-  ];
-
-  const subjects = [
-    { id: 1, name: 'Web Development', sectionId: 1 },
-    { id: 2, name: 'Data Structures', sectionId: 1 },
-    { id: 3, name: 'Python Programming', sectionId: 2 },
-    { id: 4, name: 'Machine Learning', sectionId: 3 },
-    { id: 5, name: 'Digital Electronics', sectionId: 6 },
-    { id: 6, name: 'Thermodynamics', sectionId: 8 },
-  ];
-
-  const teachers = [
-    { id: 1, name: 'John Smith', email: 'john@school.com', subjectId: 1 },
-    { id: 2, name: 'Sarah Johnson', email: 'sarah@school.com', subjectId: 2 },
-    { id: 3, name: 'Mike Brown', email: 'mike@school.com', subjectId: 3 },
-    { id: 4, name: 'Emily Davis', email: 'emily@school.com', subjectId: 4 },
-    { id: 5, name: 'Robert Wilson', email: 'robert@school.com', subjectId: 5 },
-    { id: 6, name: 'Lisa Anderson', email: 'lisa@school.com', subjectId: 6 },
-  ];
-
-  const topics = [
-    { id: 1, name: 'HTML Basics', subjectId: 1 },
-    { id: 2, name: 'CSS Styling', subjectId: 1 },
-    { id: 3, name: 'JavaScript Fundamentals', subjectId: 1 },
-    { id: 4, name: 'Arrays', subjectId: 2 },
-    { id: 5, name: 'Linked Lists', subjectId: 2 },
-    { id: 6, name: 'Variables & Data Types', subjectId: 3 },
-    { id: 7, name: 'Neural Networks', subjectId: 4 },
-    { id: 8, name: 'Logic Gates', subjectId: 5 },
-    { id: 9, name: 'Heat Transfer', subjectId: 6 },
-  ];
-
-  // Dummy recordings data
-  const dummyRecordings = [
-    {
-      id: 1,
-      title: 'Introduction to HTML & CSS',
-      videoLink: 'https://youtu.be/y9Dk6wMc8UM',
-      duration: '45 mins',
-      uploadedDate: '2024-10-15',
-      teacherId: 1,
-      subjectId: 1,
-      topicId: 1,
-      addedBy: 'admin',
-    },
-    {
-      id: 2,
-      title: 'JavaScript DOM Manipulation',
-      videoLink: 'https://youtu.be/y9Dk6wMc8UM',
-      duration: '60 mins',
-      uploadedDate: '2024-10-16',
-      teacherId: 1,
-      subjectId: 1,
-      topicId: 3,
-      addedBy: 'teacher',
-    },
-    {
-      id: 3,
-      title: 'CSS Flexbox Complete Guide',
-      videoLink: 'https://youtu.be/y9Dk6wMc8UM',
-      duration: '50 mins',
-      uploadedDate: '2024-10-17',
-      teacherId: 1,
-      subjectId: 1,
-      topicId: 2,
-      addedBy: 'teacher',
-    },
-    {
-      id: 4,
-      title: 'Arrays and Operations',
-      videoLink: 'https://youtu.be/y9Dk6wMc8UM',
-      duration: '50 mins',
-      uploadedDate: '2024-10-14',
-      teacherId: 2,
-      subjectId: 2,
-      topicId: 4,
-      addedBy: 'teacher',
-    },
-    {
-      id: 5,
-      title: 'Linked Lists Implementation',
-      videoLink: 'https://youtu.be/y9Dk6wMc8UM',
-      duration: '55 mins',
-      uploadedDate: '2024-10-18',
-      teacherId: 2,
-      subjectId: 2,
-      topicId: 5,
-      addedBy: 'admin',
-    },
-    {
-      id: 6,
-      title: 'Python Basics - Variables',
-      videoLink: 'https://youtu.be/y9Dk6wMc8UM',
-      duration: '40 mins',
-      uploadedDate: '2024-10-17',
-      teacherId: 3,
-      subjectId: 3,
-      topicId: 6,
-      addedBy: 'teacher',
-    },
-    {
-      id: 7,
-      title: 'Introduction to Neural Networks',
-      videoLink: 'https://youtu.be/y9Dk6wMc8UM',
-      duration: '70 mins',
-      uploadedDate: '2024-10-19',
-      teacherId: 4,
-      subjectId: 4,
-      topicId: 7,
-      addedBy: 'teacher',
-    },
-    {
-      id: 8,
-      title: 'Logic Gates Explained',
-      videoLink: 'https://youtu.be/y9Dk6wMc8UM',
-      duration: '45 mins',
-      uploadedDate: '2024-10-20',
-      teacherId: 5,
-      subjectId: 5,
-      topicId: 8,
-      addedBy: 'teacher',
-    },
-    {
-      id: 9,
-      title: 'Heat Transfer Mechanisms',
-      videoLink: 'https://youtu.be/y9Dk6wMc8UM',
-      duration: '60 mins',
-      uploadedDate: '2024-10-21',
-      teacherId: 6,
-      subjectId: 6,
-      topicId: 9,
-      addedBy: 'admin',
-    },
-  ];
-
-  useEffect(() => {
-    setRecordings(dummyRecordings);
+  // Fetch recordings for the currently opened topic
+  const fetchRecordings = useCallback(async (subjectId, topicId) => {
+    if (!subjectId || !topicId) {
+      setRecordings([]);
+      return;
+    }
+    try {
+      const res = await getRequest(`/recordings/subject/${subjectId}/topic/${topicId}`);
+      if (res.data?.success) {
+        const items = Array.isArray(res.data.data) ? res.data.data : [];
+        // Normalize API payload to UI shape
+        const normalized = items.map((r) => ({
+          id: r._id || r.id,
+          title: r.name,
+          videoLink: r.link,
+          description: r.description,
+          duration: r.duration,
+          uploadedDate: r.createdAt || new Date().toISOString(),
+          subjectId: (r.subId && (r.subId._id || r.subId)) || subjectId,
+          topicId: (r.topicId && (r.topicId._id || r.topicId)) || topicId,
+        }));
+        setRecordings(normalized);
+      } else {
+        setRecordings([]);
+      }
+    } catch (err) {
+      console.error('Error fetching recordings:', err);
+      setRecordings([]);
+    }
   }, []);
+  
+  // Loading states
+  const [isLoadingDepartments, setIsLoadingDepartments] = useState(false);
+  const [isLoadingSubjects, setIsLoadingSubjects] = useState(false);
+  const [isLoadingTopics, setIsLoadingTopics] = useState(false);
+
+  // API Functions
+  const fetchDepartments = useCallback(async () => {
+    if (!organization?._id) return;
+    
+    try {
+      setIsLoadingDepartments(true);
+      const response = await getRequest(
+        `/organization-setup/departments/${organization._id}`
+      );
+
+      if (response.data.success) {
+        setDepartments(response.data.data || []);
+      } else {
+        setDepartments([]);
+        toast.error('Failed to fetch departments');
+      }
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+      setDepartments([]);
+      toast.error('Failed to fetch departments');
+    } finally {
+      setIsLoadingDepartments(false);
+    }
+  }, [organization?._id]);
+
+  const fetchSubjects = useCallback(async (departmentId) => {
+    if (!organization?._id || !departmentId) {
+      setSubjects([]);
+      return;
+    }
+    
+    try {
+      setIsLoadingSubjects(true);
+      const response = await getRequest(
+        `/organization-setup/subjects/${organization._id}/${departmentId}`
+      );
+
+      if (response.data.success) {
+        setSubjects(response.data.data || []);
+      } else {
+        setSubjects([]);
+        toast.error('Failed to fetch subjects');
+      }
+    } catch (error) {
+      console.error('Error fetching subjects:', error);
+      setSubjects([]);
+      toast.error('Failed to fetch subjects');
+    } finally {
+      setIsLoadingSubjects(false);
+    }
+  }, [organization?._id]);
+
+  const fetchTopics = useCallback(async (subjectId) => {
+    if (!subjectId) {
+      setTopics([]);
+      return;
+    }
+    
+    try {
+      setIsLoadingTopics(true);
+      const response = await getRequest(
+        `/topics/subject/${subjectId}`
+      );
+      if (response.data.success) {
+        setTopics(response.data.data || []);
+      } else {
+        setTopics([]);
+        toast.error('Failed to fetch topics');
+      }
+    } catch (error) {
+      console.error('Error fetching topics:', error);
+      setTopics([]);
+      toast.error('Failed to fetch topics');
+    } finally {
+      setIsLoadingTopics(false);
+    }
+  }, []);
+
+  // Fetch departments when organization is available
+  useEffect(() => {
+    if (organization?._id) {
+      fetchDepartments();
+    }
+  }, [organization?._id, fetchDepartments]);
+
+  // Fetch subjects when department changes
+  useEffect(() => {
+    if (selectedDepartmentId) {
+      fetchSubjects(selectedDepartmentId);
+      setSelectedSubjectId(''); // Reset subject when department changes
+    } else {
+      setSubjects([]);
+      setSelectedSubjectId('');
+    }
+  }, [selectedDepartmentId, fetchSubjects]);
+
+  // Fetch topics when subject changes
+  useEffect(() => {
+    // Close any open topic when subject changes
+    setExpandedTopics(new Set());
+    if (selectedSubjectId) {
+      fetchTopics(selectedSubjectId);
+    } else {
+      setTopics([]);
+    }
+  }, [selectedSubjectId, fetchTopics]);
 
   // Handle search button click
   const handleSearch = () => {
@@ -223,52 +194,24 @@ const ClassroomRecordings = () => {
     }
   };
 
-  // Auto-expand accordions when searching
+  // Auto-expand topics when searching
   useEffect(() => {
-    if (appliedSearchTerm) {
+    if (appliedSearchTerm && selectedSubjectId) {
       const matchingRecordings = recordings.filter(r => 
+        (r.subjectId === selectedSubjectId || r.subjectId?._id === selectedSubjectId) &&
         r.title.toLowerCase().includes(appliedSearchTerm.toLowerCase())
       );
       
       if (matchingRecordings.length > 0) {
-        const newExpandedDepts = new Set();
-        const newExpandedSemesters = new Set();
-        const newExpandedSections = new Set();
-        const newExpandedSubjects = new Set();
-
+        const newExpandedTopics = new Set();
         matchingRecordings.forEach(recording => {
-          // Find subject
-          const subject = subjects.find(s => s.id === recording.subjectId);
-          if (subject) {
-            newExpandedSubjects.add(subject.id);
-            
-            // Find section
-            const section = sections.find(s => s.id === subject.sectionId);
-            if (section) {
-              newExpandedSections.add(section.id);
-              
-              // Find semester
-              const semester = semesters.find(sem => sem.id === section.semesterId);
-              if (semester) {
-                newExpandedSemesters.add(semester.id);
-                
-                // Find department
-                const dept = departments.find(d => d.id === semester.departmentId);
-                if (dept) {
-                  newExpandedDepts.add(dept.id);
-                }
-              }
-            }
-          }
+          const topicId = recording.topicId?._id || recording.topicId;
+          if (topicId) newExpandedTopics.add(topicId);
         });
-
-        setExpandedDepartments(newExpandedDepts);
-        setExpandedSemesters(newExpandedSemesters);
-        setExpandedSections(newExpandedSections);
-        setExpandedSubjects(newExpandedSubjects);
+        setExpandedTopics(newExpandedTopics);
       }
     }
-  }, [appliedSearchTerm, recordings]);
+  }, [appliedSearchTerm, recordings, selectedSubjectId]);
 
   // Handle page changes from menu
   const handlePageChange = (page) => {
@@ -283,10 +226,7 @@ const ClassroomRecordings = () => {
 
   // Get available topics for selected subject
   const getAvailableTopicsForSubject = () => {
-    if (selectedRecordingContext?.subjectId) {
-      return topics.filter(t => t.subjectId === selectedRecordingContext.subjectId);
-    }
-    return [];
+    return Array.isArray(topics) ? topics : [];
   };
 
   // Close add recording modal
@@ -296,94 +236,90 @@ const ClassroomRecordings = () => {
   };
 
   // Handle adding a new recording
-  const handleAddRecording = (recordingData) => {
-    const newRecording = {
-      id: Date.now(),
-      ...recordingData,
-      uploadedDate: new Date().toISOString().split('T')[0],
-      addedBy: 'admin',
-      subjectId: selectedRecordingContext?.subjectId,
-      teacherId: selectedRecordingContext?.teacherId,
-      // topicId now comes from recordingData.topicId (selected in dropdown)
-    };
-    setRecordings([...recordings, newRecording]);
-    toast.success('Recording added successfully!');
-    closeAddModal();
+  const handleAddRecording = async (recordingData) => {
+    try {
+      const isObjectId = (val) => typeof val === 'string' && /^[a-fA-F0-9]{24}$/.test(val);
+      const resolveTopicId = (val) => {
+        if (isObjectId(val)) return val;
+        const match = (Array.isArray(topics) ? topics : []).find(
+          (t) => t?._id === val || t?.id === val || t?.name === val
+        );
+        return match?._id || val;
+      };
+
+      const payload = {
+        name: recordingData.title || recordingData.name,
+        link: recordingData.videoLink || recordingData.link,
+        description: recordingData.description || '',
+        duration: recordingData.duration,
+        topicId: resolveTopicId(recordingData.topicId),
+        subjectId: selectedRecordingContext?.subjectId,
+      };
+      const res = await postRequest('/recordings', payload);
+      if (res.data?.success) {
+        toast.success('Recording added successfully!');
+        // Refetch for the currently open topic if it's the same topic
+        const openTopicId = Array.from(expandedTopics)[0];
+        if (openTopicId) {
+          await fetchRecordings(selectedRecordingContext?.subjectId, openTopicId);
+        }
+        closeAddModal();
+      } else {
+        toast.error(res.data?.message || 'Failed to add recording');
+      }
+    } catch (err) {
+      console.error('Error adding recording:', err);
+      toast.error('Failed to add recording');
+    }
   };
 
   // Handle recording deletion
-  const handleDeleteRecording = (recordingId) => {
-    if (window.confirm('Are you sure you want to delete this recording?')) {
-      setRecordings(recordings.filter(r => r.id !== recordingId));
-      toast.success('Recording deleted successfully!');
+  const handleDeleteRecording = async (recordingId) => {
+    if (!window.confirm('Are you sure you want to delete this recording?')) return;
+    try {
+      const res = await deleteRequest(`/recordings/${recordingId}`);
+      if (res.data?.success) {
+        // Refetch current topic recordings if one is open; fallback to local removal
+        const openTopicId = Array.from(expandedTopics)[0];
+        if (openTopicId && selectedSubjectId) {
+          await fetchRecordings(selectedSubjectId, openTopicId);
+        } else {
+          setRecordings(prev => prev.filter(r => r.id !== recordingId));
+        }
+        toast.success('Recording deleted successfully!');
+      } else {
+        toast.error(res.data?.message || 'Failed to delete recording');
+      }
+    } catch (err) {
+      console.error('Error deleting recording:', err);
+      toast.error('Failed to delete recording');
     }
   };
 
-  // Toggle accordions
-  const toggleDepartment = (deptId) => {
-    const newExpanded = new Set(expandedDepartments);
-    if (newExpanded.has(deptId)) {
-      newExpanded.delete(deptId);
-    } else {
-      newExpanded.add(deptId);
-    }
-    setExpandedDepartments(newExpanded);
+  // Handle filter changes
+  const handleDepartmentChange = (departmentId) => {
+    setSelectedDepartmentId(departmentId);
   };
 
-  const toggleSemester = (semesterId) => {
-    const newExpanded = new Set(expandedSemesters);
-    if (newExpanded.has(semesterId)) {
-      newExpanded.delete(semesterId);
-    } else {
-      newExpanded.add(semesterId);
-    }
-    setExpandedSemesters(newExpanded);
+  const handleSubjectChange = (subjectId) => {
+    setSelectedSubjectId(subjectId);
   };
 
-  const toggleSection = (sectionId) => {
-    const newExpanded = new Set(expandedSections);
-    if (newExpanded.has(sectionId)) {
-      newExpanded.delete(sectionId);
-    } else {
-      newExpanded.add(sectionId);
-    }
-    setExpandedSections(newExpanded);
+  // Toggle topic accordion
+  const toggleTopic = (topicId) => {
+    setExpandedTopics((prev) => {
+      const isOpen = prev.has(topicId);
+      const next = isOpen ? new Set() : new Set([topicId]);
+      // Fetch recordings for the opened topic, else clear
+      if (!isOpen && selectedSubjectId) {
+        fetchRecordings(selectedSubjectId, topicId);
+      } else {
+        setRecordings([]);
+      }
+      return next;
+    });
   };
 
-  const toggleSubject = (subjectId) => {
-    const newExpanded = new Set(expandedSubjects);
-    if (newExpanded.has(subjectId)) {
-      newExpanded.delete(subjectId);
-    } else {
-      newExpanded.add(subjectId);
-    }
-    setExpandedSubjects(newExpanded);
-  };
-
-  // Get recordings count by department
-  const getRecordingsByDepartment = (deptId) => {
-    const deptSemesters = semesters.filter(c => c.departmentId === deptId);
-    const deptSemesterIds = deptSemesters.map(c => c.id);
-    const deptSections = sections.filter(s => deptSemesterIds.includes(s.semesterId));
-    const deptSectionIds = deptSections.map(s => s.id);
-    const deptSubjects = subjects.filter(s => deptSectionIds.includes(s.sectionId));
-    const deptSubjectIds = deptSubjects.map(s => s.id);
-    return recordings.filter(r => deptSubjectIds.includes(r.subjectId));
-  };
-
-  // Get subject hierarchy info
-  const getSubjectInfo = (subjectId) => {
-    const subject = subjects.find(s => s.id === subjectId);
-    const section = sections.find(s => s.id === subject?.sectionId);
-    const semesterInfo = semesters.find(c => c.id === section?.semesterId);
-    const dept = departments.find(d => d.id === semesterInfo?.departmentId);
-    return { subject, section, semesterInfo, dept };
-  };
-
-  // Get topic info
-  const getTopic = (topicId) => topics.find(t => t.id === topicId);
-  const getTeacher = (teacherId) => teachers.find(t => t.id === teacherId);
-  
   // Extract YouTube video ID from URL
   const getYouTubeVideoId = (url) => {
     if (!url) return null;
@@ -395,72 +331,6 @@ const ClassroomRecordings = () => {
   // Close video player
   const closeVideoPlayer = () => {
     setPlayingVideo(null);
-  };
-
-  // Open FAB modal
-  const openFABModal = () => {
-    setIsFABModalOpen(true);
-  };
-
-  // Close FAB modal
-  const closeFABModal = () => {
-    setIsFABModalOpen(false);
-    setFABFormData({
-      departmentId: '',
-      semesterId: '',
-      sectionId: '',
-      subjectId: '',
-      teacherId: '',
-      topicId: '',
-    });
-  };
-
-  // Handle FAB form changes
-  const handleFABFormChange = (field, value) => {
-    setFABFormData(prev => {
-      const updated = { ...prev, [field]: value };
-      
-      // Reset dependent fields
-      if (field === 'departmentId') {
-        updated.semesterId = '';
-        updated.sectionId = '';
-        updated.subjectId = '';
-        updated.teacherId = '';
-        updated.topicId = '';
-      } else if (field === 'semesterId') {
-        updated.sectionId = '';
-        updated.subjectId = '';
-        updated.teacherId = '';
-        updated.topicId = '';
-      } else if (field === 'sectionId') {
-        updated.subjectId = '';
-        updated.teacherId = '';
-        updated.topicId = '';
-      } else if (field === 'subjectId') {
-        updated.teacherId = '';
-        updated.topicId = '';
-      }
-      
-      return updated;
-    });
-  };
-
-  // Submit FAB form and open recording modal
-  const handleFABFormSubmit = () => {
-    if (!fabFormData.departmentId || !fabFormData.semesterId || !fabFormData.sectionId || 
-        !fabFormData.subjectId || !fabFormData.teacherId || !fabFormData.topicId) {
-      toast.error('Please fill all fields');
-      return;
-    }
-    
-    setSelectedRecordingContext({
-      subjectId: parseInt(fabFormData.subjectId),
-      teacherId: parseInt(fabFormData.teacherId),
-      topicId: parseInt(fabFormData.topicId),
-    });
-    
-    closeFABModal();
-    setIsAddModalOpen(true);
   };
 
   return (
@@ -483,48 +353,61 @@ const ClassroomRecordings = () => {
           </div>
         </header>
 
-        {/* Department Stats Cards */}
-        <div className="grid grid-cols-3 gap-2 md:gap-4">
-          {departments.map((dept) => {
-            const deptRecordings = getRecordingsByDepartment(dept.id);
-            const colors = {
-              1: { bg: 'from-blue-500 to-indigo-500', light: 'bg-blue-50', text: 'text-blue-700' },
-              2: { bg: 'from-purple-500 to-pink-500', light: 'bg-purple-50', text: 'text-purple-700' },
-              3: { bg: 'from-green-500 to-teal-500', light: 'bg-green-50', text: 'text-green-700' },
-            };
-            const color = colors[dept.id] || colors[1];
-
-            return (
-              <div
-                key={dept.id}
-                className="bg-white rounded-lg md:rounded-xl shadow-md border border-slate-200 p-2 md:p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => toggleDepartment(dept.id)}
-              >
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                  {/* Desktop View */}
-                  <div className="hidden md:flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${color.bg} flex items-center justify-center text-white`}>
-                      <i className="fas fa-video text-xl"></i>
-                    </div>
+        {/* Filters */}
+        <div className="bg-white rounded-lg md:rounded-xl shadow-md border border-slate-200 p-4 md:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Department Filter */}
             <div>
-                      <h3 className="font-semibold text-slate-900 text-sm">{dept.name}</h3>
-                      <p className="text-xs text-slate-500">Click to view</p>
-                    </div>
-                  </div>
-                  <div className="hidden md:block text-right">
-                    <p className="text-2xl font-bold text-slate-900">{deptRecordings.length}</p>
-                    <p className="text-xs text-slate-500">recordings</p>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                <i className="fas fa-building mr-2 text-indigo-600"></i>
+                Department *
+              </label>
+              <select
+                value={selectedDepartmentId}
+                onChange={(e) => handleDepartmentChange(e.target.value)}
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white"
+              >
+                <option value="">Select Department</option>
+                {isLoadingDepartments ? (
+                  <option disabled>Loading departments...</option>
+                ) : (
+                  departments.map(dept => (
+                    <option key={dept._id} value={dept._id}>{dept.name}</option>
+                  ))
+                )}
+              </select>
             </div>
 
-                  {/* Mobile View - No Icon */}
-                  <div className="md:hidden text-center">
-                    <p className="text-lg font-bold text-slate-900">{deptRecordings.length}</p>
-                    <h3 className="text-xs font-semibold text-slate-700 leading-tight">{dept.name}</h3>
-                  </div>
-                </div>
+            {/* Subject Filter - Only shown when department is selected */}
+            {selectedDepartmentId && (
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  <i className="fas fa-book mr-2 text-indigo-600"></i>
+                  Subject *
+                </label>
+                <select
+                  value={selectedSubjectId}
+                  onChange={(e) => handleSubjectChange(e.target.value)}
+                  disabled={isLoadingSubjects}
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100 disabled:cursor-not-allowed text-sm bg-white"
+                >
+                  <option value="">Select Subject</option>
+                  {isLoadingSubjects ? (
+                    <option disabled>Loading subjects...</option>
+                  ) : (
+                    subjects
+                      .filter(s => {
+                        const deptId = s.departmentId?._id || s.departmentId;
+                        return deptId === selectedDepartmentId;
+                      })
+                      .map(subj => (
+                        <option key={subj._id} value={subj._id}>{subj.name}</option>
+                      ))
+                  )}
+                </select>
+              </div>
+            )}
           </div>
-            );
-          })}
         </div>
 
         {/* How to Upload Videos - Accordion */}
@@ -647,6 +530,25 @@ const ClassroomRecordings = () => {
           )}
         </div>
 
+        {/* Selected Department and Subject Display */}
+        {selectedDepartmentId && selectedSubjectId && (
+          <div className="bg-white rounded-lg md:rounded-xl shadow-md border border-indigo-200 p-4 md:p-6">
+            <div className="flex flex-wrap items-center gap-3 md:gap-4 text-sm md:text-base">
+              <div className="flex items中心 gap-2">
+                <i className="fas fa-building text-indigo-600"></i>
+                <span className="font-semibold text-slate-700">Department:</span>
+                <span className="text-slate-900">{departments.find(d => d._id === selectedDepartmentId)?.name}</span>
+              </div>
+              <div className="h-6 w-px bg-slate-300"></div>
+              <div className="flex items-center gap-2">
+                <i className="fas fa-book text-indigo-600"></i>
+                <span className="font-semibold text-slate-700">Subject:</span>
+                <span className="text-slate-900">{subjects.find(s => s._id === selectedSubjectId)?.name}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Search Filter */}
         <div className="bg-white rounded-lg md:rounded-xl shadow-md border border-slate-200 p-3 md:p-4">
           <div className="flex items-center gap-2">
@@ -677,444 +579,158 @@ const ClassroomRecordings = () => {
               </button>
             )}
           </div>
-          {appliedSearchTerm && (
+          {appliedSearchTerm && selectedSubjectId && (
             <p className="text-xs text-slate-500 mt-2">
-              {recordings.filter(r => r.title.toLowerCase().includes(appliedSearchTerm.toLowerCase())).length} video(s) found
+              {recordings.filter(r => 
+                (r.subjectId === selectedSubjectId || r.subjectId?._id === selectedSubjectId) &&
+                r.title.toLowerCase().includes(appliedSearchTerm.toLowerCase())
+              ).length} video(s) found
             </p>
           )}
         </div>
 
-        {/* Department Accordions */}
-        <div className="space-y-4">
-          {departments.map((dept) => {
-            const isDeptExpanded = expandedDepartments.has(dept.id);
-            const deptSemesters = semesters.filter(c => c.departmentId === dept.id);
-            const deptRecordings = getRecordingsByDepartment(dept.id);
-            
-            const colors = {
-              1: { 
-                bg: 'from-blue-500 to-indigo-500', 
-                light: 'from-blue-50 to-indigo-50',
-                hover: 'from-blue-100 to-indigo-100',
-                border: 'border-blue-200'
-              },
-              2: { 
-                bg: 'from-purple-500 to-pink-500', 
-                light: 'from-purple-50 to-pink-50',
-                hover: 'from-purple-100 to-pink-100',
-                border: 'border-purple-200'
-              },
-              3: { 
-                bg: 'from-green-500 to-teal-500', 
-                light: 'from-green-50 to-teal-50',
-                hover: 'from-green-100 to-teal-100',
-                border: 'border-green-200'
-              },
-            };
-            const color = colors[dept.id] || colors[1];
-
-            return (
-              <div key={dept.id} className={`border ${color.border} rounded-lg md:rounded-2xl overflow-hidden shadow-lg bg-white`}>
-                {/* Department Header */}
-                <button
-                  onClick={() => toggleDepartment(dept.id)}
-                  className={`w-full px-3 sm:px-6 py-3 sm:py-4 bg-gradient-to-r ${isDeptExpanded ? color.hover : color.light} hover:${color.hover} flex items-center justify-between transition-all`}
-                >
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br ${color.bg} flex items-center justify-center text-white shadow-md flex-shrink-0`}>
-                      <i className="fas fa-building text-base sm:text-xl"></i>
-                    </div>
-                    <div className="text-left flex-1 min-w-0">
-                      <h3 className="font-bold text-slate-900 text-sm sm:text-base">{dept.name}</h3>
-                      <p className="text-xs text-slate-600">{deptRecordings.length} recordings</p>
-                    </div>
-                  </div>
-                  <i className={`fas fa-chevron-${isDeptExpanded ? 'up' : 'down'} text-slate-600 flex-shrink-0`}></i>
-                </button>
-
-                {/* Department Content - Semesters */}
-                {isDeptExpanded && (
-                  <div className="p-4 space-y-3 bg-slate-50">
-                    {deptSemesters.length === 0 ? (
-                      <p className="text-sm text-slate-500 text-center py-4">No semesters available</p>
-                    ) : (
-                      deptSemesters.map((semester) => {
-                        const isSemesterExpanded = expandedSemesters.has(semester.id);
-                        const semesterSections = sections.filter(s => s.semesterId === semester.id);
-
-                        return (
-                          <div key={semester.id} className="border border-slate-200 rounded-xl overflow-hidden bg-white">
-                            {/* Semester Header */}
-                            <button
-                              onClick={() => toggleSemester(semester.id)}
-                              className="w-full px-4 py-3 bg-slate-50 hover:bg-slate-100 flex items-center justify-between transition-colors"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                                  <i className="fas fa-calendar-alt text-indigo-600"></i>
-                                </div>
-                                <div className="text-left">
-                                  <h4 className="font-semibold text-slate-900 text-sm">{semester.name}</h4>
-                                  <p className="text-xs text-slate-500">{semesterSections.length} sections</p>
-                                </div>
-                              </div>
-                              <i className={`fas fa-chevron-${isSemesterExpanded ? 'up' : 'down'} text-slate-500 text-sm`}></i>
-                            </button>
-
-                            {/* Semester Content - Sections */}
-                            {isSemesterExpanded && (
-                              <div className="p-3 space-y-2 bg-white">
-                                {semesterSections.map((section) => {
-                                  const isSectionExpanded = expandedSections.has(section.id);
-                                  const sectionSubjects = subjects.filter(s => s.sectionId === section.id);
-
-                                  return (
-                                    <div key={section.id} className="border border-slate-200 rounded-lg overflow-hidden">
-                                      {/* Section Header */}
-                                      <button
-                                        onClick={() => toggleSection(section.id)}
-                                        className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100 flex items-center justify-between transition-colors"
-                                      >
-                                        <div className="flex items-center gap-2">
-                                          <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                                            <i className="fas fa-users text-purple-600 text-sm"></i>
-                                          </div>
-                                          <div className="text-left">
-                                            <h5 className="font-semibold text-slate-900 text-sm">{section.name}</h5>
-                                            <p className="text-xs text-slate-500">{sectionSubjects.length} subjects</p>
-                                          </div>
-                                        </div>
-                                        <i className={`fas fa-chevron-${isSectionExpanded ? 'up' : 'down'} text-slate-500 text-xs`}></i>
-                                      </button>
-
-                                      {/* Section Content - Subjects */}
-                                      {isSectionExpanded && (
-                                        <div className="p-2 space-y-2 bg-white">
-                                          {sectionSubjects.length === 0 ? (
-                                            <p className="text-xs text-slate-500 text-center py-2">No subjects available</p>
-                                          ) : (
-                                            sectionSubjects.map((subject) => {
-                                              const isSubjectExpanded = expandedSubjects.has(subject.id);
-                                              const subjectRecordings = recordings.filter(r => r.subjectId === subject.id);
-                                              const teacher = teachers.find(t => t.subjectId === subject.id);
-
-                                              return (
-                                                <div key={subject.id} className="border border-slate-200 rounded-lg overflow-hidden w-[80%] sm:w-full">
-                                                  {/* Subject Header */}
-                                                  <button
-                                                    onClick={() => toggleSubject(subject.id)}
-                                                    className="w-full px-3 py-2 bg-indigo-50 hover:bg-indigo-100 flex items-center justify-between transition-colors"
-                                                  >
-                                                    <div className="flex items-center gap-2">
-                                                      <div className="w-8 h-8 bg-indigo-200 rounded-lg flex items-center justify-center">
-                                                        <i className="fas fa-book text-indigo-700 text-sm"></i>
-                                                      </div>
-                                                      <div className="text-left">
-                                                        <h6 className="font-semibold text-slate-900 text-sm">{subject.name}</h6>
-                                                        <p className="text-xs text-slate-600">
-                                                          {teacher?.name} • {subjectRecordings.length} recordings
-                                                        </p>
-                                                      </div>
-                                                    </div>
-                                                    <i className={`fas fa-chevron-${isSubjectExpanded ? 'up' : 'down'} text-slate-500 text-xs`}></i>
-                                                  </button>
-
-                                                  {/* Subject Content - Topics with Recordings */}
-                                                  {isSubjectExpanded && (
-                                                    <div className="p-3 bg-white space-y-2">
-                                                      {/* Add Recording Button */}
-                                                      <button
-                                                        onClick={() => openAddModal({
-                                                          subjectId: subject.id,
-                                                          teacherId: teacher?.id,
-                                                        })}
-                                                        className="w-full px-3 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
-                                                      >
-                                                        <i className="fas fa-plus"></i>
-                                                        Add Recording for {subject.name}
-                                                      </button>
-
-                                                                {/* Topics with Recordings */}
-                                                              {subjectRecordings.length === 0 ? (
-                                                                <p className="text-xs text-slate-500 text-center py-4">No recordings yet</p>
-                                                              ) : (
-                                                                <div className="space-y-2">
-                                                                  {topics
-                                                                    .filter(t => t.subjectId === subject.id)
-                                                                    .map((topic) => {
-                                                                      const topicRecordings = subjectRecordings.filter(r => r.topicId === topic.id);
-                                                                      const filteredTopicRecordings = topicRecordings.filter(recording => 
-                                                                        !appliedSearchTerm || 
-                                                                        recording.title.toLowerCase().includes(appliedSearchTerm.toLowerCase())
-                                                                      );
-                                                                      
-                                                                      if (filteredTopicRecordings.length === 0) return null;
-
-                                                                      return (
-                                                                        <div key={topic.id} className="border border-slate-200 rounded-lg p-3 bg-slate-50">
-                                                                          <div className="flex items-center gap-2 mb-2">
-                                                                            <i className="fas fa-bookmark text-indigo-600 text-xs"></i>
-                                                                            <h6 className="font-semibold text-slate-900 text-xs">{topic.name}</h6>
-                                                                            <span className="ml-auto bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-xs font-medium">
-                                                                              {filteredTopicRecordings.length}
-                                                                            </span>
-                                                                          </div>
-                                                                          
-                                                                  <div className="space-y-3">
-                                                                    {filteredTopicRecordings.map((recording) => {
-                                                                      return (
-                                                                        <div
-                                                                          key={recording.id}
-                                                                          onClick={() => setPlayingVideo(recording)}
-                                                                          className="bg-white border border-slate-200 rounded-lg p-3 sm:p-2 hover:shadow-md hover:bg-slate-50 transition-all cursor-pointer min-h-[70px] sm:min-h-[60px]"
-                                                                        >
-                                                                          <div className="flex items-center gap-3 sm:gap-2">
-                                                                            {/* YouTube Icon */}
-                                                                            <div className="w-12 h-12 sm:w-10 sm:h-10 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                                                              <i className="fab fa-youtube text-red-600 text-2xl sm:text-xl"></i>
-                                                                            </div>
-                                                                            
-                                                                            {/* Recording Info */}
-                                                                            <div className="flex-1 min-w-0 flex flex-col items-start sm:items-center">
-                                                                              <h6 className="font-semibold text-slate-900 text-sm sm:text-xs truncate mb-1 w-full text-left sm:text-center">
-                                                                                {recording.title}
-                                                                              </h6>
-                                                                              <div className="flex items-center gap-3 sm:gap-2 text-xs sm:text-[10px] text-slate-500">
-                                                                                <span className="flex items-center gap-1">
-                                                                                  <i className="fas fa-clock"></i>
-                                                                                  {recording.duration}
-                                                                                </span>
-                                                                                <span className="flex items-center gap-1">
-                                                                                  <i className={`fas fa-${recording.addedBy === 'admin' ? 'user-shield' : 'chalkboard-teacher'}`}></i>
-                                                                                  {recording.addedBy}
-                                                                                </span>
-                                                                              </div>
-                                                                            </div>
-                                                                            
-                                                                            {/* Delete Button */}
-                                                                            <button
-                                                                              onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                handleDeleteRecording(recording.id);
-                                                                              }}
-                                                                              className="w-9 h-9 sm:w-8 sm:h-8 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors flex items-center justify-center flex-shrink-0"
-                                                                            >
-                                                                              <i className="fas fa-trash text-sm sm:text-xs"></i>
-                                                                            </button>
-                                                                          </div>
-                                                                        </div>
-                                                                      );
-                                                                    })}
-                                                                  </div>
-                                                                </div>
-                                                              );
-                                                            })}
-                                                        </div>
-                                                      )}
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              );
-                                            })
-                                          )}
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </main>
-
-      {/* Floating Action Button (FAB) - Mobile & Desktop */}
-      <button
-        onClick={openFABModal}
-        className="fixed bottom-6 right-6 w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-full shadow-2xl hover:shadow-3xl transform hover:scale-110 active:scale-95 transition-all duration-200 z-50 flex items-center justify-center"
-        aria-label="Add New Recording"
-      >
-        <i className="fas fa-plus text-2xl"></i>
-      </button>
-
-      {/* FAB Selection Modal */}
-      {isFABModalOpen && (
-        <>
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-[100]"
-            onClick={closeFABModal}
-          ></div>
+        {/* Subject Content - Only shown when subject is selected */}
+        {selectedSubjectId && (() => {
+          const selectedSubject = subjects.find(s => s._id === selectedSubjectId);
+          const subjectRecordings = recordings.filter(r => r.subjectId === selectedSubjectId || r.subjectId?._id === selectedSubjectId);
           
-          <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none">
-            <div className="pointer-events-auto w-full max-w-2xl">
-              <div className="bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
-                {/* Modal Header */}
-                <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-10">
-                  <div>
-                    <h2 className="text-base sm:text-xl font-bold">Add New Recording</h2>
-                    <p className="text-xs sm:text-sm text-indigo-100 mt-0.5">Select details to add a video</p>
-                  </div>
-                  <button
-                    onClick={closeFABModal}
-                    className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-all flex-shrink-0"
-                  >
-                    <i className="fas fa-times text-lg"></i>
-                  </button>
-                </div>
-
-                {/* Modal Body */}
-                <div className="p-4 sm:p-6 space-y-4">
-                  {/* Department Selection */}
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Department *
-                    </label>
-                    <select
-                      value={fabFormData.departmentId}
-                      onChange={(e) => handleFABFormChange('departmentId', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                    >
-                      <option value="">Select Department</option>
-                      {departments.map(dept => (
-                        <option key={dept.id} value={dept.id}>{dept.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Semester Selection */}
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Semester *
-                    </label>
-                    <select
-                      value={fabFormData.semesterId}
-                      onChange={(e) => handleFABFormChange('semesterId', e.target.value)}
-                      disabled={!fabFormData.departmentId}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100 disabled:cursor-not-allowed text-sm"
-                    >
-                      <option value="">Select Semester</option>
-                      {semesters
-                        .filter(s => s.departmentId === parseInt(fabFormData.departmentId))
-                        .map(sem => (
-                          <option key={sem.id} value={sem.id}>{sem.name}</option>
-                        ))}
-                    </select>
-                  </div>
-
-                  {/* Section Selection */}
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Section *
-                    </label>
-                    <select
-                      value={fabFormData.sectionId}
-                      onChange={(e) => handleFABFormChange('sectionId', e.target.value)}
-                      disabled={!fabFormData.semesterId}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100 disabled:cursor-not-allowed text-sm"
-                    >
-                      <option value="">Select Section</option>
-                      {sections
-                        .filter(s => s.semesterId === parseInt(fabFormData.semesterId))
-                        .map(sec => (
-                          <option key={sec.id} value={sec.id}>{sec.name}</option>
-                        ))}
-                    </select>
-                  </div>
-
-                  {/* Subject Selection */}
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Subject *
-                    </label>
-                    <select
-                      value={fabFormData.subjectId}
-                      onChange={(e) => handleFABFormChange('subjectId', e.target.value)}
-                      disabled={!fabFormData.sectionId}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100 disabled:cursor-not-allowed text-sm"
-                    >
-                      <option value="">Select Subject</option>
-                      {subjects
-                        .filter(s => s.sectionId === parseInt(fabFormData.sectionId))
-                        .map(subj => (
-                          <option key={subj.id} value={subj.id}>{subj.name}</option>
-                        ))}
-                    </select>
-                  </div>
-
-                  {/* Teacher Selection */}
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Teacher *
-                    </label>
-                    <select
-                      value={fabFormData.teacherId}
-                      onChange={(e) => handleFABFormChange('teacherId', e.target.value)}
-                      disabled={!fabFormData.subjectId}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100 disabled:cursor-not-allowed text-sm"
-                    >
-                      <option value="">Select Teacher</option>
-                      {teachers
-                        .filter(t => t.subjectId === parseInt(fabFormData.subjectId))
-                        .map(teacher => (
-                          <option key={teacher.id} value={teacher.id}>
-                            {teacher.name} ({teacher.email})
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-
-                  {/* Topic Selection */}
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Topic *
-                    </label>
-                    <select
-                      value={fabFormData.topicId}
-                      onChange={(e) => handleFABFormChange('topicId', e.target.value)}
-                      disabled={!fabFormData.subjectId}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100 disabled:cursor-not-allowed text-sm"
-                    >
-                      <option value="">Select Topic</option>
-                      {topics
-                        .filter(t => t.subjectId === parseInt(fabFormData.subjectId))
-                        .map(topic => (
-                          <option key={topic.id} value={topic.id}>{topic.name}</option>
-                        ))}
-                    </select>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-3 pt-4">
-                    <button
-                      type="button"
-                      onClick={closeFABModal}
-                      className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 font-semibold rounded-lg hover:bg-slate-50 transition-colors text-sm"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleFABFormSubmit}
-                      className="flex-1 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 transition-all text-sm"
-                    >
-                      <i className="fas fa-arrow-right mr-2"></i>
-                      Continue
-                    </button>
-                  </div>
-                </div>
+          return (
+            <div className="space-y-4">
+              {/* Add Recording Button */}
+              <div className="bg-white rounded-lg md:rounded-xl shadow-md border border-slate-200 p-4">
+                <button
+                  onClick={() => openAddModal({
+                    subjectId: selectedSubjectId,
+                  })}
+                  className="w-full px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
+                >
+                  <i className="fas fa-plus"></i>
+                  Add Recording for {selectedSubject?.name}
+                </button>
               </div>
+
+              {/* Topics with Recordings */}
+              {(() => {
+                const subjectTopics = Array.isArray(topics) ? topics : [];
+                if (subjectTopics.length === 0) {
+                  return (
+                    <div className="bg-white rounded-lg md:rounded-xl shadow-md border border-slate-200 p-8">
+                      <p className="text-center text-slate-500">
+                        <i className="fas fa-bookmark text-4xl mb-4 text-slate-300"></i>
+                        <br />
+                        No topics in this subject. Add topics before recording.
+                      </p>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="space-y-3">
+                    {subjectTopics.map((topic) => {
+                      const isTopicExpanded = expandedTopics.has(topic._id);
+                      const topicRecordings = subjectRecordings.filter(r => r.topicId === topic._id || r.topicId?._id === topic._id);
+                      const filteredTopicRecordings = topicRecordings.filter(recording => 
+                        !appliedSearchTerm || 
+                        recording.title.toLowerCase().includes(appliedSearchTerm.toLowerCase())
+                      );
+                      return (
+                        <div key={topic._id} className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-md">
+                          {/* Topic Header */}
+                          <button
+                            onClick={() => toggleTopic(topic._id)}
+                            className="w-full px-4 py-3 bg-slate-50 hover:bg-slate-100 flex items-center justify-between transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <i className="fas fa-bookmark text-indigo-600"></i>
+                              <h6 className="font-semibold text-slate-900 text-sm">{topic.name}</h6>
+                            </div>
+                            <i className={`fas fa-chevron-${isTopicExpanded ? 'up' : 'down'} text-slate-500`}></i>
+                          </button>
+                          {/* Topic Content - Recordings */}
+                          {isTopicExpanded && (
+                            <div className="p-4 space-y-3 bg-white">
+                              {filteredTopicRecordings.length === 0 ? (
+                                <p className="text-xs text-slate-500 text-center py-2">No recordings for this topic</p>
+                              ) : (
+                                filteredTopicRecordings.map((recording) => (
+                                  <div
+                                    key={recording.id}
+                                    onClick={() => setPlayingVideo(recording)}
+                                    className="bg-slate-50 border border-slate-200 rounded-lg p-3 sm:p-4 hover:shadow-md hover:bg-white transition-all cursor-pointer"
+                                  >
+                                    <div className="flex items-center gap-3 sm:gap-4">
+                                      {/* YouTube Icon */}
+                                      <div className="w-14 h-14 sm:w-16 sm:h-16 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                        <i className="fab fa-youtube text-red-600 text-2xl sm:text-3xl"></i>
+                                      </div>
+                                      {/* Recording Info */}
+                                      <div className="flex-1 min-w-0">
+                                        <h6 className="font-semibold text-slate-900 text-sm sm:text-base mb-1">
+                                          {recording.title}
+                                        </h6>
+                                        {recording.description && (
+                                          <p className="text-xs sm:text-sm text-slate-600 mb-2 line-clamp-2">
+                                            {recording.description}
+                                          </p>
+                                        )}
+                                        <div className="flex items-center gap-4 text-xs sm:text-sm text-slate-500">
+                                          <span className="flex items-center gap-1">
+                                            <i className="fas fa-clock"></i>
+                                            {recording.duration}
+                                          </span>
+                                          <span className="flex items-center gap-1">
+                                            <i className="fas fa-calendar"></i>
+                                            {new Date(recording.uploadedDate).toLocaleDateString()}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      {/* Delete Button */}
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteRecording(recording.id);
+                                        }}
+                                        className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors flex items-center justify-center flex-shrink-0"
+                                      >
+                                        <i className="fas fa-trash text-sm"></i>
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
+          );
+        })()}
+        
+        {/* Empty State - When no subject is selected */}
+        {!selectedSubjectId && selectedDepartmentId && (
+          <div className="bg-white rounded-lg md:rounded-xl shadow-md border border-slate-200 p-8">
+            <p className="text-center text-slate-500">
+              <i className="fas fa-book text-4xl mb-4 text-slate-300"></i>
+              <br />
+              Please select a subject to view recordings
+            </p>
           </div>
-        </>
-      )}
+        )}
+        
+        {/* Initial Empty State */}
+        {!selectedDepartmentId && (
+          <div className="bg-white rounded-lg md:rounded-xl shadow-md border border-slate-200 p-8">
+            <p className="text-center text-slate-500">
+              <i className="fas fa-filter text-4xl mb-4 text-slate-300"></i>
+              <br />
+              Please select a department to get started
+            </p>
+          </div>
+        )}
+      </main>
 
       {/* Add Recording Modal - with backdrop above menu */}
       {isAddModalOpen && (
@@ -1131,8 +747,7 @@ const ClassroomRecordings = () => {
               <AddRecordingModal
                 onClose={closeAddModal}
                 onSubmit={handleAddRecording}
-                selectedTeacher={getTeacher(selectedRecordingContext?.teacherId)}
-                selectedSubject={subjects.find(s => s.id === selectedRecordingContext?.subjectId)}
+                selectedSubject={subjects.find(s => s._id === selectedRecordingContext?.subjectId)}
                 availableTopics={getAvailableTopicsForSubject()}
               />
             </div>
@@ -1207,10 +822,6 @@ const ClassroomRecordings = () => {
                       <i className="fas fa-calendar mr-1 text-indigo-600"></i>
                       {new Date(playingVideo.uploadedDate).toLocaleDateString()}
                     </span>
-                    <span>
-                      <i className={`fas fa-${playingVideo.addedBy === 'admin' ? 'user-shield' : 'chalkboard-teacher'} mr-1 text-indigo-600`}></i>
-                      Added by {playingVideo.addedBy}
-                    </span>
                   </div>
                 </div>
               </div>
@@ -1223,3 +834,5 @@ const ClassroomRecordings = () => {
 };
 
 export default ClassroomRecordings;
+
+

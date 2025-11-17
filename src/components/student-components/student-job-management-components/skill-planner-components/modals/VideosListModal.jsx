@@ -1,6 +1,6 @@
 import React from 'react';
 
-const VideosListModal = ({ isOpen, onClose, selectedSkill }) => {
+const VideosListModal = ({ isOpen, onClose, selectedSkill, videosList = [], isLoadingVideos = false }) => {
   if (!isOpen || !selectedSkill) return null;
 
   return (
@@ -25,9 +25,14 @@ const VideosListModal = ({ isOpen, onClose, selectedSkill }) => {
         </div>
 
         <div className="p-6 space-y-4">
-          {selectedSkill.youtubeLinks && selectedSkill.youtubeLinks.length > 0 ? (
-            selectedSkill.youtubeLinks.map((video) => (
-              <div key={video.id} className="border border-slate-200 rounded-lg p-4 hover:shadow-lg transition-shadow">
+          {isLoadingVideos ? (
+            <div className="text-center py-12">
+              <i className="fas fa-spinner fa-spin text-3xl text-slate-400 mb-4"></i>
+              <p className="text-slate-500">Loading videos...</p>
+            </div>
+          ) : videosList && videosList.length > 0 ? (
+            videosList.map((video) => (
+              <div key={video._id || video.id} className="border border-slate-200 rounded-lg p-4 hover:shadow-lg transition-shadow">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
                     <i className="fab fa-youtube text-red-600 text-2xl"></i>
@@ -38,10 +43,10 @@ const VideosListModal = ({ isOpen, onClose, selectedSkill }) => {
                       <p className="text-sm text-slate-600 mb-3">{video.description}</p>
                     )}
                     <p className="text-xs text-slate-400 mb-3">
-                      Added: {new Date(video.addedAt).toLocaleDateString()}
+                      Added: {new Date(video.createdAt || video.addedAt).toLocaleDateString()}
                     </p>
                     <a
-                      href={video.url}
+                      href={video.link || video.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors text-sm"

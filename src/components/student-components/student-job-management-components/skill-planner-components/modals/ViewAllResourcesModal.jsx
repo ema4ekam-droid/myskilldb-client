@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { getRequest } from '../../../../../api/apiRequests';
+import { toast } from 'react-hot-toast';
 
 const ViewAllResourcesModal = ({ 
   isOpen, 
@@ -8,12 +10,74 @@ const ViewAllResourcesModal = ({
   onOpenModule,
   onOpenScript
 }) => {
-  if (!isOpen || !selectedSkill) return null;
+  const [videoScripts, setVideoScripts] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Get the single learning module (there's only one per skill)
-  const learningModule = selectedSkill.readingModules && selectedSkill.readingModules.length > 0 
-    ? selectedSkill.readingModules[0] 
-    : null;
+  useEffect(() => {
+    if (isOpen && selectedSkill && selectedJob?.skillPlannerId) {
+      fetchVideoScripts();
+    }
+  }, [isOpen, selectedSkill, selectedJob]);
+
+  const fetchVideoScripts = async () => {
+    if (!selectedJob?.skillPlannerId || !selectedSkill?.id) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await getRequest(`/video-scripts?skillPlannerId=${selectedJob.skillPlannerId}&topicId=${selectedSkill.id}`);
+      
+      if (response.data?.success && response.data?.data) {
+        setVideoScripts(response.data.data || []);
+      } else {
+        setVideoScripts([]);
+      }
+    } catch (error) {
+      console.error('Error fetching video scripts:', error);
+      setVideoScripts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleScriptClick = async (script) => {
+    if (!script?._id) {
+      toast.error('Script ID is missing');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await getRequest(`/video-scripts/${script._id}/sections`);
+      
+      if (response.data?.success && response.data?.data) {
+        // Transform to match frontend format
+        const scriptData = {
+          duration: script.selectedLength,
+          sections: response.data.data.map(section => ({
+            time: section.time,
+            title: section.title,
+            content: section.content
+          })),
+          generatedAt: script.createdAt,
+          userIdea: script.userIdea,
+          selectedLength: script.selectedLength
+        };
+        
+        onOpenScript({ content: scriptData });
+      } else {
+        toast.error(response.data?.message || 'Failed to fetch script sections');
+      }
+    } catch (error) {
+      console.error('Error fetching script sections:', error);
+      toast.error('Failed to fetch script sections');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!isOpen || !selectedSkill) return null;
 
   return (
     <div className="fixed inset-0 bg-white z-[9999] overflow-y-auto">
@@ -48,76 +112,28 @@ const ViewAllResourcesModal = ({
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Learning Module Section (Single Card) */}
-        {learningModule && (
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <i className="fas fa-book text-blue-600 text-lg"></i>
-              </div>
-              <h3 className="text-xl font-bold text-slate-900">Learning Module</h3>
+        {/* Video Scripts Section */}
+        <div className="mb-12">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <i className="fas fa-video text-purple-600 text-lg"></i>
             </div>
-
-            <div
-              onClick={() => onOpenModule(learningModule)}
-              className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all cursor-pointer border border-slate-200 overflow-hidden max-w-2xl"
-            >
-              <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6">
-                <div className="flex items-start justify-between mb-3">
-                  <i className="fas fa-book-open text-white text-3xl"></i>
-                  <span className="px-3 py-1 bg-white bg-opacity-20 rounded-full text-sm text-white font-medium">
-                    {learningModule.timeSpent}
-                  </span>
-                </div>
-                <h4 className="text-white font-bold text-xl mb-2">{learningModule.title}</h4>
-                <p className="text-blue-100 text-sm">AI-Generated Learning Content</p>
-              </div>
-
-              <div className="p-6">
-                <div className="flex items-center justify-between text-sm text-slate-600 mb-4">
-                  <span className="flex items-center gap-2">
-                    <i className="fas fa-calendar"></i>
-                    {learningModule.completedDate}
-                  </span>
-                  <span className="flex items-center gap-2 text-green-600 font-medium">
-                    <i className="fas fa-check-circle"></i>
-                    Completed
-                  </span>
-                </div>
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenModule(learningModule);
-                  }}
-                  className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 shadow-sm"
-                >
-                  <i className="fas fa-eye"></i>
-                  Read Module
-                </button>
-              </div>
-            </div>
+            <h3 className="text-xl font-bold text-slate-900">Video Scripts</h3>
           </div>
-        )}
 
-        {/* Video Scripts Section (Horizontal Scroll) */}
-        {selectedSkill.videoScripts && selectedSkill.videoScripts.length > 0 && (
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                <i className="fas fa-video text-purple-600 text-lg"></i>
-              </div>
-              <h3 className="text-xl font-bold text-slate-900">Video Scripts</h3>
-              <span className="text-sm text-slate-500">({selectedSkill.videoScripts.length})</span>
+          {/* Horizontal Scrolling Container */}
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+              <p className="text-slate-600 mt-4">Loading video scripts...</p>
             </div>
-
-            {/* Horizontal Scrolling Container */}
+          ) : videoScripts.length > 0 ? (
             <div className="relative">
               <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide" style={{ scrollSnapType: 'x mandatory' }}>
-                {selectedSkill.videoScripts.map((script) => (
+                {videoScripts.map((script) => (
                   <div
-                    key={script.id}
-                    onClick={() => onOpenScript(script)}
+                    key={script._id}
+                    onClick={() => handleScriptClick(script)}
                     className="flex-shrink-0 w-80 bg-white rounded-xl shadow-md hover:shadow-xl transition-all cursor-pointer border border-slate-200 overflow-hidden snap-start"
                     style={{ scrollSnapAlign: 'start' }}
                   >
@@ -125,17 +141,19 @@ const ViewAllResourcesModal = ({
                       <div className="flex items-start justify-between mb-3">
                         <i className="fas fa-film text-white text-2xl"></i>
                         <span className="px-2.5 py-1 bg-white bg-opacity-20 rounded-full text-xs text-white font-medium">
-                          {script.duration}
+                          {script.selectedLength}
                         </span>
                       </div>
-                      <h4 className="text-white font-bold text-lg mb-1 line-clamp-2">{script.title}</h4>
+                      <h4 className="text-white font-bold text-lg mb-1 line-clamp-2">
+                        {selectedSkill.name} - {script.userIdea}
+                      </h4>
                     </div>
 
                     <div className="p-5">
                       <div className="flex items-center justify-between text-xs text-slate-600 mb-3">
                         <span className="flex items-center gap-1.5">
                           <i className="fas fa-calendar"></i>
-                          {script.generatedDate}
+                          {new Date(script.createdAt).toLocaleDateString()}
                         </span>
                         <span className="flex items-center gap-1.5 text-green-600 font-medium">
                           <i className="fas fa-check-circle"></i>
@@ -144,14 +162,14 @@ const ViewAllResourcesModal = ({
                       </div>
 
                       <div className="mb-4 text-sm text-slate-600">
-                        <p className="font-medium mb-1">Sections:</p>
-                        <p className="text-slate-500 text-xs">{script.content.sections.length} parts • Full breakdown</p>
+                        <p className="font-medium mb-1">Idea:</p>
+                        <p className="text-slate-500 text-xs line-clamp-2">{script.userIdea}</p>
                       </div>
 
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          onOpenScript(script);
+                          handleScriptClick(script);
                         }}
                         className="w-full px-3 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2"
                       >
@@ -163,25 +181,17 @@ const ViewAllResourcesModal = ({
                 ))}
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!learningModule && (!selectedSkill.videoScripts || selectedSkill.videoScripts.length === 0) && (
-          <div className="text-center py-12">
-            <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <i className="fas fa-book-open text-slate-400 text-4xl"></i>
+          ) : (
+            <div className="text-center py-12">
+              <i className="fas fa-video text-5xl text-slate-300 mb-4"></i>
+              <p className="text-slate-500">No video scripts found</p>
+              <p className="text-sm text-slate-400 mt-2">Generate a script to get started</p>
             </div>
-            <h3 className="text-xl font-semibold text-slate-900 mb-2">No Resources Yet</h3>
-            <p className="text-slate-600 mb-4">
-              Generate learning modules and video scripts to build your resource library
-            </p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
 export default ViewAllResourcesModal;
-

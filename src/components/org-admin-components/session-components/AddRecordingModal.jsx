@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const AddRecordingModal = ({ onClose, onSubmit, selectedTeacher, selectedSubject, availableTopics }) => {
+const AddRecordingModal = ({ onClose, onSubmit, selectedSubject, availableTopics }) => {
   const [formData, setFormData] = useState({
     title: '',
     videoLink: '',
@@ -57,7 +57,7 @@ const AddRecordingModal = ({ onClose, onSubmit, selectedTeacher, selectedSubject
           <div>
             <h2 className="text-lg sm:text-2xl font-bold">Add Classroom Recording</h2>
             <p className="text-xs sm:text-sm text-indigo-100 mt-1">
-              Adding on behalf of {selectedTeacher?.name} • {selectedSubject?.name}
+              Adding recording for {selectedSubject?.name}
             </p>
           </div>
           <button
@@ -166,7 +166,7 @@ const AddRecordingModal = ({ onClose, onSubmit, selectedTeacher, selectedSubject
             >
               <option value="">Select a topic</option>
               {availableTopics && availableTopics.map((topic) => (
-                <option key={topic.id} value={topic.id}>
+                <option key={topic._id || topic.id} value={topic._id || topic.id}>
                   {topic.name}
                 </option>
               ))}
@@ -178,19 +178,13 @@ const AddRecordingModal = ({ onClose, onSubmit, selectedTeacher, selectedSubject
             </p>
           </div>
 
-          {/* Teacher Info Display */}
+          {/* Subject Info Display */}
           <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
             <h3 className="text-sm font-semibold text-indigo-900 mb-2">
               <i className="fas fa-info-circle mr-2"></i>
               Recording Details
             </h3>
             <div className="space-y-1 text-sm text-indigo-700">
-              <p>
-                <span className="font-medium">Teacher:</span> {selectedTeacher?.name}
-              </p>
-              <p>
-                <span className="font-medium">Email:</span> {selectedTeacher?.email}
-              </p>
               <p>
                 <span className="font-medium">Subject:</span> {selectedSubject?.name}
               </p>

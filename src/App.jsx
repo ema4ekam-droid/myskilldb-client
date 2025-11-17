@@ -11,13 +11,12 @@ import TeacherAssignments from './org_admin/teacher_management/teacher_assignmen
 import AdminAccessManage from './org_admin/access_management/admin_access_manage.jsx';
 import TopicManagement from './org_admin/skills_and_academics/topics/topic_management.jsx';
 import ClassroomSessions from './org_admin/skills_and_academics/sessions/classroom_sessions.jsx';
-import TestManagement from './org_admin/tests/test_management.jsx';
-import JobsPlacements from './org_admin/jobs_placements/jobs_placements.jsx';
+import JobsPlacements from './org_admin/skills_and_academics/jobs_placements/jobs_placements.jsx';
+import TestManagement from './org_admin/skills_and_academics/tests/test_management.jsx';
 import MasterOrganizationSetup from './master/master-organization-setup/master-organization-setup.jsx';
 import OrganizationLoginManager from './master/master-login-create/organization_login_manager.jsx';
 import AuthWrapper from './wrappers/AuthWrapper.jsx';
 import ProtectedWrapper from './wrappers/ProtectedWrapper.jsx';
-import Azy from './org_admin/subject_assign/Azy.jsx';
 import StudentDashboard from './student_user/student_dashboard/student_dashboard.jsx';
 import MyCourses from './student_user/student_courses/my_courses/my_courses.jsx';
 import ClassroomRecordings from './student_user/student_courses/classroom_recordings/classroom_recordings.jsx';
@@ -26,6 +25,10 @@ import JobBoard from './student_user/student_job_management/job_board/job_board.
 import SkillPlanner from './student_user/student_job_management/skill_planner/skill_planner.jsx';
 import JobAssessments from './student_user/student_job_management/job_assessments/job_assessments.jsx';
 import JobCV from './student_user/student_job_management/job_cv/job_cv.jsx';
+import Abc from './student_user/dummy/Abc.jsx';
+import Mentors from './student_user/student_contacts/mentors/mentors.jsx';
+import Founders from './student_user/student_contacts/founders/founders.jsx';
+import HRManagers from './student_user/student_contacts/hr_managers/hr_managers.jsx';
 
 function App() {
   return (
@@ -55,35 +58,26 @@ function App() {
           <Route path="/admin/access/manage" element={<AdminAccessManage />} />
           <Route path="/admin/skills/topics" element={<TopicManagement />} />
           <Route path="/admin/skills/sessions" element={<ClassroomSessions />} />
+          <Route path="/admin/skills/jobs-placements" element={<JobsPlacements />} />
           <Route path="/admin/tests/manage" element={<TestManagement />} />
           <Route path="/admin/skills/test-topics" element={<JobsPlacements />} />
-          <Route path="/abc" element={<Azy />} />
         </Route>
 
-        {/* Student routes - Temporarily unprotected for development */}
-        {/* <Route element={<ProtectedWrapper allowedRoles={["student"]} />}> */}
-          {/* Home/Dashboard */}
+        <Route element={<ProtectedWrapper allowedRoles={["student"]} />}>
           <Route path="/student/dashboard" element={<StudentDashboard />} />
-          
-          {/* Courses submenu */}
           <Route path="/student/courses" element={<MyCourses />} />
           <Route path="/student/recordings" element={<ClassroomRecordings />} />
           <Route path="/student/course-assessments" element={<CourseAssessments />} />
-          
-          {/* Job Management submenu */}
           <Route path="/student/jobs" element={<JobBoard />} />
           <Route path="/student/skill-planner" element={<SkillPlanner />} />
           <Route path="/student/job-assessments" element={<JobAssessments />} />
           <Route path="/student/cv" element={<JobCV />} />
-          
-          {/* Contacts submenu */}
-          <Route path="/student/contacts/mentors" element={<StudentDashboard />} />
-          <Route path="/student/contacts/hr" element={<StudentDashboard />} />
-          <Route path="/student/contacts/founders" element={<StudentDashboard />} />
-          
-          {/* Settings */}
+          <Route path="/student/contacts/mentors" element={<Mentors />} />
+          <Route path="/student/contacts/hr" element={<HRManagers />} />
+          <Route path="/student/contacts/founders" element={<Founders />} />
           <Route path="/student/settings" element={<StudentDashboard />} />
-        {/* </Route> */}
+        </Route>
+        <Route path="/abc" element={<Abc />} />
       </Routes>
     </BrowserRouter>
   );

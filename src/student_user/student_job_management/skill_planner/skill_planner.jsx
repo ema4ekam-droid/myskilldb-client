@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { toast } from 'react-hot-toast';
 import StudentMenuNavigation from '../../../components/student-components/student-menu-components/StudentMenuNavigation';
 import LoaderOverlay from '../../../components/loader/LoaderOverlay';
+import { getRequest, postRequest } from '../../../api/apiRequests';
 import {
-  AddResourceModal,
-  RequestTestimonialModal,
-  ViewTestimonialModal,
-  ViewNoteModal,
   CameraRecorder
 } from '../../../components/student-components/student-job-management-components/skill-planner-components';
 
@@ -16,8 +14,6 @@ import {
   AssessmentReviewModal,
   AddVideoModal,
   VideosListModal,
-  TestimonialsListModal,
-  LinkedInPostsModal,
   LearningModuleReader,
   VideoScriptViewer,
   ViewAllResourcesModal,
@@ -26,27 +22,17 @@ import {
 
 const SkillPlanner = () => {
   const navigate = useNavigate();
+  const user = useSelector((state) => state.user);
   const [currentPage, setCurrentPage] = useState('skill-planner');
   const [isLoading, setIsLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState(null);
   const [expandedJobs, setExpandedJobs] = useState({});
   const [expandedSkills, setExpandedSkills] = useState({});
-  const [isAddResourceModalOpen, setIsAddResourceModalOpen] = useState(false);
-  const [isRequestTestimonialModalOpen, setIsRequestTestimonialModalOpen] = useState(false);
-  const [isViewTestimonialModalOpen, setIsViewTestimonialModalOpen] = useState(false);
-  const [isViewNoteModalOpen, setIsViewNoteModalOpen] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState(null);
-  const [selectedTestimonial, setSelectedTestimonial] = useState(null);
-  const [selectedNote, setSelectedNote] = useState(null);
-  const [resourceType, setResourceType] = useState('youtube');
-  const [isLinkedInModalOpen, setIsLinkedInModalOpen] = useState(false);
-  const [selectedLinkedInPost, setSelectedLinkedInPost] = useState(null);
   const [showVideoScriptModal, setShowVideoScriptModal] = useState(false);
-  const [showModuleReaderModal, setShowModuleReaderModal] = useState(false);
   const [showAssessmentReviewModal, setShowAssessmentReviewModal] = useState(false);
   const [showVideosModal, setShowVideosModal] = useState(false);
   const [showAddVideoModal, setShowAddVideoModal] = useState(false);
-  const [showLinkedInPostsModal, setShowLinkedInPostsModal] = useState(false);
   const [showViewAllResourcesModal, setShowViewAllResourcesModal] = useState(false);
   const [showCameraRecorder, setShowCameraRecorder] = useState(false);
   const [showScriptGeneratorModal, setShowScriptGeneratorModal] = useState(false);
@@ -63,11 +49,17 @@ const SkillPlanner = () => {
   const [certificateTitle, setCertificateTitle] = useState('');
   const [certificateLink, setCertificateLink] = useState('');
   const [certificateProvider, setCertificateProvider] = useState('drive'); // 'drive' or 'dropbox'
+  const [certificatesList, setCertificatesList] = useState([]);
+  const [isLoadingCertificates, setIsLoadingCertificates] = useState(false);
   
-  // Form states
-  const [resourceTitle, setResourceTitle] = useState('');
-  const [resourceUrl, setResourceUrl] = useState('');
-  const [resourceNote, setResourceNote] = useState('');
+  // Testimonial form states
+  const [showTestimonialsModal, setShowTestimonialsModal] = useState(false);
+  const [showAddTestimonialModal, setShowAddTestimonialModal] = useState(false);
+  const [testimonialsList, setTestimonialsList] = useState([]);
+  const [isLoadingTestimonials, setIsLoadingTestimonials] = useState(false);
+  const [validatorName, setValidatorName] = useState('');
+  const [validatorEmail, setValidatorEmail] = useState('');
+  const [validatorRole, setValidatorRole] = useState('');
   
   // Video Form states
   const [videoTitle, setVideoTitle] = useState('');
@@ -80,425 +72,147 @@ const SkillPlanner = () => {
   const [linkedInPostContext, setLinkedInPostContext] = useState('');
   const [generatedLinkedInPost, setGeneratedLinkedInPost] = useState('');
   const [isGeneratingPost, setIsGeneratingPost] = useState(false);
-  const [linkedInTopic, setLinkedInTopic] = useState('');
-  const [generatedPostText, setGeneratedPostText] = useState('');
-  const [generatedImageUrl, setGeneratedImageUrl] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showViewLinkedInPostsModal, setShowViewLinkedInPostsModal] = useState(false);
+  const [linkedInPostsList, setLinkedInPostsList] = useState([]);
+  const [currentPostIndex, setCurrentPostIndex] = useState(0);
+  const [isLoadingLinkedInPosts, setIsLoadingLinkedInPosts] = useState(false);
+  const [videosList, setVideosList] = useState([]);
+  const [isLoadingVideos, setIsLoadingVideos] = useState(false);
   
-  // Testimonial form states
-  const [testimonialProject, setTestimonialProject] = useState('');
-  const [validatorName, setValidatorName] = useState('');
-  const [validatorEmail, setValidatorEmail] = useState('');
-  const [validatorRole, setValidatorRole] = useState('');
-  const [personalMessage, setPersonalMessage] = useState('');
-  
-  // Dummy data
-  const [plannerJobs, setPlannerJobs] = useState([
-    {
-      _id: 'job-1',
-      title: 'Frontend Developer',
-      company: 'TechCorp Solutions',
-      targetDate: '2025-03-15',
-      priority: 'high',
-      skills: [
-        {
-          id: 'skill-1',
-          name: 'React',
-          status: 'completed',
-          progress: 100,
-          assessmentCompleted: true,
-          assessmentScore: 91.7,
-          assessmentDate: '2024-01-28',
-          hoursInvested: 45,
-          estimatedHoursLeft: 0,
-          linkedInPosts: [
-            { 
-              id: 'li-1', 
-              topic: 'React Hooks Mastery', 
-              postText: '🚀 Just completed my React journey!\n\nExcited to share that I\'ve mastered React Hooks and Context API. Here are 3 key takeaways:\n\n1️⃣ useState & useEffect are game-changers\n2️⃣ Custom hooks make code reusable\n3️⃣ Context API eliminates prop drilling\n\n#React #WebDevelopment #JavaScript',
-              imageUrl: 'https://via.placeholder.com/1200x630/4F46E5/ffffff?text=React+Mastery',
-              date: '2024-10-20' 
-            },
-            { 
-              id: 'li-2', 
-              topic: 'Building Scalable Apps', 
-              postText: '💻 Learning React has transformed how I build web applications!\n\nJust finished a complex project using React best practices.',
-              imageUrl: 'https://via.placeholder.com/1200x630/6366F1/ffffff?text=React+Apps',
-              date: '2024-10-25' 
-            }
-          ],
-          youtubeLinks: [
-            { id: 'yt-1', title: 'React Complete Course', url: 'https://youtu.be/y9Dk6wMc8UM', addedDate: '2024-10-18' },
-            { id: 'yt-2', title: 'My React Tutorial Series - Part 1', url: 'https://youtu.be/y9Dk6wMc8UM', addedDate: '2024-10-22' }
-          ],
-          certificates: [
-            { id: 'cert-1', title: 'React Basics Certificate', url: 'https://drive.google.com/file/example', type: 'drive', addedDate: '2024-10-15' }
-          ],
-          testimonials: [
-            { 
-              id: 'test-1', 
-              project: 'E-commerce Checkout', 
-              skills: ['React'], 
-              validatorName: 'Ms. Priya Sharma', 
-              validatorEmail: 'priya.sharma@company.com', 
-              validatorRole: 'Project Manager, TechSolutions Inc.', 
-              status: 'approved',
-              testimonialText: 'Excellent work on React components. Shows strong understanding of component architecture and state management. Built a clean, maintainable checkout system.',
-              approvedDate: '2024-10-18'
-            },
-            { 
-              id: 'test-2', 
-              project: 'Dashboard Analytics', 
-              skills: ['React'], 
-              validatorName: 'Mr. John Davis', 
-              validatorEmail: 'john@startup.com', 
-              validatorRole: 'Lead Developer, StartupXYZ', 
-              status: 'pending',
-              requestedDate: '2024-10-28'
-            }
-          ],
-          assessments: [
-            {
-              id: 'assess-1',
-              name: 'React Fundamentals Test',
-              score: 91.7,
-              totalQuestions: 24,
-              correctAnswers: 22,
-              completedDate: '2024-01-28',
-              difficulty: 'Intermediate',
-              timeSpent: '45 minutes'
-            }
-          ],
-          readingModules: [
-            {
-              id: 'module-1',
-              title: 'React Core Concepts',
-              completedDate: '2024-10-10',
-              timeSpent: '2 hours',
-              content: {
-                skillName: 'React Core Concepts',
-                jobContext: 'Frontend Developer at TechCorp Solutions',
-                introduction: 'React is a powerful JavaScript library for building user interfaces. Created by Facebook, it revolutionizes how we think about building web applications by introducing a component-based architecture and virtual DOM for optimal performance.',
-                keyConcepts: [
-                  {
-                    title: 'Components and Props',
-                    content: 'React applications are built using components - reusable pieces of UI that can accept inputs called props. Components can be functional or class-based, with functional components being the modern standard.'
-                  },
-                  {
-                    title: 'State Management',
-                    content: 'State is data that changes over time in your application. React provides the useState hook for functional components, allowing you to track and update component-specific data.'
-                  },
-                  {
-                    title: 'Virtual DOM',
-                    content: 'React uses a virtual representation of the DOM to optimize updates. When state changes, React compares the virtual DOM with the actual DOM and only updates what has changed, making applications faster.'
-                  }
-                ],
-                practicalExample: `function Counter() {
-  const [count, setCount] = useState(0);
-  
-  return (
-    <div>
-      <p>You clicked {count} times</p>
-      <button onClick={() => setCount(count + 1)}>
-        Click me
-      </button>
-    </div>
-  );
-}`,
-                summary: [
-                  'React uses a component-based architecture for building UIs',
-                  'Props allow data to flow from parent to child components',
-                  'State management with useState enables dynamic, interactive applications',
-                  'Virtual DOM optimization ensures high performance',
-                  'React has a rich ecosystem with tools like React Router and Redux'
-                ]
-              }
-            },
-            {
-              id: 'module-2',
-              title: 'Advanced React Patterns',
-              completedDate: '2024-10-18',
-              timeSpent: '3 hours',
-              content: {
-                skillName: 'Advanced React Patterns',
-                jobContext: 'Frontend Developer at TechCorp Solutions',
-                introduction: 'Once you understand React basics, mastering advanced patterns will help you build more maintainable and scalable applications. These patterns solve common problems in larger React applications.',
-                keyConcepts: [
-                  {
-                    title: 'Custom Hooks',
-                    content: 'Custom hooks let you extract component logic into reusable functions. They follow the naming convention of starting with "use" and can call other hooks.'
-                  },
-                  {
-                    title: 'Context API',
-                    content: 'Context provides a way to pass data through the component tree without having to pass props down manually at every level, solving the prop drilling problem.'
-                  },
-                  {
-                    title: 'Memoization and Performance',
-                    content: 'React provides useMemo and useCallback hooks to optimize performance by memoizing values and functions, preventing unnecessary re-renders.'
-                  }
-                ],
-                practicalExample: `// Custom Hook Example
-function useCounter(initialValue = 0) {
-  const [count, setCount] = useState(initialValue);
-  
-  const increment = useCallback(() => {
-    setCount(c => c + 1);
-  }, []);
-  
-  const decrement = useCallback(() => {
-    setCount(c => c - 1);
-  }, []);
-  
-  return { count, increment, decrement };
-}`,
-                summary: [
-                  'Custom hooks promote code reuse and separation of concerns',
-                  'Context API solves prop drilling in deeply nested components',
-                  'useMemo and useCallback optimize performance',
-                  'Proper memoization prevents unnecessary re-renders',
-                  'These patterns are essential for large-scale React applications'
-                ]
-              }
-            }
-          ],
-          videoScripts: [
-            {
-              id: 'script-1',
-              title: 'Introduction to React Hooks',
-              generatedDate: '2024-10-15',
-              duration: '8-10 minutes',
-              content: {
-                skillName: 'Introduction to React Hooks',
-                duration: '8-10 minutes',
-                sections: [
-                  {
-                    time: '0:00-0:30',
-                    title: 'Introduction',
-                    content: 'Hey everyone! Today we\'re diving into React Hooks. Whether you\'re just starting with React or looking to modernize your code, this video will give you everything you need to know about hooks. Let\'s get started!'
-                  },
-                  {
-                    time: '0:30-2:00',
-                    title: 'What are Hooks?',
-                    content: 'Hooks are functions that let you use state and other React features in functional components. Before hooks, you needed class components for state management. Hooks changed everything! The most common hooks are useState for state management and useEffect for side effects.'
-                  },
-                  {
-                    time: '2:00-4:00',
-                    title: 'useState Hook',
-                    content: 'Let me show you useState in action. [Show code] useState returns an array with two elements: the current state value and a function to update it. We use array destructuring to get these values. Every time you call the setter function, React re-renders your component with the new state.'
-                  },
-                  {
-                    time: '4:00-6:30',
-                    title: 'useEffect Hook',
-                    content: 'useEffect is for side effects like data fetching, subscriptions, or manual DOM changes. [Show example] The second parameter is the dependency array - it controls when the effect runs. Empty array means run once, no array means run on every render, and with dependencies means run when those values change.'
-                  },
-                  {
-                    time: '6:30-8:00',
-                    title: 'Conclusion',
-                    content: 'That\'s your introduction to React Hooks! We covered useState and useEffect - the two most important hooks. Practice using them in your projects, and soon they\'ll feel natural. Check out the description for code examples and additional resources!'
-                  }
-                ],
-                visualSuggestions: [
-                  'Show React hooks logo and animation',
-                  'Display code editor with syntax highlighting',
-                  'Animate state changes in real-time',
-                  'Show before/after: class vs functional components',
-                  'Include visual diagram of useEffect lifecycle'
-                ],
-                thumbnailIdeas: [
-                  'React logo with "Hooks Explained" overlay',
-                  'Split screen showing code and result',
-                  'Colorful hooks diagram',
-                  'Before/After comparison thumbnail'
-                ]
-              }
-            }
-          ]
-        },
-        {
-          id: 'skill-2',
-          name: 'JavaScript ES6+',
-          status: 'in-progress',
-          progress: 65,
-          assessmentCompleted: false,
-          hoursInvested: 20,
-          estimatedHoursLeft: 10,
-          linkedInPosts: [],
-          youtubeLinks: [
-            { id: 'yt-3', title: 'JavaScript ES6 Features', url: 'https://youtu.be/y9Dk6wMc8UM', addedDate: '2024-10-25' }
-          ],
-          certificates: [],
-          testimonials: [
-            { 
-              id: 'test-3', 
-              project: 'Modern JS App', 
-              skills: ['JavaScript'], 
-              validatorName: 'Ms. Sarah Wilson', 
-              validatorEmail: 'sarah@tech.com', 
-              validatorRole: 'Senior Developer', 
-              status: 'pending',
-              requestedDate: '2024-10-29'
-            }
-          ],
-          assessments: [],
-          readingModules: [],
-          videoScripts: []
-        }
-      ]
-    },
-    {
-      _id: 'job-2',
-      title: 'Backend Developer',
-      company: 'InnovateTech',
-      targetDate: '2025-06-20',
-      priority: 'medium',
-      skills: [
-        {
-          id: 'skill-3',
-          name: 'Node.js',
-          status: 'in-progress',
-          progress: 40,
-          assessmentCompleted: false,
-          hoursInvested: 15,
-          estimatedHoursLeft: 20,
-          linkedInPosts: [],
-          youtubeLinks: [],
-          certificates: [],
-          testimonials: [],
-          assessments: [],
-          readingModules: [],
-          videoScripts: []
-        },
-        {
-          id: 'skill-4',
-          name: 'MongoDB',
-          status: 'not-started',
-          progress: 0,
-          assessmentCompleted: false,
-          hoursInvested: 0,
-          estimatedHoursLeft: 25,
-          linkedInPosts: [],
-          youtubeLinks: [],
-          certificates: [],
-          testimonials: [],
-          assessments: [],
-          readingModules: [],
-          videoScripts: []
-        },
-        {
-          id: 'skill-5',
-          name: 'Express.js',
-          status: 'not-started',
-          progress: 0,
-          assessmentCompleted: false,
-          hoursInvested: 0,
-          estimatedHoursLeft: 18,
-          linkedInPosts: [],
-          youtubeLinks: [],
-          certificates: [],
-          testimonials: [],
-          assessments: [],
-          readingModules: [],
-          videoScripts: []
-        }
-      ]
-    },
-    {
-      _id: 'job-3',
-      title: 'UI/UX Designer',
-      company: 'DesignHub Studios',
-      targetDate: '2025-04-10',
-      priority: 'low',
-      skills: [
-        {
-          id: 'skill-6',
-          name: 'Figma',
-          status: 'completed',
-          progress: 100,
-          assessmentCompleted: true,
-          assessmentScore: 88.5,
-          assessmentDate: '2024-02-10',
-          hoursInvested: 30,
-          estimatedHoursLeft: 0,
-          linkedInPosts: [
-            { 
-              id: 'li-3', 
-              topic: 'Figma Design Tips', 
-              postText: '🎨 5 Figma features that changed my design workflow!\n\nJust completed my Figma mastery journey.',
-              imageUrl: 'https://via.placeholder.com/1200x630/F24E1E/ffffff?text=Figma+Tips',
-              date: '2024-02-12' 
-            }
-          ],
-          youtubeLinks: [],
-          certificates: [
-            { id: 'cert-2', title: 'Figma Professional Certificate', url: 'https://drive.google.com/file/example2', type: 'drive', addedDate: '2024-02-11' }
-          ],
-          testimonials: [
-            { 
-              id: 'test-4', 
-              project: 'Mobile App Design', 
-              skills: ['Figma'], 
-              validatorName: 'Ms. Emily Chen', 
-              validatorEmail: 'emily@designstudio.com', 
-              validatorRole: 'Design Lead, CreativeWorks', 
-              status: 'approved',
-              testimonialText: 'Outstanding design skills in Figma. Created pixel-perfect mockups and maintained excellent design systems.',
-              approvedDate: '2024-02-15'
-            }
-          ],
-          assessments: [
-            {
-              id: 'assess-2',
-              name: 'Figma Mastery Test',
-              score: 88.5,
-              totalQuestions: 20,
-              correctAnswers: 18,
-              completedDate: '2024-02-10',
-              difficulty: 'Advanced',
-              timeSpent: '35 minutes'
-            }
-          ],
-          readingModules: [],
-          videoScripts: []
-        },
-        {
-          id: 'skill-7',
-          name: 'Adobe XD',
-          status: 'completed',
-          progress: 100,
-          assessmentCompleted: true,
-          assessmentScore: 92.0,
-          assessmentDate: '2024-02-18',
-          hoursInvested: 25,
-          estimatedHoursLeft: 0,
-          linkedInPosts: [],
-          youtubeLinks: [],
-          certificates: [],
-          testimonials: [],
-          assessments: [
-            {
-              id: 'assess-3',
-              name: 'Adobe XD Fundamentals',
-              score: 92.0,
-              totalQuestions: 25,
-              correctAnswers: 23,
-              completedDate: '2024-02-18',
-              difficulty: 'Intermediate',
-              timeSpent: '40 minutes'
-            }
-          ],
-          readingModules: [],
-          videoScripts: []
-        }
-      ]
-    }
-  ]);
+  // Planner jobs data
+  const [plannerJobs, setPlannerJobs] = useState([]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    if (user?._id) {
+      fetchSkillPlannerJobs();
+    } else {
       setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+    }
+  }, [user?._id]);
+
+  const fetchSkillPlannerJobs = async () => {
+    if (!user?._id) return;
+    
+    try {
+      setIsLoading(true);
+      const response = await getRequest('/skill-planner');
+      
+      if (response.data?.success && response.data?.data) {
+        const plannerEntries = response.data.data; // Contains both jobId and _id (skillPlannerId)
+        
+        // Fetch full job details for each job ID
+        const jobsPromises = plannerEntries.map(async (plannerEntry) => {
+          const jobId = plannerEntry.jobId;
+          const skillPlannerId = plannerEntry._id;
+          try {
+            // Fetch job details
+            const jobResponse = await getRequest(`/jobs/${jobId}`);
+            if (jobResponse.data?.success && jobResponse.data?.data) {
+              const jobData = jobResponse.data.data;
+              
+              // Fetch topics (skills) for this job
+              let skills = [];
+              try {
+                const topicsResponse = await getRequest(`/topics/job/${jobId}`);
+                if (topicsResponse.data?.success && topicsResponse.data?.data) {
+                  // Transform topics to skills format and check for existing reading modules
+                  const skillsPromises = topicsResponse.data.data.map(async (topic, index) => {
+                    let hasReadingModule = false;
+                    let existingModule = null;
+                    
+                    // Check if reading module exists for this job and topic
+                    try {
+                      const moduleResponse = await getRequest(`/reading-modules?jobId=${jobId}&topicId=${topic._id}`);
+                      if (moduleResponse.data?.success && moduleResponse.data?.data) {
+                        hasReadingModule = true;
+                        existingModule = moduleResponse.data.data;
+                      }
+                    } catch (error) {
+                      // Module doesn't exist, which is fine
+                    }
+
+                    // Fetch testimonials for this skill
+                    let testimonials = [];
+                    try {
+                      const testimonialsResponse = await getRequest(`/testimonials?skillPlannerId=${skillPlannerId}&topicId=${topic._id}`);
+                      if (testimonialsResponse.data?.success && testimonialsResponse.data?.data) {
+                        testimonials = testimonialsResponse.data.data;
+                      }
+                    } catch (error) {
+                      // Testimonials don't exist, which is fine
+                    }
+
+                    // Fetch certificates for this skill
+                    let certificates = [];
+                    try {
+                      const certificatesResponse = await getRequest(`/certificates?skillPlannerId=${skillPlannerId}&topicId=${topic._id}`);
+                      if (certificatesResponse.data?.success && certificatesResponse.data?.data) {
+                        certificates = certificatesResponse.data.data;
+                      }
+                    } catch (error) {
+                      // Certificates don't exist, which is fine
+                    }
+
+                    return {
+                      id: topic._id || `skill-${index}`,
+                      name: topic.name || topic.title || 'Skill',
+                      status: 'not-started',
+                      progress: 0,
+                      assessmentCompleted: false,
+                      hoursInvested: 0,
+                      estimatedHoursLeft: 0,
+                      linkedInPosts: [],
+                      youtubeLinks: [],
+                      certificates: certificates,
+                      testimonials: testimonials,
+                      assessments: [],
+                      readingModules: hasReadingModule ? [existingModule] : [],
+                      videoScripts: [],
+                      hasReadingModule: hasReadingModule,
+                      existingReadingModule: existingModule
+                    };
+                  });
+                  
+                  skills = await Promise.all(skillsPromises);
+                }
+              } catch (error) {
+                console.error('Error fetching topics for job:', jobId, error);
+              }
+              
+              // Transform API data to match component's expected format
+              return {
+                _id: jobData._id,
+                title: jobData.name || jobData.title || 'Job Title',
+                company: jobData.companyName || jobData.company || 'Company',
+                targetDate: jobData.targetDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Default 90 days from now
+                priority: jobData.priority || 'medium',
+                skillPlannerId: skillPlannerId,
+                skills: skills.length > 0 ? skills : []
+              };
+            }
+            return null;
+          } catch (error) {
+            console.error('Error fetching job details:', jobId, error);
+            return null;
+          }
+        });
+        
+        const fetchedJobs = await Promise.all(jobsPromises);
+        const validJobs = fetchedJobs.filter(job => job !== null);
+        
+        setPlannerJobs(validJobs);
+      } else {
+        setPlannerJobs([]);
+      }
+    } catch (error) {
+      console.error('Error fetching skill planner jobs:', error);
+      toast.error('Failed to load skill planner jobs');
+      setPlannerJobs([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -550,35 +264,6 @@ function useCounter(initialValue = 0) {
     }, 0);
   };
 
-  const getSkillsWithTestimonials = () => {
-    return plannerJobs.reduce((total, job) => {
-      return total + job.skills.filter(skill => 
-        skill.testimonials && skill.testimonials.length > 0
-      ).length;
-    }, 0);
-  };
-
-  const getCVStatus = (job) => {
-    const totalSkills = job.skills.length;
-    const assessmentsCompleted = job.skills.filter(skill => skill.assessmentCompleted).length;
-    
-    if (assessmentsCompleted === 0) {
-      return { status: 'start', label: 'Start CV Creation', color: 'text-slate-600 bg-slate-100', link: '/student/job-assessments' };
-    } else if (assessmentsCompleted === totalSkills) {
-      return { status: 'generated', label: 'CV Generated', color: 'text-green-600 bg-green-100', link: '/student/job-cv' };
-    } else {
-      return { status: 'progress', label: 'CV In Progress', color: 'text-amber-600 bg-amber-100', link: '/student/job-cv' };
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'completed': return 'text-green-600 bg-green-50 border-green-200';
-      case 'in-progress': return 'text-blue-600 bg-blue-50 border-blue-200';
-      case 'not-started': return 'text-slate-600 bg-slate-50 border-slate-200';
-      default: return 'text-slate-600 bg-slate-50 border-slate-200';
-    }
-  };
 
   const getPriorityColor = (priority) => {
     switch (priority) {
@@ -589,15 +274,45 @@ function useCounter(initialValue = 0) {
     }
   };
 
+  // View Existing Module Handler
+  const handleViewModule = async (job, skill) => {
+    if (!skill?.existingReadingModule) {
+      toast.error('Module not found');
+      return;
+    }
+
+    setSelectedJob(job);
+    setSelectedSkill(skill);
+    
+    // Transform database module to display format
+    const module = {
+      skillName: skill.existingReadingModule.skillName,
+      jobContext: skill.existingReadingModule.jobContext,
+      introduction: skill.existingReadingModule.introduction,
+      keyConcepts: skill.existingReadingModule.keyConcepts,
+      practicalExample: skill.existingReadingModule.practicalExample,
+      summary: skill.existingReadingModule.summary
+    };
+
+    setGeneratedModule(module);
+    setReaderMode(true);
+  };
+
   // Generate Module Handler
-  const handleGenerateModule = (job, skill) => {
+  const handleGenerateModule = async (job, skill) => {
+    if (!user?._id || !job?._id || !skill?.id) {
+      toast.error('Unable to generate module. Missing required information.');
+      return;
+    }
+
     setSelectedJob(job);
     setSelectedSkill(skill);
     setIsGenerating(true);
     setGenerationType('module');
     setReaderMode(true);
     
-    setTimeout(() => {
+    try {
+      // Generate module content (simulating AI generation)
       const module = {
         skillName: skill.name,
         jobContext: job.title,
@@ -627,15 +342,59 @@ function useCounter(initialValue = 0) {
           'Practice with real-world examples solidifies knowledge',
           'Following best practices ensures code quality',
           'Continuous learning keeps skills relevant'
-        ],
-        generatedAt: new Date().toISOString()
+        ]
       };
-      
-      setGeneratedModule(module);
+
+      // Save to database
+      const response = await postRequest('/reading-modules', {
+        jobId: job._id,
+        topicId: skill.id,
+        skillName: module.skillName,
+        jobContext: module.jobContext,
+        introduction: module.introduction,
+        keyConcepts: module.keyConcepts,
+        practicalExample: module.practicalExample,
+        summary: module.summary
+      });
+
+      if (response.data?.success) {
+        setGeneratedModule(module);
+        toast.success('Learning module generated and saved successfully!');
+        // Refresh the jobs to update the hasReadingModule flag
+        fetchSkillPlannerJobs();
+      } else {
+        if (response.data?.message?.includes('already exists')) {
+          toast.info('Module already exists. Loading existing module...');
+          // Fetch and show existing module
+          try {
+            const moduleResponse = await getRequest(`/reading-modules?jobId=${job._id}&topicId=${skill.id}`);
+            if (moduleResponse.data?.success && moduleResponse.data?.data) {
+              const existingModule = moduleResponse.data.data;
+              setGeneratedModule({
+                skillName: existingModule.skillName,
+                jobContext: existingModule.jobContext,
+                introduction: existingModule.introduction,
+                keyConcepts: existingModule.keyConcepts,
+                practicalExample: existingModule.practicalExample,
+                summary: existingModule.summary
+              });
+              fetchSkillPlannerJobs();
+            }
+          } catch (error) {
+            console.error('Error fetching existing module:', error);
+          }
+        } else {
+          toast.error(response.data?.message || 'Failed to save module');
+          setGeneratedModule(module); // Still show the module even if save fails
+        }
+      }
+    } catch (error) {
+      console.error('Error generating module:', error);
+      toast.error('Failed to generate module');
+    } finally {
       setIsGenerating(false);
       setGenerationType('');
-      toast.success('Learning module generated successfully!');
-    }, 3000);
+    }
   };
 
   const handleCloseReader = () => {
@@ -653,6 +412,13 @@ function useCounter(initialValue = 0) {
     setShowScriptGeneratorModal(true);
   };
 
+  // View Video Scripts Handler
+  const handleViewVideoScripts = (job, skill) => {
+    setSelectedJob(job);
+    setSelectedSkill(skill);
+    setShowVideoScriptsModal(true);
+  };
+
   // Handle Script Generation with Vertex AI
   const handleGenerateScript = async () => {
     if (!selectedSkill || !selectedJob) {
@@ -660,82 +426,103 @@ function useCounter(initialValue = 0) {
       return;
     }
 
+    if (!scriptIdea.trim()) {
+      toast.error('Please enter a specific idea or focus for the video script');
+      return;
+    }
+
+    if (!selectedJob.skillPlannerId) {
+      toast.error('Skill planner ID is missing');
+      return;
+    }
+
     setShowScriptGeneratorModal(false);
     setIsGenerating(true);
     setGenerationType('script');
     
-    // Simulating API call to Vertex AI
-    // In production, this will be: const response = await fetch('/api/generate-script', { method: 'POST', body: JSON.stringify({ skill, job, idea, length }) });
-    
-    setTimeout(() => {
+    try {
       const durationMap = {
         '2-3': '2-3 minutes',
         '5-7': '5-7 minutes',
         '8-10': '8-10 minutes'
       };
 
-      const script = {
-        skillName: selectedSkill.name,
-        jobContext: selectedJob.title,
-        duration: durationMap[videoLength],
-        sections: [
+      // Generate sections (this would normally come from AI, but keeping the same structure for now)
+      const sections = [
+        {
+          time: '0:00 - 0:30',
+          title: 'Hook & Introduction',
+          content: `"Hey everyone! Today I'm going to share everything I've learned about ${selectedSkill.name}${scriptIdea ? `, specifically focusing on ${scriptIdea}` : ''}. If you're preparing for a ${selectedJob.title} role, this is essential knowledge you need to master. By the end of this video, you'll understand the core concepts and how to apply them in real projects."`
+        },
+        {
+          time: '0:30 - 1:30',
+          title: `What is ${selectedSkill.name}?`,
+          content: `"Let me start by explaining what ${selectedSkill.name} actually is and why it matters${scriptIdea ? `, especially when it comes to ${scriptIdea}` : ''}. This is particularly important for ${selectedJob.title} because it's a fundamental skill that employers look for."`
+        },
+        {
+          time: '1:30 - 3:30',
+          title: 'Key Concepts',
+          content: `"Now let's dive into the most important concepts you need to know. I'll walk you through each one with examples that relate to real-world scenarios${scriptIdea ? `, particularly around ${scriptIdea}` : ''}."`
+        },
+        ...(videoLength !== '2-3' ? [
           {
-            time: '0:00 - 0:30',
-            title: 'Hook & Introduction',
-            content: `"Hey everyone! Today I'm going to share everything I've learned about ${selectedSkill.name}${scriptIdea ? `, specifically focusing on ${scriptIdea}` : ''}. If you're preparing for a ${selectedJob.title} role, this is essential knowledge you need to master. By the end of this video, you'll understand the core concepts and how to apply them in real projects."`
-          },
-          {
-            time: '0:30 - 1:30',
-            title: `What is ${selectedSkill.name}?`,
-            content: `"Let me start by explaining what ${selectedSkill.name} actually is and why it matters${scriptIdea ? `, especially when it comes to ${scriptIdea}` : ''}. This is particularly important for ${selectedJob.title} because it's a fundamental skill that employers look for."`
-          },
-          {
-            time: '1:30 - 3:30',
-            title: 'Key Concepts',
-            content: `"Now let's dive into the most important concepts you need to know. I'll walk you through each one with examples that relate to real-world scenarios${scriptIdea ? `, particularly around ${scriptIdea}` : ''}."`
-          },
-          ...(videoLength !== '2-3' ? [
-            {
-              time: videoLength === '5-7' ? '3:30 - 5:00' : '3:30 - 6:00',
-              title: 'Practical Examples',
-              content: `"Let me show you how this works in practice. I'll demonstrate with a real example that shows ${selectedSkill.name} in action${scriptIdea ? `, focusing on ${scriptIdea}` : ''}."`
-            }
-          ] : []),
-          ...(videoLength === '8-10' ? [
-            {
-              time: '6:00 - 8:00',
-              title: 'Best Practices & Tips',
-              content: `"Here are some best practices and pro tips that will help you master ${selectedSkill.name}. These are insights I've learned through my journey and from industry professionals."`
-            }
-          ] : []),
-          {
-            time: videoLength === '2-3' ? '2:30 - 3:00' : videoLength === '5-7' ? '5:00 - 5:30' : '8:00 - 8:30',
-            title: 'Closing',
-            content: `"Thanks for watching! If you found this helpful, please like and subscribe. Drop a comment below with your questions about ${selectedSkill.name}, and I'll answer them. Keep learning and keep building!"`
+            time: videoLength === '5-7' ? '3:30 - 5:00' : '3:30 - 6:00',
+            title: 'Practical Examples',
+            content: `"Let me show you how this works in practice. I'll demonstrate with a real example that shows ${selectedSkill.name} in action${scriptIdea ? `, focusing on ${scriptIdea}` : ''}."`
           }
-        ],
-        visualSuggestions: [
-          'Use screen recording for demonstrations',
-          'Add text overlays for key points',
-          'Include relevant diagrams',
-          'Show code examples if applicable'
-        ],
-        thumbnailIdeas: [
-          `"${selectedSkill.name} Explained"`,
-          `Professional skill demonstration`,
-          `Clear, engaging title overlay`
-        ],
-        generatedAt: new Date().toISOString(),
-        userIdea: scriptIdea || 'General overview',
-        selectedLength: durationMap[videoLength]
-      };
-      
+        ] : []),
+        ...(videoLength === '8-10' ? [
+          {
+            time: '6:00 - 8:00',
+            title: 'Best Practices & Tips',
+            content: `"Here are some best practices and pro tips that will help you master ${selectedSkill.name}. These are insights I've learned through my journey and from industry professionals."`
+          }
+        ] : []),
+        {
+          time: videoLength === '2-3' ? '2:30 - 3:00' : videoLength === '5-7' ? '5:00 - 5:30' : '8:00 - 8:30',
+          title: 'Closing',
+          content: `"Thanks for watching! If you found this helpful, please like and subscribe. Drop a comment below with your questions about ${selectedSkill.name}, and I'll answer them. Keep learning and keep building!"`
+        }
+      ];
+
+      // Call API to create video script
+      const response = await postRequest('/video-scripts', {
+        jobId: selectedJob._id,
+        topicId: selectedSkill.id,
+        skillPlannerId: selectedJob.skillPlannerId,
+        userIdea: scriptIdea.trim(),
+        selectedLength: durationMap[videoLength],
+        sections: sections
+      });
+
+      if (response.data?.success) {
+        // Transform response to match frontend format
+        const script = {
+          duration: durationMap[videoLength],
+          sections: sections,
+          generatedAt: new Date().toISOString(),
+          userIdea: scriptIdea.trim(),
+          selectedLength: durationMap[videoLength]
+        };
+        
+        setGeneratedVideoScript(script);
+        setShowVideoScriptModal(true);
+        toast.success('Video script generated and saved successfully!');
+      } else {
+        // Check if it's a duplicate error
+        if (response.data?.message?.includes('already exists')) {
+          toast.error('A video script with this idea already exists for this skill and topic');
+        } else {
+          toast.error(response.data?.message || 'Failed to generate video script');
+        }
+      }
+    } catch (error) {
+      console.error('Error generating video script:', error);
+      toast.error('Failed to generate video script');
+    } finally {
       setIsGenerating(false);
       setGenerationType('');
-      setGeneratedVideoScript(script);
-      setShowVideoScriptModal(true);
-      toast.success('Video script generated successfully!');
-    }, 3000);
+    }
   };
 
   // Handle Create LinkedIn Post
@@ -759,7 +546,7 @@ function useCounter(initialValue = 0) {
   };
 
   // Save Video
-  const handleSaveVideo = () => {
+  const handleSaveVideo = async () => {
     if (!videoTitle.trim() || !videoUrl.trim()) {
       toast.error('Please enter video title and URL');
       return;
@@ -772,52 +559,54 @@ function useCounter(initialValue = 0) {
       return;
     }
 
-    const newVideo = {
-      id: Date.now(),
-      title: videoTitle.trim(),
-      url: videoUrl.trim(),
-      description: videoDescription.trim(),
-      addedAt: new Date().toISOString()
-    };
+    if (!selectedJob?._id || !selectedSkill?.id || !selectedJob?.skillPlannerId) {
+      toast.error('Missing job or skill information');
+      return;
+    }
 
-    // Update the plannerJobs state to add the video
-    setPlannerJobs(prevJobs => 
-      prevJobs.map(job => {
-        if (job.id === selectedJob.id) {
-          return {
-            ...job,
-            skills: job.skills.map(skill => {
-              if (skill.name === selectedSkill.name) {
-                return {
-                  ...skill,
-                  youtubeLinks: [...(skill.youtubeLinks || []), newVideo]
-                };
-              }
-              return skill;
-            })
-          };
-        }
-        return job;
-      })
-    );
+    try {
+      const response = await postRequest('/student-videos', {
+        jobId: selectedJob._id,
+        topicId: selectedSkill.id,
+        skillPlannerId: selectedJob.skillPlannerId,
+        title: videoTitle.trim(),
+        link: videoUrl.trim(),
+        description: videoDescription?.trim() || undefined
+      });
 
-    setShowAddVideoModal(false);
-    setVideoTitle('');
-    setVideoUrl('');
-    setVideoDescription('');
-    toast.success('Video added successfully!');
+      if (response.data?.success) {
+        toast.success('Video added successfully!');
+        // Reset form
+        setShowAddVideoModal(false);
+        setVideoTitle('');
+        setVideoUrl('');
+        setVideoDescription('');
+        // Refresh jobs to show updated videos
+        fetchSkillPlannerJobs();
+      } else {
+        toast.error(response.data?.message || 'Failed to add video');
+      }
+    } catch (error) {
+      console.error('Error adding video:', error);
+      toast.error(error.response?.data?.message || 'Failed to add video');
+    }
   };
 
   // Generate LinkedIn Post
-  const handleGenerateLinkedInPost = () => {
+  const handleGenerateLinkedInPost = async () => {
     if (!linkedInPostTopic.trim()) {
       toast.error('Please enter what your post is about');
       return;
     }
 
+    if (!selectedJob?._id || !selectedSkill?.id || !selectedJob?.skillPlannerId) {
+      toast.error('Missing job or skill information');
+      return;
+    }
+
     setIsGeneratingPost(true);
     
-    setTimeout(() => {
+    try {
       const companyName = selectedJob?.company || 'MySkillDB';
       const jobName = selectedJob?.title || 'Career Development';
       const skillName = selectedSkill?.name || '';
@@ -837,10 +626,30 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
 
 #${companyName.replace(/\s+/g, '')} #${jobName.replace(/\s+/g, '')} #${skillName.replace(/\s+/g, '')} #MySkillDB #CareerGrowth #LearningJourney #TechCareers #SkillDevelopment #ProfessionalDevelopment`;
 
-      setGeneratedLinkedInPost(post);
+      // Save to database
+      const response = await postRequest('/linkedin-posts', {
+        jobId: selectedJob._id,
+        topicId: selectedSkill.id,
+        skillPlannerId: selectedJob.skillPlannerId,
+        topic: skillName,
+        postText: post,
+        userTopic: linkedInPostTopic.trim(),
+        userContext: linkedInPostContext?.trim() || undefined
+      });
+
+      if (response.data?.success) {
+        setGeneratedLinkedInPost(post);
+        toast.success('LinkedIn post generated and saved successfully!');
+      } else {
+        setGeneratedLinkedInPost(post);
+        toast.error(response.data?.message || 'Failed to save LinkedIn post');
+      }
+    } catch (error) {
+      console.error('Error generating LinkedIn post:', error);
+      toast.error(error.response?.data?.message || 'Failed to generate LinkedIn post');
+    } finally {
       setIsGeneratingPost(false);
-      toast.success('LinkedIn post generated successfully!');
-    }, 2000);
+    }
   };
 
   // Copy LinkedIn Post to Clipboard
@@ -849,8 +658,73 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
     toast.success('Post copied to clipboard!');
   };
 
+  // Fetch LinkedIn Posts
+  const fetchLinkedInPosts = async (skillPlannerId, topicId) => {
+    if (!skillPlannerId || !topicId) {
+      return;
+    }
+
+    try {
+      setIsLoadingLinkedInPosts(true);
+      const response = await getRequest(`/linkedin-posts?skillPlannerId=${skillPlannerId}&topicId=${topicId}`);
+      
+      if (response.data?.success) {
+        setLinkedInPostsList(response.data.data || []);
+        setCurrentPostIndex(0);
+      } else {
+        setLinkedInPostsList([]);
+        toast.error(response.data?.message || 'Failed to fetch LinkedIn posts');
+      }
+    } catch (error) {
+      console.error('Error fetching LinkedIn posts:', error);
+      setLinkedInPostsList([]);
+      toast.error('Failed to fetch LinkedIn posts');
+    } finally {
+      setIsLoadingLinkedInPosts(false);
+    }
+  };
+
+  // Navigate to next post
+  const handleNextPost = () => {
+    if (currentPostIndex < linkedInPostsList.length - 1) {
+      setCurrentPostIndex(currentPostIndex + 1);
+    }
+  };
+
+  // Navigate to previous post
+  const handlePreviousPost = () => {
+    if (currentPostIndex > 0) {
+      setCurrentPostIndex(currentPostIndex - 1);
+    }
+  };
+
+  // Fetch Student Videos
+  const fetchStudentVideos = async (skillPlannerId, topicId) => {
+    if (!skillPlannerId || !topicId) {
+      return;
+    }
+
+    try {
+      setIsLoadingVideos(true);
+      const response = await getRequest(`/student-videos?skillPlannerId=${skillPlannerId}&topicId=${topicId}`);
+      
+      if (response.data?.success) {
+        setVideosList(response.data.data || []);
+      } else {
+        setVideosList([]);
+        toast.error(response.data?.message || 'Failed to fetch videos');
+      }
+    } catch (error) {
+      console.error('Error fetching videos:', error);
+      setVideosList([]);
+      toast.error('Failed to fetch videos');
+    } finally {
+      setIsLoadingVideos(false);
+    }
+  };
+
   // Add Certificate
-  const handleSaveCertificate = () => {
+  const handleSaveCertificate = async () => {
     if (!certificateTitle.trim() || !certificateLink.trim()) {
       toast.error('Please enter certificate title and link');
       return;
@@ -864,40 +738,145 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
       return;
     }
 
-    const newCertificate = {
-      id: Date.now(),
-      title: certificateTitle.trim(),
-      url: certificateLink.trim(),
-      provider: certificateProvider,
-      addedAt: new Date().toISOString()
-    };
+    if (!selectedJob?._id || !selectedSkill?.id || !selectedJob?.skillPlannerId) {
+      toast.error('Missing job or skill information');
+      return;
+    }
 
-    // Update the plannerJobs state to add the certificate
-    setPlannerJobs(prevJobs => 
-      prevJobs.map(job => {
-        if (job._id === selectedJob._id) {
-          return {
-            ...job,
-            skills: job.skills.map(skill => {
-              if (skill.id === selectedSkill.id) {
-                return {
-                  ...skill,
-                  certificates: [...(skill.certificates || []), newCertificate]
-                };
-              }
-              return skill;
-            })
-          };
+    // Convert 'drive' to 'google drive' for API
+    const storageProvider = certificateProvider === 'drive' ? 'google drive' : 'dropbox';
+
+    try {
+      const response = await postRequest('/certificates', {
+        jobId: selectedJob._id,
+        topicId: selectedSkill.id,
+        skillPlannerId: selectedJob.skillPlannerId,
+        title: certificateTitle.trim(),
+        link: certificateLink.trim(),
+        storageProvider: storageProvider
+      });
+
+      if (response.data?.success) {
+        toast.success('Certificate added successfully!');
+        // Reset form
+        setShowAddCertificateModal(false);
+        setCertificateTitle('');
+        setCertificateLink('');
+        setCertificateProvider('drive');
+        // Refresh certificates list if modal is open
+        if (showCertificatesModal && selectedJob?.skillPlannerId && selectedSkill?.id) {
+          await fetchCertificates(selectedJob.skillPlannerId, selectedSkill.id);
         }
-        return job;
-      })
-    );
+        // Refresh jobs to show updated certificates
+        fetchSkillPlannerJobs();
+      } else {
+        toast.error(response.data?.message || 'Failed to add certificate');
+      }
+    } catch (error) {
+      console.error('Error adding certificate:', error);
+      toast.error(error.response?.data?.message || 'Failed to add certificate');
+    }
+  };
 
-    setShowAddCertificateModal(false);
-    setCertificateTitle('');
-    setCertificateLink('');
-    setCertificateProvider('drive');
-    toast.success('Certificate added successfully!');
+  // Fetch Certificates
+  const fetchCertificates = async (skillPlannerId, topicId) => {
+    if (!skillPlannerId || !topicId) {
+      return;
+    }
+
+    try {
+      setIsLoadingCertificates(true);
+      const response = await getRequest(`/certificates?skillPlannerId=${skillPlannerId}&topicId=${topicId}`);
+      
+      if (response.data?.success) {
+        setCertificatesList(response.data.data || []);
+      } else {
+        setCertificatesList([]);
+        toast.error(response.data?.message || 'Failed to fetch certificates');
+      }
+    } catch (error) {
+      console.error('Error fetching certificates:', error);
+      setCertificatesList([]);
+      toast.error('Failed to fetch certificates');
+    } finally {
+      setIsLoadingCertificates(false);
+    }
+  };
+
+  // Fetch Testimonials
+  const fetchTestimonials = async (skillPlannerId, topicId) => {
+    if (!skillPlannerId || !topicId) {
+      return;
+    }
+
+    try {
+      setIsLoadingTestimonials(true);
+      const response = await getRequest(`/testimonials?skillPlannerId=${skillPlannerId}&topicId=${topicId}`);
+      
+      if (response.data?.success) {
+        setTestimonialsList(response.data.data || []);
+      } else {
+        setTestimonialsList([]);
+        toast.error(response.data?.message || 'Failed to fetch testimonials');
+      }
+    } catch (error) {
+      console.error('Error fetching testimonials:', error);
+      setTestimonialsList([]);
+      toast.error('Failed to fetch testimonials');
+    } finally {
+      setIsLoadingTestimonials(false);
+    }
+  };
+
+  // Add Testimonial
+  const handleSaveTestimonial = async () => {
+    if (!validatorName.trim() || !validatorEmail.trim() || !validatorRole.trim()) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(validatorEmail.trim())) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    if (!selectedJob?._id || !selectedSkill?.id || !selectedJob?.skillPlannerId) {
+      toast.error('Missing job or skill information');
+      return;
+    }
+
+    try {
+      const response = await postRequest('/testimonials', {
+        jobId: selectedJob._id,
+        topicId: selectedSkill.id,
+        skillPlannerId: selectedJob.skillPlannerId,
+        validatorName: validatorName.trim(),
+        validatorEmail: validatorEmail.trim(),
+        validatorRole: validatorRole.trim()
+      });
+
+      if (response.data?.success) {
+        toast.success('Testimonial added successfully!');
+        // Reset form
+        setShowAddTestimonialModal(false);
+        setValidatorName('');
+        setValidatorEmail('');
+        setValidatorRole('');
+        // Refresh testimonials list if modal is open
+        if (showTestimonialsModal && selectedJob?.skillPlannerId && selectedSkill?.id) {
+          await fetchTestimonials(selectedJob.skillPlannerId, selectedSkill.id);
+        }
+        // Refresh jobs to show updated testimonials
+        fetchSkillPlannerJobs();
+      } else {
+        toast.error(response.data?.message || 'Failed to add testimonial');
+      }
+    } catch (error) {
+      console.error('Error adding testimonial:', error);
+      toast.error(error.response?.data?.message || 'Failed to add testimonial');
+    }
   };
 
   // Delete Certificate
@@ -953,7 +932,7 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
         </div>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
             <div className="flex items-center gap-3">
               <div className="hidden lg:flex w-12 h-12 bg-indigo-100 rounded-lg items-center justify-center">
@@ -999,20 +978,6 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="hidden lg:flex w-12 h-12 bg-amber-100 rounded-lg items-center justify-center">
-                <i className="fas fa-award text-amber-600 text-xl"></i>
-              </div>
-              <div className="flex-1">
-                <p className="text-sm text-slate-600">Skills With</p>
-                <p className="text-sm text-slate-500">Testimonials</p>
-                <p className="text-2xl font-bold text-slate-900 lg:text-slate-900">
-                  <span className="lg:bg-transparent bg-amber-100 text-amber-600 lg:text-slate-900 px-3 py-1 rounded-lg inline-block">{getSkillsWithTestimonials()}</span>
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Jobs List */}
@@ -1051,16 +1016,6 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                           <div className="flex-1">
                             <h2 className="text-lg font-bold text-slate-900 mb-1">{job.title}</h2>
                             <p className="text-sm text-slate-600 mb-2">{job.company}</p>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(getCVStatus(job).link);
-                              }}
-                              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold ${getCVStatus(job).color} hover:opacity-80 transition-opacity`}
-                            >
-                              <i className={`fas ${getCVStatus(job).status === 'generated' ? 'fa-check-circle' : getCVStatus(job).status === 'progress' ? 'fa-clock' : 'fa-play-circle'}`}></i>
-                              {getCVStatus(job).label}
-                            </button>
                           </div>
                           <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'} text-slate-400 text-xl ml-2`}></i>
                         </div>
@@ -1089,14 +1044,12 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                         <div>
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-xs font-medium text-slate-700">Progress</span>
-                            <span className="text-xs font-semibold text-indigo-600">
-                              {job.skills.length > 0 ? Math.round((job.skills.filter(s => s.status === 'completed').length / job.skills.length) * 100) : 0}%
-                            </span>
+                            <span className="text-xs font-semibold text-indigo-600">50%</span>
                           </div>
                           <div className="w-full bg-slate-200 rounded-full h-2">
                             <div
                               className="bg-gradient-to-r from-indigo-500 to-purple-600 h-2 rounded-full transition-all"
-                              style={{ width: `${job.skills.length > 0 ? (job.skills.filter(s => s.status === 'completed').length / job.skills.length) * 100 : 0}%` }}
+                              style={{ width: '50%' }}
                             ></div>
                           </div>
                         </div>
@@ -1114,16 +1067,6 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                           <div className="flex-1">
                             <h2 className="text-xl font-bold text-slate-900 mb-1">{job.title}</h2>
                             <p className="text-sm text-slate-600 mb-3">{job.company}</p>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(getCVStatus(job).link);
-                              }}
-                              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold ${getCVStatus(job).color} hover:opacity-80 transition-opacity`}
-                            >
-                              <i className={`fas ${getCVStatus(job).status === 'generated' ? 'fa-check-circle' : getCVStatus(job).status === 'progress' ? 'fa-clock' : 'fa-play-circle'}`}></i>
-                              {getCVStatus(job).label}
-                            </button>
                           </div>
                           <div className="px-4 py-2 bg-white text-slate-700 rounded-lg font-medium flex items-center gap-2 shadow-sm">
                             <span>{isExpanded ? 'Collapse' : 'Expand'}</span>
@@ -1136,14 +1079,12 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                       <div className="p-6">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-medium text-slate-700">Overall Progress</span>
-                          <span className="text-sm font-semibold text-slate-900">
-                            {job.skills.length > 0 ? Math.round((job.skills.filter(s => s.status === 'completed').length / job.skills.length) * 100) : 0}%
-                          </span>
+                          <span className="text-sm font-semibold text-slate-900">50%</span>
                         </div>
                         <div className="w-full bg-slate-200 rounded-full h-3">
                           <div
                             className="bg-gradient-to-r from-indigo-500 to-purple-600 h-3 rounded-full transition-all"
-                            style={{ width: `${job.skills.length > 0 ? (job.skills.filter(s => s.status === 'completed').length / job.skills.length) * 100 : 0}%` }}
+                            style={{ width: '50%' }}
                           ></div>
                         </div>
                       </div>
@@ -1168,9 +1109,6 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                                   <div className="flex-1">
                                     <h4 className="font-semibold text-slate-900 mb-2">{skill.name}</h4>
                                     <div className="flex items-center gap-3 flex-wrap">
-                                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(skill.status)}`}>
-                                        {skill.status.replace('-', ' ').toUpperCase()}
-                                      </span>
                                       {skill.assessmentCompleted && (
                                         <span className="flex items-center gap-1 text-green-600 font-medium text-xs">
                                           <i className="fas fa-check-circle"></i>
@@ -1225,12 +1163,21 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                                             </div>
                                             <span className="text-xs text-slate-500 font-medium">{skill.readingModules?.length || 0}</span>
                                           </div>
-                                          <button
-                                            onClick={() => handleGenerateModule(job, skill)}
-                                            className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm"
-                                          >
-                                            Generate
-                                          </button>
+                                          {skill.hasReadingModule ? (
+                                            <button
+                                              onClick={() => handleViewModule(job, skill)}
+                                              className="w-full px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm"
+                                            >
+                                              View Module
+                                            </button>
+                                          ) : (
+                                            <button
+                                              onClick={() => handleGenerateModule(job, skill)}
+                                              className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm"
+                                            >
+                                              Generate
+                                            </button>
+                                          )}
                                         </div>
 
                                         <div className="border-t border-slate-100 my-4"></div>
@@ -1247,28 +1194,21 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                                           </div>
                                           <button
                                             onClick={() => handleGenerateVideoScript(job, skill)}
-                                            className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm"
+                                            className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm mb-2"
                                           >
                                             Generate Script
                                           </button>
+                                          <button
+                                            onClick={() => {
+                                              setSelectedSkill(skill);
+                                              setSelectedJob(job);
+                                              setShowViewAllResourcesModal(true);
+                                            }}
+                                            className="w-full text-center text-indigo-600 hover:text-indigo-800 text-xs font-medium transition-colors py-2"
+                                          >
+                                            View All Scripts
+                                          </button>
                                         </div>
-
-                                        {/* View All Resources Link */}
-                                        {(skill.readingModules?.length > 0 || skill.videoScripts?.length > 0) && (
-                                          <>
-                                            <div className="border-t border-slate-100 my-4"></div>
-                                            <button
-                                              onClick={() => {
-                                                setSelectedSkill(skill);
-                                                setSelectedJob(job);
-                                                setShowViewAllResourcesModal(true);
-                                              }}
-                                              className="w-full text-center text-indigo-600 hover:text-indigo-800 text-xs font-medium transition-colors py-2"
-                                            >
-                                              View All Resources ({(skill.readingModules?.length || 0) + (skill.videoScripts?.length || 0)})
-                                            </button>
-                                          </>
-                                        )}
                                       </div>
 
                                       {/* Evidence & Proof */}
@@ -1279,7 +1219,7 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                                             Evidence & proof
                                           </h5>
                                           <p className="text-slate-500 text-[11px] mt-1" style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 100 }}>
-                                            Validate your skills with assessments and testimonials
+                                            Validate your skills with assessments
                                           </p>
                                         </div>
                                         
@@ -1316,52 +1256,6 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
 
                                         <div className="border-t border-slate-100 my-4"></div>
 
-                                        {/* Testimonials */}
-                                        <div className="mb-4">
-                                          <div className="mb-3">
-                                            <div className="flex items-center gap-2 mb-1">
-                                              <i className="fas fa-award text-slate-600 text-sm"></i>
-                                              <span className="text-xs font-medium text-slate-700">Testimonials</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-xs">
-                                              <span className="text-slate-500 font-medium">
-                                                {skill.testimonials?.filter(t => t.status === 'approved').length || 0} Approved
-                                              </span>
-                                              <span className="text-slate-300">·</span>
-                                              <span className="text-orange-600 font-semibold">
-                                                {skill.testimonials?.filter(t => t.status === 'pending').length || 0} Pending
-                                              </span>
-                                            </div>
-                                          </div>
-                                          <div className="flex gap-2">
-                                            {skill.testimonials && skill.testimonials.length > 0 && (
-                                              <button
-                                                onClick={() => {
-                                                  setSelectedSkill(skill);
-                                                  setIsViewTestimonialModalOpen(true);
-                                                }}
-                                                className="flex-1 px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                                              >
-                                                <i className="fas fa-eye lg:hidden"></i>
-                                                <span className="hidden lg:inline">View All ({skill.testimonials.length})</span>
-                                              </button>
-                                            )}
-                                            <button
-                                              onClick={() => {
-                                                setSelectedJob(job);
-                                                setSelectedSkill(skill);
-                                                setIsRequestTestimonialModalOpen(true);
-                                              }}
-                                              className={`px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm flex items-center justify-center gap-2 ${skill.testimonials && skill.testimonials.length > 0 ? 'flex-1' : 'w-full'}`}
-                                            >
-                                              <i className="fas fa-plus lg:hidden"></i>
-                                              <span className="hidden lg:inline">Request New</span>
-                                            </button>
-                                          </div>
-                                        </div>
-
-                                        <div className="border-t border-slate-100 my-4"></div>
-
                                         {/* Certifications */}
                                         <div className="mb-4">
                                           <div className="flex items-center justify-between mb-3">
@@ -1372,28 +1266,77 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                                             <span className="text-xs text-slate-500 font-medium">{skill.certificates?.length || 0}</span>
                                           </div>
                                           <div className="flex gap-2">
-                                            {skill.certificates && skill.certificates.length > 0 && (
-                                              <button
-                                                onClick={() => {
-                                                  setSelectedSkill(skill);
-                                                  setShowCertificatesModal(true);
-                                                }}
-                                                className="flex-1 px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                                              >
-                                                <i className="fas fa-eye lg:hidden"></i>
-                                                <span className="hidden lg:inline">View All ({skill.certificates.length})</span>
-                                              </button>
-                                            )}
+                                            <button
+                                              onClick={async () => {
+                                                setSelectedSkill(skill);
+                                                setSelectedJob(job);
+                                                setShowCertificatesModal(true);
+                                                await fetchCertificates(job.skillPlannerId, skill.id);
+                                              }}
+                                              className="flex-1 px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                                            >
+                                              <i className="fas fa-eye lg:hidden"></i>
+                                              <span className="hidden lg:inline">
+                                                {skill.certificates && skill.certificates.length > 0 
+                                                  ? `View All (${skill.certificates.length})` 
+                                                  : 'View Certificates'}
+                                              </span>
+                                            </button>
                                             <button
                                               onClick={() => {
                                                 setSelectedJob(job);
                                                 setSelectedSkill(skill);
                                                 setShowAddCertificateModal(true);
                                               }}
-                                              className={`px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm flex items-center justify-center gap-2 ${skill.certificates && skill.certificates.length > 0 ? 'flex-1' : 'w-full'}`}
+                                              className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm flex items-center justify-center gap-2"
                                             >
                                               <i className="fas fa-plus lg:hidden"></i>
                                               <span className="hidden lg:inline">Add Link</span>
+                                            </button>
+                                          </div>
+                                        </div>
+
+                                        <div className="border-t border-slate-100 my-4"></div>
+
+                                        {/* Testimonials */}
+                                        <div className="mb-4">
+                                          <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2">
+                                              <i className="fas fa-award text-slate-600 text-sm"></i>
+                                              <span className="text-xs font-medium text-slate-700">Testimonials</span>
+                                            </div>
+                                            <span className="text-xs text-slate-500 font-medium">{skill.testimonials?.length || 0}</span>
+                                          </div>
+                                          <div className="flex gap-2">
+                                            <button
+                                              onClick={async () => {
+                                                setSelectedSkill(skill);
+                                                setSelectedJob(job);
+                                                setShowTestimonialsModal(true);
+                                                await fetchTestimonials(job.skillPlannerId, skill.id);
+                                              }}
+                                              className="flex-1 px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                                            >
+                                              <i className="fas fa-eye lg:hidden"></i>
+                                              <span className="hidden lg:inline">
+                                                {skill.testimonials && skill.testimonials.length > 0 
+                                                  ? `View All (${skill.testimonials.length})` 
+                                                  : 'View Testimonials'}
+                                              </span>
+                                            </button>
+                                            <button
+                                              onClick={() => {
+                                                setSelectedJob(job);
+                                                setSelectedSkill(skill);
+                                                setValidatorName('');
+                                                setValidatorEmail('');
+                                                setValidatorRole('');
+                                                setShowAddTestimonialModal(true);
+                                              }}
+                                              className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm flex items-center justify-center gap-2"
+                                            >
+                                              <i className="fas fa-plus lg:hidden"></i>
+                                              <span className="hidden lg:inline">Add New</span>
                                             </button>
                                           </div>
                                         </div>
@@ -1421,24 +1364,28 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                                             </div>
                                             <span className="text-xs text-slate-500 font-medium">{skill.linkedInPosts?.length || 0}</span>
                                           </div>
-                                          {skill.linkedInPosts && skill.linkedInPosts.length > 0 ? (
+                                          <div className="flex gap-2">
                                             <button
-                                              onClick={() => {
+                                              onClick={async () => {
                                                 setSelectedSkill(skill);
-                                                setShowLinkedInPostsModal(true);
+                                                setSelectedJob(job);
+                                                setShowViewLinkedInPostsModal(true);
+                                                setCurrentPostIndex(0);
+                                                await fetchLinkedInPosts(job.skillPlannerId, skill.id);
                                               }}
-                                              className="w-full px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs rounded-lg font-medium transition-colors"
+                                              className="flex-1 px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                                             >
-                                              View Post
+                                              <i className="fas fa-eye lg:hidden"></i>
+                                              <span className="hidden lg:inline">View All</span>
                                             </button>
-                                          ) : (
                                             <button
                                               onClick={() => handleCreateLinkedInPost(job, skill)}
-                                              className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm"
+                                              className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm flex items-center justify-center gap-2"
                                             >
-                                              Create Post
+                                              <i className="fas fa-plus lg:hidden"></i>
+                                              <span className="hidden lg:inline">Create Post</span>
                                             </button>
-                                          )}
+                                          </div>
                                         </div>
 
                                         <div className="border-t border-slate-100 my-4"></div>
@@ -1453,21 +1400,21 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                                             <span className="text-xs text-slate-500 font-medium">{skill.youtubeLinks?.length || 0}</span>
                                           </div>
                                           <div className="flex gap-2">
-                                            {skill.youtubeLinks && skill.youtubeLinks.length > 0 && (
-                                              <button
-                                                onClick={() => {
-                                                  setSelectedSkill(skill);
-                                                  setShowVideosModal(true);
-                                                }}
-                                                className="flex-1 px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                                              >
-                                                <i className="fas fa-eye lg:hidden"></i>
-                                                <span className="hidden lg:inline">View All ({skill.youtubeLinks.length})</span>
-                                              </button>
-                                            )}
+                                            <button
+                                              onClick={async () => {
+                                                setSelectedSkill(skill);
+                                                setSelectedJob(job);
+                                                setShowVideosModal(true);
+                                                await fetchStudentVideos(job.skillPlannerId, skill.id);
+                                              }}
+                                              className="flex-1 px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                                            >
+                                              <i className="fas fa-eye lg:hidden"></i>
+                                              <span className="hidden lg:inline">View All</span>
+                                            </button>
                                             <button
                                               onClick={() => handleAddVideo(job, skill)}
-                                              className={`px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm flex items-center justify-center gap-2 ${skill.youtubeLinks && skill.youtubeLinks.length > 0 ? 'flex-1' : 'w-full'}`}
+                                              className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg font-semibold transition-colors shadow-sm flex items-center justify-center gap-2"
                                             >
                                               <i className="fas fa-plus lg:hidden"></i>
                                               <span className="hidden lg:inline">Add Video</span>
@@ -1491,50 +1438,6 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
           </div>
         )}
       </div>
-
-      {/* Modals remain the same */}
-      <AddResourceModal
-        isOpen={isAddResourceModalOpen}
-        onClose={() => setIsAddResourceModalOpen(false)}
-        resourceType={resourceType}
-        selectedSkill={selectedSkill}
-        resourceTitle={resourceTitle}
-        setResourceTitle={setResourceTitle}
-        resourceUrl={resourceUrl}
-        setResourceUrl={setResourceUrl}
-        resourceNote={resourceNote}
-        setResourceNote={setResourceNote}
-        onAddResource={() => {}}
-      />
-
-      <RequestTestimonialModal
-        isOpen={isRequestTestimonialModalOpen}
-        onClose={() => setIsRequestTestimonialModalOpen(false)}
-        selectedSkill={selectedSkill}
-        testimonialProject={testimonialProject}
-        setTestimonialProject={setTestimonialProject}
-        validatorName={validatorName}
-        setValidatorName={setValidatorName}
-        validatorEmail={validatorEmail}
-        setValidatorEmail={setValidatorEmail}
-        validatorRole={validatorRole}
-        setValidatorRole={setValidatorRole}
-        personalMessage={personalMessage}
-        setPersonalMessage={setPersonalMessage}
-        onRequestTestimonial={() => {}}
-      />
-
-      <ViewTestimonialModal
-        isOpen={isViewTestimonialModalOpen}
-        onClose={() => setIsViewTestimonialModalOpen(false)}
-        selectedTestimonial={selectedTestimonial}
-      />
-
-      <ViewNoteModal
-        isOpen={isViewNoteModalOpen}
-        onClose={() => setIsViewNoteModalOpen(false)}
-        selectedNote={selectedNote}
-      />
 
       {/* Reader Mode for Learning Modules */}
       <LearningModuleReader
@@ -1561,25 +1464,16 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
         selectedSkill={selectedSkill}
       />
 
-      {/* View All Testimonials Modal */}
-      <TestimonialsListModal
-        isOpen={isViewTestimonialModalOpen}
-        onClose={() => setIsViewTestimonialModalOpen(false)}
-        selectedSkill={selectedSkill}
-      />
-
-      {/* LinkedIn Posts Modal */}
-      <LinkedInPostsModal
-        isOpen={showLinkedInPostsModal}
-        onClose={() => setShowLinkedInPostsModal(false)}
-        selectedSkill={selectedSkill}
-      />
-
       {/* Videos Modal */}
       <VideosListModal
         isOpen={showVideosModal}
-        onClose={() => setShowVideosModal(false)}
+        onClose={() => {
+          setShowVideosModal(false);
+          setVideosList([]);
+        }}
         selectedSkill={selectedSkill}
+        videosList={videosList}
+        isLoadingVideos={isLoadingVideos}
       />
 
       {/* Add Video Modal */}
@@ -1607,7 +1501,10 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                 <p className="text-sm text-slate-600">{selectedSkill.name}</p>
               </div>
               <button
-                onClick={() => setShowCertificatesModal(false)}
+                onClick={() => {
+                  setShowCertificatesModal(false);
+                  setCertificatesList([]);
+                }}
                 className="text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <i className="fas fa-times text-xl"></i>
@@ -1615,30 +1512,35 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
             </div>
             
             <div className="p-6">
-              {selectedSkill.certificates && selectedSkill.certificates.length > 0 ? (
+              {isLoadingCertificates ? (
+                <div className="text-center py-12">
+                  <i className="fas fa-spinner fa-spin text-3xl text-slate-400 mb-4"></i>
+                  <p className="text-slate-500">Loading certificates...</p>
+                </div>
+              ) : certificatesList && certificatesList.length > 0 ? (
                 <div className="space-y-4">
-                  {selectedSkill.certificates.map((cert) => (
-                    <div key={cert.id} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                  {certificatesList.map((cert) => (
+                    <div key={cert._id} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <i className={`fas ${cert.provider === 'drive' ? 'fa-google-drive' : 'fa-dropbox'} text-lg ${cert.provider === 'drive' ? 'text-blue-600' : 'text-blue-500'}`}></i>
+                            <i className={`fas ${cert.storageProvider === 'google drive' ? 'fa-google-drive' : 'fa-dropbox'} text-lg ${cert.storageProvider === 'google drive' ? 'text-blue-600' : 'text-blue-500'}`}></i>
                             <h4 className="font-semibold text-slate-900">{cert.title}</h4>
                           </div>
                           <a 
-                            href={cert.url} 
+                            href={cert.link} 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="text-sm text-blue-600 hover:text-blue-700 hover:underline break-all"
                           >
-                            {cert.url}
+                            {cert.link}
                           </a>
                           <p className="text-xs text-slate-500 mt-2">
-                            Added: {new Date(cert.addedAt).toLocaleDateString()}
+                            Added: {new Date(cert.createdAt).toLocaleDateString()}
                           </p>
                         </div>
                         <button
-                          onClick={() => handleDeleteCertificate(cert.id)}
+                          onClick={() => handleDeleteCertificate(cert._id)}
                           className="text-red-500 hover:text-red-700 transition-colors"
                         >
                           <i className="fas fa-trash"></i>
@@ -1766,6 +1668,155 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
         </div>
       )}
 
+      {/* View Testimonials Modal */}
+      {showTestimonialsModal && selectedSkill && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900">Testimonials</h3>
+                <p className="text-sm text-slate-600">{selectedSkill.name}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowTestimonialsModal(false);
+                  setTestimonialsList([]);
+                }}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <i className="fas fa-times text-xl"></i>
+              </button>
+            </div>
+            
+            <div className="p-6">
+              {isLoadingTestimonials ? (
+                <div className="text-center py-12">
+                  <i className="fas fa-spinner fa-spin text-3xl text-slate-400 mb-4"></i>
+                  <p className="text-slate-500">Loading testimonials...</p>
+                </div>
+              ) : testimonialsList && testimonialsList.length > 0 ? (
+                <div className="space-y-4">
+                  {testimonialsList.map((testimonial) => (
+                    <div key={testimonial._id} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <i className="fas fa-award text-amber-600 text-lg"></i>
+                            <h4 className="font-semibold text-slate-900">{testimonial.validatorName}</h4>
+                          </div>
+                          <p className="text-sm text-slate-700 mb-1">
+                            <span className="font-medium">Role:</span> {testimonial.validatorRole}
+                          </p>
+                          <p className="text-sm text-slate-600 mb-2">
+                            <span className="font-medium">Email:</span> {testimonial.validatorEmail}
+                          </p>
+                          <p className="text-xs text-slate-500 mt-2">
+                            Added: {new Date(testimonial.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <i className="fas fa-award text-5xl text-slate-300 mb-4"></i>
+                  <p className="text-slate-500">No testimonials added yet</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Testimonial Modal */}
+      {showAddTestimonialModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-xl max-w-lg w-full">
+            <div className="p-6 border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Add Testimonial</h3>
+                  <p className="text-sm text-slate-600">{selectedSkill?.name}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowAddTestimonialModal(false);
+                    setValidatorName('');
+                    setValidatorEmail('');
+                    setValidatorRole('');
+                  }}
+                  className="text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <i className="fas fa-times text-xl"></i>
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Validator's Name *
+                </label>
+                <input
+                  type="text"
+                  value={validatorName}
+                  onChange={(e) => setValidatorName(e.target.value)}
+                  placeholder="e.g., Ms. Priya Sharma"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Validator's Email *
+                </label>
+                <input
+                  type="email"
+                  value={validatorEmail}
+                  onChange={(e) => setValidatorEmail(e.target.value)}
+                  placeholder="e.g., priya.sharma@company.com"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Validator's Role/Title *
+                </label>
+                <input
+                  type="text"
+                  value={validatorRole}
+                  onChange={(e) => setValidatorRole(e.target.value)}
+                  placeholder="e.g., Project Manager, TechSolutions Inc."
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => {
+                    setShowAddTestimonialModal(false);
+                    setValidatorName('');
+                    setValidatorEmail('');
+                    setValidatorRole('');
+                  }}
+                  className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveTestimonial}
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  Add Testimonial
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* View All Resources Modal */}
       <ViewAllResourcesModal
         isOpen={showViewAllResourcesModal}
@@ -1799,8 +1850,98 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
         isGeneratingPost={isGeneratingPost}
         onGenerate={handleGenerateLinkedInPost}
         onCopy={handleCopyLinkedInPost}
-        onSave={handleSaveLinkedInPost}
       />
+
+      {/* View LinkedIn Posts Modal */}
+      {showViewLinkedInPostsModal && selectedSkill && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900">LinkedIn Posts</h3>
+                <p className="text-sm text-slate-600">{selectedSkill.name}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowViewLinkedInPostsModal(false);
+                  setLinkedInPostsList([]);
+                  setCurrentPostIndex(0);
+                }}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <i className="fas fa-times text-xl"></i>
+              </button>
+            </div>
+            
+            <div className="p-6">
+              {isLoadingLinkedInPosts ? (
+                <div className="text-center py-12">
+                  <i className="fas fa-spinner fa-spin text-3xl text-slate-400 mb-4"></i>
+                  <p className="text-slate-500">Loading LinkedIn posts...</p>
+                </div>
+              ) : linkedInPostsList && linkedInPostsList.length > 0 ? (
+                <div className="space-y-6">
+                  {/* Current Post Display */}
+                  <div className="border border-slate-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                    <div className="flex items-start gap-4 mb-4">
+                      <i className="fab fa-linkedin text-blue-600 text-3xl"></i>
+                      <div className="flex-1">
+                        <h4 className="font-bold text-slate-900 text-lg mb-2">{linkedInPostsList[currentPostIndex].topic}</h4>
+                        <p className="text-sm text-slate-500">
+                          {new Date(linkedInPostsList[currentPostIndex].createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="bg-slate-50 p-4 rounded-lg mb-4">
+                      <pre className="whitespace-pre-wrap text-sm text-slate-700 font-sans leading-relaxed">
+                        {linkedInPostsList[currentPostIndex].postText}
+                      </pre>
+                    </div>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(linkedInPostsList[currentPostIndex].postText);
+                        toast.success('Post copied to clipboard!');
+                      }}
+                      className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      <i className="fas fa-copy"></i>
+                      Copy Post Text
+                    </button>
+                  </div>
+
+                  {/* Navigation */}
+                  <div className="flex items-center justify-between gap-4">
+                    <button
+                      onClick={handlePreviousPost}
+                      disabled={currentPostIndex === 0}
+                      className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed text-slate-700 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      <i className="fas fa-chevron-left"></i>
+                      Previous
+                    </button>
+                    <span className="text-sm text-slate-600 font-medium">
+                      {currentPostIndex + 1} of {linkedInPostsList.length}
+                    </span>
+                    <button
+                      onClick={handleNextPost}
+                      disabled={currentPostIndex === linkedInPostsList.length - 1}
+                      className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed text-slate-700 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      Next
+                      <i className="fas fa-chevron-right"></i>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <i className="fab fa-linkedin text-5xl text-slate-300 mb-4"></i>
+                  <p className="text-slate-500">No LinkedIn posts found</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* AI Generation Loader */}
       <AIGenerationLoader
@@ -1847,18 +1988,16 @@ Grateful for the learning resources and support from the MySkillDB community. Ev
                 {/* Specific Idea Input */}
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Any specific idea or focus? (Optional)
+                    Any specific idea or focus? <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     value={scriptIdea}
                     onChange={(e) => setScriptIdea(e.target.value)}
                     placeholder="e.g., focus on hooks and state management, or explain async/await patterns..."
                     rows={3}
+                    required
                     className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-sm"
                   />
-                  <p className="text-xs text-slate-500 mt-1">
-                    Leave blank for a general overview of the skill
-                  </p>
                 </div>
 
                 {/* Video Length Selection */}
