@@ -79,11 +79,10 @@ const Mentors = () => {
     try {
       if (editingContact) {
         // Update existing contact
-        const response = await putRequest(`/contacts/${DESIGNATION}/${editingContact.id}`, JSON.stringify(formData));
-  
-        const data = await response.json();
-  
-        if (!response.ok) throw new Error(data.message);
+        const { data } = await putRequest(
+          `/contacts/${DESIGNATION}/${editingContact.id}`,
+          formData
+        );
   
         const updatedContacts = contacts.map(contact =>
           contact.id === editingContact.id ? data.data : contact
@@ -91,12 +90,10 @@ const Mentors = () => {
         setContacts(updatedContacts);
         toast.success(`${DESIGNATION} contact updated successfully!`);
       } else {
+        console.log(formData)
         // Add new contact
-        const response = await postRequest(`/contacts/add/${DESIGNATION}`, JSON.stringify(formData));
-  
-        const data = await response.json();
-  
-        if (!response.ok) throw new Error(data.message);
+        const response = await postRequest(`/contacts/add/${DESIGNATION}`, formData);
+        console.log("hello ", response)
   
         setContacts([data.data, ...contacts]);
         toast.success(`${DESIGNATION} contact added successfully!`);
@@ -104,7 +101,7 @@ const Mentors = () => {
   
       closeModal();
     } catch (error) {
-      toast.error(error.message || 'Something went wrong');
+      toast.error(error.response?.data?.message || 'Something went wrong');
     }
   };
 
