@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import OrgMenuNavigation from '../../components/org-admin-components/org-admin-menu_components/OrgMenuNavigation';
+import JobParserModal from '../../components/org-admin-components/jobs-placements-components/JobParserModal';
 
 const OrgDashboard = () => {
   const API_BASE_URL = useMemo(() => `${import.meta.env.VITE_SERVER_API_URL}/api`, []);
@@ -36,9 +37,7 @@ const OrgDashboard = () => {
 
   // Job Hunter Modal states
   const [isJobHunterOpen, setIsJobHunterOpen] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [rawJobText, setRawJobText] = useState('');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isJobParserOpen, setIsJobParserOpen] = useState(false);
   const [userPortals, setUserPortals] = useState([
     { id: 1, name: 'My LinkedIn Search', url: 'https://www.linkedin.com/jobs/' }
   ]);
@@ -48,14 +47,6 @@ const OrgDashboard = () => {
     { id: 1, name: 'Indeed', url: 'https://www.indeed.com/' },
     { id: 2, name: 'Wellfound', url: 'https://wellfound.com/' }
   ]);
-  const [captureForm, setCaptureForm] = useState({
-    title: '',
-    company: '',
-    description: '',
-    salary: '',
-    location: '',
-    type: 'full-time'
-  });
 
   // Record Placement Modal states
   const [isRecordPlacementOpen, setIsRecordPlacementOpen] = useState(false);
@@ -106,117 +97,11 @@ const OrgDashboard = () => {
   const handleLaunch = (url) => {
     // Open portal in new browser tab
     window.open(url, '_blank', 'noopener,noreferrer');
-    // Reset and show capture form modal
-    setRawJobText('');
-    setIsModalOpen(true);
+    // Show job parser modal
+    setIsJobParserOpen(true);
     setIsJobHunterOpen(false);
   };
 
-  const handleAnalyze = () => {
-    if (!rawJobText.trim()) {
-      toast.error('Please paste job text first');
-      return;
-    }
-
-    setIsAnalyzing(true);
-
-    // Simulate AI analysis
-    setTimeout(() => {
-      const lines = rawJobText.split('\n').filter(line => line.trim().length > 0);
-      
-      // Extract Title (first non-empty line)
-      const title = lines[0] || '';
-      
-      // Extract Company (second line or search for company indicators)
-      let company = 'Extracted Company';
-      if (lines[1]) {
-        company = lines[1];
-      }
-      // Look for company indicators
-      const companyMatch = rawJobText.match(/(?:Company:|at|@)\s*([A-Z][^\n]*)/i);
-      if (companyMatch) {
-        company = companyMatch[1].trim();
-      }
-      
-      // Extract Salary (look for $ or ₹ or salary keywords)
-      let salary = '';
-      const salaryMatch = rawJobText.match(/(?:salary|compensation|pay|package)[\s:]*([^\n]*(?:\$|₹|LPA|USD|INR)[^\n]*)/i);
-      if (salaryMatch) {
-        salary = salaryMatch[1].trim();
-      } else {
-        const dollarMatch = rawJobText.match(/[\$₹][0-9,]+(?:\s*-\s*[\$₹]?[0-9,]+)?(?:\s*(?:USD|INR|LPA))?/i);
-        if (dollarMatch) {
-          salary = dollarMatch[0];
-        }
-      }
-      
-      // Extract Location
-      let location = '';
-      const locationMatch = rawJobText.match(/(?:location|place|city)[\s:]*([^\n]+)/i);
-      if (locationMatch) {
-        location = locationMatch[1].trim();
-      }
-      
-      // Extract Job Type
-      let type = 'full-time';
-      if (rawJobText.toLowerCase().includes('part-time') || rawJobText.toLowerCase().includes('part time')) {
-        type = 'part-time';
-      } else if (rawJobText.toLowerCase().includes('intern')) {
-        type = 'internship';
-      }
-      
-      // Extract Description (take a meaningful chunk)
-      let description = rawJobText.substring(0, 500);
-      // Try to find a description section
-      const descMatch = rawJobText.match(/(?:description|responsibilities|about|role)[\s:]*([^\n]{100,})/i);
-      if (descMatch) {
-        description = descMatch[1].trim().substring(0, 500);
-      }
-      
-      // Update form with extracted data
-      setCaptureForm({
-        title: title.substring(0, 100),
-        company: company.substring(0, 100),
-        description: description,
-        salary: salary.substring(0, 50),
-        location: location.substring(0, 100),
-        type: type
-      });
-      
-      setIsAnalyzing(false);
-      toast.success('✨ Job details extracted successfully!');
-    }, 1500);
-  };
-
-  const handleSaveJob = (e) => {
-    e.preventDefault();
-    console.log('Captured Job Details:', captureForm);
-    toast.success('Job saved successfully! (Check console)');
-    // Close modal and reset
-    setIsModalOpen(false);
-    setRawJobText('');
-    setCaptureForm({
-      title: '',
-      company: '',
-      description: '',
-      salary: '',
-      location: '',
-      type: 'full-time'
-    });
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setRawJobText('');
-    setCaptureForm({
-      title: '',
-      company: '',
-      description: '',
-      salary: '',
-      location: '',
-      type: 'full-time'
-    });
-  };
 
   const handleSaveNewPortal = (e) => {
     e.preventDefault();
@@ -413,12 +298,12 @@ const OrgDashboard = () => {
       <Toaster position="top-right" />
       
       {/* Navigation Component - Hidden when Job Hunter modals are open */}
-      {!isJobHunterOpen && !isModalOpen && (
+      {!isJobHunterOpen && !isJobParserOpen && (
       <OrgMenuNavigation currentPage={activeMenu} onPageChange={handlePageChange} />
       )}
 
       {/* Main Content with offset for sidebar */}
-      <div className={isJobHunterOpen || isModalOpen ? "" : "lg:ml-72"}>
+      <div className={isJobHunterOpen || isJobParserOpen ? "" : "lg:ml-72"}>
         <main id="mainContent" className="flex-1 p-4 md:p-8 space-y-8">
           {/* Mobile Profile - Fixed Top Right */}
           <div className="lg:hidden fixed top-4 right-4 z-[99]">
@@ -1165,192 +1050,10 @@ const OrgDashboard = () => {
       )}
 
       {/* AI Job Parser Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-70 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[95vh] overflow-hidden flex flex-col">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 p-6 flex-shrink-0">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3">
-                  <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center flex-shrink-0">
-                    <i className="fas fa-magic text-purple-600 text-2xl"></i>
-                  </div>
-                  <div className="text-left">
-                    <h2 className="text-2xl md:text-3xl font-bold text-white">AI Job Parser</h2>
-                    <p className="text-sm text-purple-100">Paste job text and let AI extract the details</p>
-                  </div>
-                </div>
-                <button
-                  onClick={handleCloseModal}
-                  className="w-10 h-10 rounded-lg bg-white bg-opacity-20 hover:bg-opacity-30 flex items-center justify-center transition-colors flex-shrink-0"
-                >
-                  <i className="fas fa-times text-white text-xl"></i>
-              </button>
-            </div>
-      </div>
-
-            {/* Two-Column Layout */}
-            <div className="flex-1 overflow-y-auto">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
-                {/* Left Column - Input */}
-                <div className="space-y-4">
-                  <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-6 border-2 border-purple-200">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
-                        <span className="text-white font-bold text-lg">1</span>
-                      </div>
-                      <h3 className="text-xl font-bold text-slate-900">Paste Job Details</h3>
-                    </div>
-                    
-                    <p className="text-sm text-slate-600 mb-4 bg-white rounded-lg p-3 border border-purple-200">
-                      <i className="fas fa-info-circle text-purple-600 mr-2"></i>
-                      Go to the opened tab, press <kbd className="px-2 py-1 bg-slate-200 rounded text-xs font-mono">Ctrl+A</kbd> then <kbd className="px-2 py-1 bg-slate-200 rounded text-xs font-mono">Ctrl+C</kbd>. Paste everything here.
-                    </p>
-
-                    <textarea
-                      value={rawJobText}
-                      onChange={(e) => setRawJobText(e.target.value)}
-                      placeholder="Paste the entire job posting text here..."
-                      rows={12}
-                      className="w-full px-4 py-3 border-2 border-purple-300 rounded-lg focus:border-purple-500 focus:outline-none text-slate-900 resize-none font-mono text-sm"
-                    />
-
-                    <button
-                      onClick={handleAnalyze}
-                      disabled={!rawJobText.trim() || isAnalyzing}
-                      className="w-full mt-4 px-6 py-4 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:via-indigo-700 hover:to-blue-700 text-white rounded-xl font-bold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isAnalyzing ? (
-                        <>
-                          <i className="fas fa-spinner fa-spin text-xl"></i>
-                          Analyzing...
-                        </>
-                      ) : (
-                        <>
-                          <i className="fas fa-sparkles text-xl"></i>
-                          Analyze with AI
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Right Column - Form */}
-                <div className="space-y-4">
-                  <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-6 border-2 border-emerald-200">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center">
-                        <span className="text-white font-bold text-lg">2</span>
-                      </div>
-                      <h3 className="text-xl font-bold text-slate-900">Review & Save</h3>
-                    </div>
-
-                    <form onSubmit={handleSaveJob} className="space-y-4">
-                      {/* Job Title */}
-                  <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-2">
-                          Job Title <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={captureForm.title}
-                          onChange={(e) => setCaptureForm({ ...captureForm, title: e.target.value })}
-                          placeholder="Will be auto-filled..."
-                          className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:outline-none text-slate-900"
-                          required
-                        />
-                  </div>
-
-                      {/* Company */}
-                      <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-2">
-                          Company
-                        </label>
-                        <input
-                          type="text"
-                          value={captureForm.company}
-                          onChange={(e) => setCaptureForm({ ...captureForm, company: e.target.value })}
-                          placeholder="Will be auto-filled..."
-                          className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:outline-none text-slate-900"
-                        />
-                </div>
-
-                      {/* Description */}
-                      <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-2">
-                          Description
-                        </label>
-                        <textarea
-                          value={captureForm.description}
-                          onChange={(e) => setCaptureForm({ ...captureForm, description: e.target.value })}
-                          placeholder="Will be auto-filled..."
-                          rows={4}
-                          className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:outline-none text-slate-900 resize-none"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        {/* Salary */}
-                        <div>
-                          <label className="block text-sm font-semibold text-slate-700 mb-2">
-                            Salary
-                          </label>
-                          <input
-                            type="text"
-                            value={captureForm.salary}
-                            onChange={(e) => setCaptureForm({ ...captureForm, salary: e.target.value })}
-                            placeholder="Auto-filled"
-                            className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:outline-none text-slate-900"
-                          />
-                        </div>
-
-                        {/* Location */}
-                        <div>
-                          <label className="block text-sm font-semibold text-slate-700 mb-2">
-                            Location
-                          </label>
-                          <input
-                            type="text"
-                            value={captureForm.location}
-                            onChange={(e) => setCaptureForm({ ...captureForm, location: e.target.value })}
-                            placeholder="Auto-filled"
-                            className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:outline-none text-slate-900"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Job Type */}
-                      <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-2">
-                          Job Type
-                        </label>
-                        <select
-                          value={captureForm.type}
-                          onChange={(e) => setCaptureForm({ ...captureForm, type: e.target.value })}
-                          className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:outline-none text-slate-900"
-                        >
-                          <option value="full-time">Full-time</option>
-                          <option value="part-time">Part-time</option>
-                          <option value="internship">Internship</option>
-                        </select>
-                      </div>
-
-                      {/* Save Button */}
-                      <button
-                        type="submit"
-                        className="w-full mt-4 px-6 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl font-bold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 text-lg"
-                      >
-                        <i className="fas fa-save text-xl"></i>
-                        Save Job
-              </button>
-                    </form>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-      </div>
-      )}
+      <JobParserModal
+        isOpen={isJobParserOpen}
+        onClose={() => setIsJobParserOpen(false)}
+      />
 
       {/* Record Placement Modal */}
       {isRecordPlacementOpen && (
