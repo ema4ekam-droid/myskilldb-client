@@ -1,10 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { parseJobPosting, extractSkills } from '../../../config/aiConfig';
+import { getRequest, postRequest } from '../../../api/apiRequests';
 
-const JobParserModal = ({ isOpen, onClose }) => {
+const JobParserModal = ({ isOpen, onClose, organizationId }) => {
   const [step, setStep] = useState(1); // 1: Paste, 2: Review, 3: Skills Results
   const [isLoading, setIsLoading] = useState(false);
+  const [departments, setDepartments] = useState([]);
+  const [isDeptLoading, setIsDeptLoading] = useState(false);
+  const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [isJobCreated, setIsJobCreated] = useState(false);
+  const [createdJob, setCreatedJob] = useState(null);
   
   // Step 1: Paste job text
   const [fullJobText, setFullJobText] = useState('');
@@ -14,6 +20,7 @@ const JobParserModal = ({ isOpen, onClose }) => {
     job_title: '',
     company: '',
     description: '',
+    requirements: '',
     salary: '',
     location: '',
     job_type: 'Full-time'
@@ -32,14 +39,49 @@ const JobParserModal = ({ isOpen, onClose }) => {
         job_title: '',
         company: '',
         description: '',
+        requirements: '',
         salary: '',
         location: '',
         job_type: 'Full-time'
       });
       setSkillsData(null);
       setJobName('');
+      setDepartments([]);
+      setSelectedDepartment('');
+      setIsDeptLoading(false);
+      setIsJobCreated(false);
+      setCreatedJob(null);
     }
   }, [isOpen]);
+
+  const shouldLoadDepartments = useMemo(
+    () => Boolean(isOpen && step === 2 && organizationId),
+    [isOpen, step, organizationId]
+  );
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      if (!shouldLoadDepartments) return;
+      try {
+        setIsDeptLoading(true);
+        const response = await getRequest(`/organization-setup/departments/${organizationId}`);
+        const data = response.data?.data ?? [];
+        setDepartments(data);
+        if (data.length === 0) {
+          setSelectedDepartment('');
+        }
+      } catch (error) {
+        console.error('Error fetching departments:', error);
+        toast.error('Failed to load departments');
+        setDepartments([]);
+        setSelectedDepartment('');
+      } finally {
+        setIsDeptLoading(false);
+      }
+    };
+
+    fetchDepartments();
+  }, [shouldLoadDepartments, organizationId]);
 
   // Step 1: Parse job posting
   const handleParseJob = async (e) => {
@@ -61,6 +103,9 @@ const JobParserModal = ({ isOpen, onClose }) => {
           job_title: data.job_title || '',
           company: data.company || 'Not specified',
           description: data.description || '',
+          requirements: Array.isArray(data.requirements)
+            ? data.requirements.join('\n')
+            : (data.requirements || ''),
           salary: data.salary || 'Not specified',
           location: data.location || 'Not specified',
           job_type: data.job_type || 'Full-time'
@@ -79,6 +124,109 @@ const JobParserModal = ({ isOpen, onClose }) => {
   };
 
   // Step 2: Extract skills
+  const buildRequirementsArray = (text) => {
+    if (!text) return [];
+    
+    // First, split by newlines (primary separator)
+    const lines = text.split(/\n/).map((line) => line.trim()).filter(Boolean);
+    
+    const requirements = [];
+    
+    for (const line of lines) {
+      // Remove common list markers (bullet points, dashes, numbers, etc.)
+      let cleanedLine = line.replace(/^[\s]*[•\-\*\d+\.\)]\s*/, '').trim();
+      
+      if (!cleanedLine) continue;
+      
+      // Check if this line looks like a comma-separated list of short items
+      // (e.g., "React, Vue, Angular" vs "Experience with React, Vue, and Angular")
+      if (cleanedLine.includes(',')) {
+        const parts = cleanedLine.split(',').map((part) => part.trim()).filter(Boolean);
+        
+        // Calculate average length of parts
+        const avgLength = parts.reduce((sum, part) => sum + part.length, 0) / parts.length;
+        
+        // If average length is short (< 25 chars) and we have multiple parts, treat as list
+        // Otherwise, treat as one requirement (comma is part of the text)
+        if (avgLength < 25 && parts.length > 1) {
+          requirements.push(...parts);
+        } else {
+          requirements.push(cleanedLine);
+        }
+      } else {
+        // No commas, treat as single requirement
+        requirements.push(cleanedLine);
+      }
+    }
+    
+    return requirements.filter((req) => req.length > 0);
+  };
+
+  const ensureJobCreated = async () => {
+    if (isJobCreated && createdJob) {
+      return createdJob;
+    }
+
+    if (!organizationId) {
+      toast.error('Organization not found. Please login again.');
+      throw new Error('Organization missing');
+    }
+
+    if (!selectedDepartment) {
+      toast.error('Please select a department');
+      throw new Error('Department missing');
+    }
+
+    const requirementsArray = buildRequirementsArray(parsedData.requirements);
+
+    const companyName =
+      parsedData.company && parsedData.company !== 'Not specified'
+        ? parsedData.company
+        : 'Not specified';
+
+    const placeValue =
+      parsedData.location && parsedData.location !== 'Not specified'
+        ? parsedData.location
+        : 'Not specified';
+
+    const salaryValue =
+      parsedData.salary && parsedData.salary !== 'Not specified'
+        ? parsedData.salary
+        : null;
+
+    const jobPayload = {
+      name: parsedData.job_title || 'Untitled Job',
+      description: parsedData.description || '',
+      companyName,
+      departmentId: selectedDepartment,
+      place: placeValue,
+      organizationId,
+      requirements: requirementsArray,
+    };
+
+    if (salaryValue) {
+      jobPayload.salaryRange = salaryValue;
+    }
+
+    try {
+      const response = await postRequest('/jobs', jobPayload);
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || 'Failed to create job');
+      }
+      const job = response.data.data;
+      setIsJobCreated(true);
+      setCreatedJob(job);
+      toast.success('Job created successfully!');
+      return job;
+    } catch (error) {
+      console.error('Error creating job:', error);
+      const message =
+        error.response?.data?.message || error.message || 'Failed to create job';
+      toast.error(message);
+      throw error;
+    }
+  };
+
   const handleExtractSkills = async (e) => {
     e.preventDefault();
     
@@ -87,9 +235,15 @@ const JobParserModal = ({ isOpen, onClose }) => {
       return;
     }
 
+    if (departments.length > 0 && !selectedDepartment) {
+      toast.error('Please select a department');
+      return;
+    }
+
     setIsLoading(true);
     
     try {
+      await ensureJobCreated();
       const result = await extractSkills(parsedData.description);
       
       if (result.success) {
@@ -128,6 +282,59 @@ const JobParserModal = ({ isOpen, onClose }) => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     toast.success('Skills data downloaded!');
+  };
+
+  // Save extracted skills as topics
+  const saveSkillsAsTopics = async () => {
+    if (!skillsData?.technical_skills || !Array.isArray(skillsData.technical_skills) || skillsData.technical_skills.length === 0) {
+      return; // No skills to save
+    }
+
+    if (!isJobCreated || !createdJob?._id) {
+      console.warn('Job not created yet, cannot save topics');
+      return;
+    }
+
+    if (!organizationId) {
+      toast.error('Organization not found. Cannot save topics.');
+      return;
+    }
+
+    setIsLoading(true);
+    const topicsToCreate = skillsData.technical_skills.map((skillItem) => ({
+      name: skillItem.skill,
+      description: skillItem.explanation || '',
+      difficultyLevel: 'Medium',
+      organizationId,
+      departmentId: selectedDepartment || undefined,
+      jobId: createdJob._id,
+    }));
+
+    try {
+      // Create all topics in parallel
+      const topicPromises = topicsToCreate.map((topicData) =>
+        postRequest('/topics', topicData)
+      );
+
+      const results = await Promise.allSettled(topicPromises);
+      
+      const successful = results.filter((r) => r.status === 'fulfilled').length;
+      const failed = results.filter((r) => r.status === 'rejected').length;
+
+      if (successful > 0) {
+        toast.success(`Successfully saved ${successful} skill${successful > 1 ? 's' : ''} as topic${successful > 1 ? 's' : ''}`);
+      }
+      
+      if (failed > 0) {
+        console.error('Some topics failed to save:', results.filter((r) => r.status === 'rejected'));
+        toast.error(`Failed to save ${failed} topic${failed > 1 ? 's' : ''}`);
+      }
+    } catch (error) {
+      console.error('Error saving skills as topics:', error);
+      toast.error('Failed to save skills as topics');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -247,7 +454,7 @@ const JobParserModal = ({ isOpen, onClose }) => {
                     />
                   </div>
 
-                  <div>
+                <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2">
                       Description <span className="text-red-500">*</span>
                     </label>
@@ -258,6 +465,19 @@ const JobParserModal = ({ isOpen, onClose }) => {
                       rows={4}
                       className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:outline-none text-slate-900 resize-none"
                       required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Requirements
+                    </label>
+                    <textarea
+                      value={parsedData.requirements}
+                      onChange={(e) => setParsedData({ ...parsedData, requirements: e.target.value })}
+                      placeholder="List requirements (one per line or comma separated)"
+                      rows={4}
+                      className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:outline-none text-slate-900 resize-none"
                     />
                   </div>
 
@@ -306,6 +526,33 @@ const JobParserModal = ({ isOpen, onClose }) => {
                     </select>
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Department {departments.length > 0 && <span className="text-red-500">*</span>}
+                    </label>
+                    {organizationId ? (
+                      <select
+                        value={selectedDepartment}
+                        onChange={(e) => setSelectedDepartment(e.target.value)}
+                        disabled={isDeptLoading || departments.length === 0}
+                        className="w-full px-4 py-2.5 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:outline-none text-slate-900 disabled:cursor-not-allowed disabled:bg-slate-100"
+                      >
+                        <option value="">
+                          {isDeptLoading ? 'Loading departments...' : 'Select a department'}
+                        </option>
+                        {departments.map((dept) => (
+                          <option key={dept._id || dept.id} value={dept._id || dept.id}>
+                            {dept.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="text-sm text-slate-600">
+                        Organization not available. Department selection is disabled.
+                      </p>
+                    )}
+                  </div>
+
                   <button
                     type="submit"
                     disabled={isLoading}
@@ -344,7 +591,7 @@ const JobParserModal = ({ isOpen, onClose }) => {
               </div>
 
               {/* Info Cards */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
                   <h4 className="font-semibold text-slate-900 mb-2">Educational Qualifications</h4>
                   <p className="text-slate-700">{skillsData.education || 'Not specified'}</p>
@@ -353,12 +600,33 @@ const JobParserModal = ({ isOpen, onClose }) => {
                   <h4 className="font-semibold text-slate-900 mb-2">Tools Mentioned</h4>
                   <p className="text-slate-700">{skillsData.tools || 'Not specified'}</p>
                 </div>
+                <div className="bg-gradient-to-br from-emerald-50 to-green-50 p-4 rounded-xl border border-emerald-200 col-span-2 md:col-span-1">
+                  <h4 className="font-semibold text-slate-900 mb-2">Department</h4>
+                  <p className="text-slate-700">
+                    {departments.find((dept) => (dept._id || dept.id) === selectedDepartment)?.name || 'Not selected'}
+                  </p>
+                </div>
+                    <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-xl border border-amber-200 col-span-2">
+                      <h4 className="font-semibold text-slate-900 mb-2">Requirements</h4>
+                      {parsedData.requirements
+                        ? parsedData.requirements
+                            .split(/[\n,]/)
+                            .map((item) => item.trim())
+                            .filter(Boolean)
+                            .map((req, index) => (
+                              <p key={index} className="text-slate-700 text-sm flex items-start gap-2">
+                                <span className="text-amber-600 mt-1">•</span>
+                                <span>{req}</span>
+                              </p>
+                            ))
+                        : <p className="text-slate-600 text-sm">Not specified</p>}
+                    </div>
               </div>
 
-              {/* Technical Skills */}
+              {/* Skills */}
               {skillsData.technical_skills && skillsData.technical_skills.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="text-xl font-bold text-slate-900 mb-4">Technical Skills</h3>
+                  <h3 className="text-xl font-bold text-slate-900 mb-4">Skills</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {skillsData.technical_skills.map((skillItem, index) => (
                       <div
@@ -373,39 +641,29 @@ const JobParserModal = ({ isOpen, onClose }) => {
                 </div>
               )}
 
-              {/* Soft Skills */}
-              {skillsData.soft_skills && skillsData.soft_skills.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-xl font-bold text-slate-900 mb-4">Soft Skills</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {skillsData.soft_skills.map((skillItem, index) => (
-                      <div
-                        key={index}
-                        className="bg-white border-2 border-slate-200 rounded-xl p-4 hover:border-green-400 transition-all"
-                      >
-                        <h4 className="font-semibold text-slate-900 mb-2">{skillItem.skill}</h4>
-                        <p className="text-sm text-slate-600">{skillItem.explanation}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* Action Buttons */}
               <div className="flex gap-3 mt-6">
                 <button
-                  onClick={() => {
+                  onClick={async () => {
+                    await saveSkillsAsTopics();
                     setStep(1);
                     setFullJobText('');
                     setSkillsData(null);
+                    setIsJobCreated(false);
+                    setCreatedJob(null);
                   }}
-                  className="flex-1 px-6 py-3 border-2 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg font-semibold transition-colors"
+                  disabled={isLoading}
+                  className="flex-1 px-6 py-3 border-2 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Parse Another Job
                 </button>
                 <button
-                  onClick={onClose}
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-lg font-semibold transition-all"
+                  onClick={async () => {
+                    await saveSkillsAsTopics();
+                    onClose();
+                  }}
+                  disabled={isLoading}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Done
                 </button>
