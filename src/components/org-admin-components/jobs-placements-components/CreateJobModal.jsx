@@ -107,42 +107,32 @@ const FormSection = ({ newJobData, fieldErrors, departments, handleFieldChange }
       />
     </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <label className="block text-sm font-semibold text-slate-700 mb-2">
-          Department *
-        </label>
-        <select
-          value={newJobData.department}
-          onChange={(e) => handleFieldChange("department", e.target.value)}
-          className={`w-full p-3 bg-white border rounded-lg text-sm focus:ring-2 outline-none ${
-            fieldErrors.department
-              ? "border-red-500 focus:ring-red-500 focus:border-red-500"
-              : "border-slate-200 focus:ring-blue-500 focus:border-blue-500"
-          }`}
-        >
-          <option value="">Select a department</option>
-          {departments.map((dept) => (
-            <option key={dept._id} value={dept.name}>
-              {dept.name}
-            </option>
-          ))}
-        </select>
-        {fieldErrors.department && (
-          <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-            <i className="fas fa-exclamation-circle"></i>
-            {fieldErrors.department}
-          </p>
-        )}
-      </div>
-      <FormField
-        label="Role *"
-        type="text"
-        value={newJobData.role}
-        onChange={(e) => handleFieldChange("role", e.target.value)}
-        placeholder="e.g., Frontend Developer"
-        error={fieldErrors.role}
-      />
+    <div>
+      <label className="block text-sm font-semibold text-slate-700 mb-2">
+        Department *
+      </label>
+      <select
+        value={newJobData.department}
+        onChange={(e) => handleFieldChange("department", e.target.value)}
+        className={`w-full p-3 bg-white border rounded-lg text-sm focus:ring-2 outline-none ${
+          fieldErrors.department
+            ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+            : "border-slate-200 focus:ring-blue-500 focus:border-blue-500"
+        }`}
+      >
+        <option value="">Select a department</option>
+        {departments.map((dept) => (
+          <option key={dept._id} value={dept.name}>
+            {dept.name}
+          </option>
+        ))}
+      </select>
+      {fieldErrors.department && (
+        <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+          <i className="fas fa-exclamation-circle"></i>
+          {fieldErrors.department}
+        </p>
+      )}
     </div>
 
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

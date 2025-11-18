@@ -125,15 +125,16 @@ Your job is to analyze the text and extract the following fields:
 
 1.  \`job_title\`: The job title (e.g., 'Senior Software Engineer').
 2.  \`company\`: The company name. If not found, return 'Not specified'.
-3.  \`description\`: The main job description, responsibilities, and qualifications, formatted as clean text.
-4.  \`salary\`: The salary range (e.g., '$120,000 - $140,000' or 'INR 10 LPA - 15 LPA'). If not found, return 'Not specified'.
-5.  \`location\`: The job location (e.g., 'Kochi, Kerala' or 'Remote'). If not found, return 'Not specified'.
-6.  \`job_type\`: The employment type (e.g., 'Full-time', 'Contract', 'Internship'). If not found, return 'Full-time'.
+3.  \`description\`: A concise summary of the role (2-3 sentences).
+4.  \`requirements\`: A JSON array of short bullet-style strings describing responsibilities/qualifications. Each entry should be one requirement (no numbering, no long paragraphs). If not found, return an empty array.
+5.  \`salary\`: The salary range (e.g., '$120,000 - $140,000' or 'INR 10 LPA - 15 LPA'). If not found, return 'Not specified'.
+6.  \`location\`: The job location (e.g., 'Kochi, Kerala' or 'Remote'). If not found, return 'Not specified'.
+7.  \`job_type\`: The employment type (e.g., 'Full-time', 'Contract', 'Internship'). If not found, return 'Full-time'.
 
 Format the entire output as a single, valid JSON object.
 
 Example Output:
-{"job_title": "Senior Software Engineer", "company": "Tech Corp", "description": "Responsibilities:\\n- Build and maintain...", "salary": "Not specified", "location": "Remote", "job_type": "Full-time"}
+{"job_title": "Senior Software Engineer", "company": "Tech Corp", "description": "Lead UI development for fintech products.", "requirements": ["5+ years with React/TypeScript", "Experience with micro frontends", "Strong stakeholder communication"], "salary": "Not specified", "location": "Remote", "job_type": "Full-time"}
 
 Here is the text to parse:
 
@@ -159,11 +160,10 @@ If a responsibility is 'Communicate with stakeholders', the skill is 'Stakeholde
 Extract the following:
 
 1.  \`technical_skills\`: A list of technical/hard skills (e.g., 'React.js', 'Python', 'Data Analysis', 'Safety Inspections').
-2.  \`soft_skills\`: A list of soft skills (e.g., 'Communication', 'Teamwork', 'Problem Solving', 'Leadership').
-3.  \`education\`: The required educational qualifications. If not specified, return 'Not specified'.
-4.  \`tools\`: A list of specific software or tools. If not specified, return 'Not specified'.
+2.  \`education\`: The required educational qualifications. If not specified, return 'Not specified'.
+3.  \`tools\`: A list of specific software or tools. If not specified, return 'Not specified'.
 
-For each skill in \`technical_skills\` and \`soft_skills\`, provide an object with two keys:
+For each skill in \`technical_skills\`, provide an object with two keys:
 1.  \`skill\`: The name of the skill.
 2.  \`explanation\`: A brief (max 150 characters) explanation of how this skill is used in the job, based *only* on the description.
 
@@ -174,9 +174,6 @@ Example Output:
   "technical_skills": [
     {"skill": "React.js", "explanation": "Build and maintain user interface components."},
     {"skill": "Feature Development", "explanation": "Develop new user-facing features."}
-  ],
-  "soft_skills": [
-    {"skill": "Communication", "explanation": "Collaborate with cross-functional teams."}
   ],
   "education": "Bachelor's Degree in Computer Science",
   "tools": "Git, JIRA"

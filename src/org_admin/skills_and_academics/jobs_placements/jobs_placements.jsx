@@ -42,7 +42,6 @@ const JobsPlacements = () => {
     name: "",
     description: "",
     department: "",
-    role: "",
     company: "",
     place: "",
     requirements: "",
@@ -245,7 +244,6 @@ const JobsPlacements = () => {
       name: "",
       description: "",
       department: "",
-      role: "",
       company: "",
       place: "",
       requirements: "",
@@ -270,10 +268,6 @@ const JobsPlacements = () => {
     }
     if (!newJobData.company.trim()) {
       errors.company = "Company name is required";
-      hasErrors = true;
-    }
-    if (!newJobData.role.trim()) {
-      errors.role = "Role is required";
       hasErrors = true;
     }
     if (!newJobData.place.trim()) {
@@ -327,7 +321,6 @@ const JobsPlacements = () => {
         description: newJobData.description,
         companyName: newJobData.company,
         departmentId: selectedDept._id,
-        role: newJobData.role,
         place: newJobData.place,
         salaryRange: newJobData.salaryRange,
         requirements: requirementsArray,
@@ -363,7 +356,6 @@ const JobsPlacements = () => {
           name: "",
           description: "",
           department: "",
-          role: "",
           company: "",
           place: "",
           requirements: "",

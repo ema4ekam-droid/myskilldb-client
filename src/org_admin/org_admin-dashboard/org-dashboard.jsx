@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
+import { useSelector } from 'react-redux';
 import toast, { Toaster } from 'react-hot-toast';
 import OrgMenuNavigation from '../../components/org-admin-components/org-admin-menu_components/OrgMenuNavigation';
 import JobParserModal from '../../components/org-admin-components/jobs-placements-components/JobParserModal';
 
 const OrgDashboard = () => {
-  const API_BASE_URL = useMemo(() => `${import.meta.env.VITE_SERVER_API_URL}/api`, []);
   
   // State management
   const [isLoading, setIsLoading] = useState(false);
-  const [organizationInfo, setOrganizationInfo] = useState(null);
+  const organization = useSelector((state) => state.organization);
+  const organizationId = organization?._id;
   const [stats, setStats] = useState({
     departments: 5,
     totalJobs: 42,
@@ -1053,6 +1053,7 @@ const OrgDashboard = () => {
       <JobParserModal
         isOpen={isJobParserOpen}
         onClose={() => setIsJobParserOpen(false)}
+        organizationId={organizationId}
       />
 
       {/* Record Placement Modal */}
