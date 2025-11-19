@@ -218,8 +218,9 @@ const AdminSubjectAssign = () => {
   const transformAssignmentsData = (apiData) => {
     const assignments = [];
     
+    // Now each item in apiData is a separate teaching assignment document
     apiData.forEach(assignment => {
-      const { assignmentId, assignedSubTeachers = [] } = assignment;
+      const { assignmentId, subjectId, teacherId } = assignment;
 
       // Skip invalid records where assignmentId or its nested fields are missing
       if (!assignmentId || !assignmentId.departmentId || !assignmentId.classId || !assignmentId.sectionId) {
@@ -227,29 +228,30 @@ const AdminSubjectAssign = () => {
         return;
       }
 
-      assignedSubTeachers.forEach(subTeacher => {
-        const subjectObj = subTeacher?.subjectId;
-        const subjectId = subjectObj?._id;
-        const subjectName = subjectObj?.name;
+      // Skip if subject is missing
+      const subjectObj = subjectId;
+      const subjectIdValue = subjectObj?._id || subjectObj;
+      const subjectName = subjectObj?.name;
 
-        // Skip if subject is missing
-        if (!subjectId) return;
+      if (!subjectIdValue) {
+        console.warn('Skipping invalid teaching assignment record (missing subjectId):', assignment);
+        return;
+      }
 
-        assignments.push({
-          _id: `${assignment._id}-${subjectId}`,
-          subjectId: subjectId,
-          subjectName: subjectName || '',
-          departmentId: assignmentId.departmentId._id,
-          departmentName: assignmentId.departmentId.name,
-          classId: assignmentId.classId._id,
-          className: assignmentId.classId.name,
-          sectionId: assignmentId.sectionId._id,
-          sectionName: assignmentId.sectionId.name,
-          assignmentId: assignmentId._id,
-          teachingAssignmentId: assignment._id,
-          teacherId: subTeacher.teacherId?._id || null,
-          teacherName: subTeacher.teacherId?.name || null
-        });
+      assignments.push({
+        _id: assignment._id,
+        subjectId: subjectIdValue,
+        subjectName: subjectName || '',
+        departmentId: assignmentId.departmentId._id,
+        departmentName: assignmentId.departmentId.name,
+        classId: assignmentId.classId._id,
+        className: assignmentId.classId.name,
+        sectionId: assignmentId.sectionId._id,
+        sectionName: assignmentId.sectionId.name,
+        assignmentId: assignmentId._id,
+        teachingAssignmentId: assignment._id,
+        teacherId: teacherId?._id || teacherId || null,
+        teacherName: teacherId?.name || null
       });
     });
     
@@ -375,28 +377,31 @@ const AdminSubjectAssign = () => {
         return;
       }
 
-      // Create API calls for each selected section using the filtered subjects
-      const apiCalls = sectionsToAssign.map(sectionId => {
+      // Create individual API calls for each section-subject combination
+      const apiCalls = [];
+      sectionsToAssign.forEach(sectionId => {
         const section = sections.find(s => s._id === sectionId);
         if (!section || !section.assignmentId) {
           console.error(`No assignmentId found for section: ${sectionId}`);
-          return Promise.reject(`No assignmentId for section ${sectionId}`);
+          return;
         }
 
-        const requestData = {
-          organizationId: organizationId,
-          assignmentId: section.assignmentId,
-          assignedSubTeachers: subjectsToAssign.map(subjectId => ({ subjectId }))
-        };
-
-        return postRequest('/organization-setup/teachingAssignments', requestData);
+        // Create API call for each subject
+        subjectsToAssign.forEach(subjectId => {
+          const requestData = {
+            organizationId: organizationId,
+            assignmentId: section.assignmentId,
+            subjectId: subjectId
+          };
+          apiCalls.push(postRequest('/organization-setup/teachingAssignments', requestData));
+        });
       });
 
       // Execute all API calls
       const responses = await Promise.all(apiCalls);
       
       // Check if all API calls were successful
-      const allSuccess = responses.every(response => response.data.success);
+      const allSuccess = responses.every(response => response?.data?.success);
       
       if (allSuccess) {
         toast.success(`${selectedSubjects.length} subject${selectedSubjects.length !== 1 ? 's' : ''} assigned to ${sectionsToAssign.length} section${sectionsToAssign.length !== 1 ? 's' : ''} successfully!`);
@@ -475,9 +480,7 @@ const AdminSubjectAssign = () => {
         const requestData = {
           organizationId: organizationId,
           assignmentId: section.assignmentId,
-          assignedSubTeachers: [{
-            subjectId: selectedSubject
-          }]
+          subjectId: selectedSubject
         };
 
         return postRequest('/organization-setup/teachingAssignments', requestData);

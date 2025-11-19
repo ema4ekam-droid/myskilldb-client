@@ -136,9 +136,10 @@ const ClassroomRecordings = () => {
         );
         
         if (response.data.success && response.data.data) {
-          const assignedSubTeachers = response.data.data.assignedSubTeachers || [];
+          // Now response.data.data is an array of teaching assignments
+          const teachingAssignments = Array.isArray(response.data.data) ? response.data.data : [];
           const colors = ['blue', 'green', 'purple', 'orange', 'pink', 'red', 'yellow', 'indigo'];
-          const transformedSubjects = assignedSubTeachers.map((item, index) => ({
+          const transformedSubjects = teachingAssignments.map((item, index) => ({
             id: item.subjectId?._id || item.subjectId,
             name: item.subjectId?.name || 'Unknown Subject',
             code: item.subjectId?.code || `SUB${String(index + 1).padStart(3, '0')}`,
