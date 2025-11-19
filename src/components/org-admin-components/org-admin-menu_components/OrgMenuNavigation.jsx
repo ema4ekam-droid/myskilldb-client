@@ -73,8 +73,7 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
       color: 'green',
       subItems: [
         { id: 'view-classrooms', label: 'Class Setup', icon: 'fas fa-list' },
-        { id: 'define-subjects', label: 'Subjects & Teachers', icon: 'fas fa-book' },
-        { id: 'teacher-assignments', label: 'Teachers in Org', icon: 'fas fa-user-tie' }
+        { id: 'define-subjects', label: 'Subjects & Teachers', icon: 'fas fa-book' }
       ]
     },
     {
@@ -109,6 +108,9 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
 
   // Navigation handler
   const handlePageChange = (pageId, parentId = null) => {
+    // Close mobile menu when navigating
+    setIsMobileMenuOpen(false);
+    
     onPageChange(pageId);
 
     // Route mapping
@@ -116,7 +118,6 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
       dashboard: "/admin/dashboard",
       "view-classrooms": "/admin/classrooms/view",
       "define-subjects": "/admin/classrooms/subjects",
-      "teacher-assignments": "/admin/classrooms/teacher-assignments",
       "topic-management": "/admin/skills/topics",
       "classroom-sessions": "/admin/skills/sessions",
       "test-management": "/admin/tests/manage",
@@ -132,8 +133,13 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
     // If it's a submenu item, navigate directly but keep parent menu open
     if (parentId) {
       if (routes[pageId]) {
-        navigate(routes[pageId]);
-        toast.success(`Navigating to: ${pageId}`);
+        try {
+          navigate(routes[pageId]);
+          toast.success(`Navigating to: ${pageId}`);
+        } catch (error) {
+          console.error('Navigation error:', error);
+          toast.error('Failed to navigate');
+        }
       }
       // Ensure parent menu stays expanded
       setExpandedMenus((prev) => ({
@@ -156,8 +162,13 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
       } else {
         // Regular menu item without submenus - navigate directly
         if (routes[pageId]) {
-          navigate(routes[pageId]);
-          toast.success(`Navigating to: ${pageId}`);
+          try {
+            navigate(routes[pageId]);
+            toast.success(`Navigating to: ${pageId}`);
+          } catch (error) {
+            console.error('Navigation error:', error);
+            toast.error('Failed to navigate');
+          }
         }
       }
     }
@@ -185,7 +196,11 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
       {isMobileMenuOpen && (
         <div
           className="lg:hidden fixed inset-0 bg-black bg-opacity-60 z-[90] backdrop-blur-sm"
-          onClick={() => setIsMobileMenuOpen(false)}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsMobileMenuOpen(false);
+          }}
         ></div>
       )}
 
@@ -237,9 +252,12 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
               <div key={item.id}>
                 {/* Main Menu Item */}
                 <button
-                  onClick={() => handlePageChange(item.id)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handlePageChange(item.id);
+                  }}
                   className={`
-                    w-full flex items-center gap-4 px-4 py-4 rounded-xl text-left transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]
+                    w-full flex items-center gap-4 px-4 py-4 rounded-xl text-left transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer
                     ${
                       hasActiveSubmenu
                         ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500 shadow-md"
@@ -314,11 +332,12 @@ const OrgMenuNavigation = ({ currentPage, onPageChange }) => {
                         <button
                           key={subItem.id}
                           onClick={(e) => {
+                            e.preventDefault();
                             e.stopPropagation(); // Prevent any parent click handlers
                             handlePageChange(subItem.id, item.id);
                           }}
                           className={`
-                            w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200 transform hover:scale-[1.01] active:scale-[0.99] text-sm
+                            w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200 transform hover:scale-[1.01] active:scale-[0.99] text-sm cursor-pointer
                             ${
                               isSubActive
                                 ? `bg-${item.color}-50 text-${item.color}-700 border-l-4 border-${item.color}-500 shadow-sm font-semibold`

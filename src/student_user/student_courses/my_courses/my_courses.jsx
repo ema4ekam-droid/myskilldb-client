@@ -84,11 +84,11 @@ const MyCourses = () => {
         );
         
         if (response.data.success && response.data.data) {
-          const teachingAssignment = response.data.data;
-          const assignedSubTeachers = teachingAssignment.assignedSubTeachers || [];
+          // Now response.data.data is an array of teaching assignments
+          const teachingAssignments = Array.isArray(response.data.data) ? response.data.data : [];
 
           // Transform API data to subjects format
-          const transformedSubjects = assignedSubTeachers.map((item, index) => {
+          const transformedSubjects = teachingAssignments.map((item, index) => {
             const subjectId = item.subjectId?._id || item.subjectId;
             const subjectName = item.subjectId?.name || 'Unknown Subject';
             const subjectCode = item.subjectId?.code || `SUB${String(index + 1).padStart(3, '0')}`;

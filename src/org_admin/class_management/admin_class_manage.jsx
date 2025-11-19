@@ -30,6 +30,14 @@ const MasterOrganizationSetup = () => {
   const organization = useSelector((state) => state.organization); // If you have organization slice
   const organizationName = organization?.name;
   const organizationId = organization?._id;
+  
+  // Navigation state
+  const [currentPage, setCurrentPage] = useState('view-classrooms');
+  
+  // Navigation handler
+  const handlePageChange = (pageId) => {
+    setCurrentPage(pageId);
+  };
   // State for global entities
   const [departments, setDepartments] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -811,7 +819,7 @@ const MasterOrganizationSetup = () => {
       <Toaster position="top-right" />
 
       {/* Navigation Component - hidden when modal is open */}
-      {!isAnyModalOpen && <Navigation />}
+      {!isAnyModalOpen && <Navigation currentPage={currentPage} onPageChange={handlePageChange} />}
 
       {/* Main Content */}
       <div className={isAnyModalOpen ? "" : "lg:ml-72"}>
